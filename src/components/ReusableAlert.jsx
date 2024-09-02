@@ -1,72 +1,116 @@
-import React from 'react';
-import AwesomeAlert from 'react-native-awesome-alerts';
-import { StyleSheet, View } from 'react-native';
+import React, { useEffect, useRef } from 'react';
+import { Animated, StyleSheet, View, Dimensions, Text, TouchableOpacity, Keyboard } from 'react-native';
 import LottieView from 'lottie-react-native';
 
 // Adjust these paths based on your project structure
 import successAnimation from '../../assets/animations/success.json';
 import errorAnimation from '../../assets/animations/error.json';
 
+const { width, height } = Dimensions.get('window');
+
 const ReusableAlert = ({ show, alertType, message, onConfirm }) => {
     const isSuccess = alertType === 'success';
+    const slideAnim = useRef(new Animated.Value(height)).current; // Start off-screen
+
+    useEffect(() => {
+        if (show) {
+            Keyboard.dismiss(); // Dismiss the keyboard when the alert shows
+            Animated.spring(slideAnim, {
+                toValue: 0, // Slide up to visible position
+                useNativeDriver: true,
+            }).start();
+        } else {
+            Animated.timing(slideAnim, {
+                toValue: height, // Slide down to hide
+                duration: 300,
+                useNativeDriver: true,
+            }).start();
+        }
+    }, [show]);
 
     return (
-        <AwesomeAlert
-            show={show}
-            showProgress={false}
-            title={isSuccess ? 'Sukses' : 'Kesalahan'}
-            message={message}
-            closeOnTouchOutside={true}
-            closeOnHardwareBackPress={false}
-            showConfirmButton={true}
-            confirmText="Confirm"
-            confirmButtonColor={isSuccess ? '#148FFF' : '#FF3D00'}
-            onConfirmPressed={onConfirm}
-            titleStyle={[styles.title, { color: isSuccess ? '#148FFF' : '#FF3D00' }]}
-            messageStyle={styles.message}
-            contentContainerStyle={styles.container}
-            overlayStyle={styles.overlay}
-            customView={
-                <View style={styles.animationContainer}>
-                    <LottieView
-                        source={isSuccess ? successAnimation : errorAnimation}
-                        autoPlay
-                        loop={false}
-                        style={styles.animation}
-                    />
-                </View>
-            }
-        />
+        show && (
+            <View style={styles.overlay}>
+                <Animated.View style={[styles.alertWrapper, { transform: [{ translateY: slideAnim }] }]}>
+                    <View style={styles.alertContent}>
+                        <View style={styles.iconContainer}>
+                            <LottieView
+                                source={isSuccess ? successAnimation : errorAnimation}
+                                autoPlay
+                                loop={false}
+                                style={styles.icon}
+                            />
+                        </View>
+                        <Text style={styles.title}>{isSuccess ? 'Success' : 'Error'}</Text>
+                        <Text style={styles.message}>
+                            {message || (isSuccess ? 'Action completed successfully.' : 'An error occurred.')}
+                        </Text>
+                        <TouchableOpacity style={styles.button} onPress={onConfirm}>
+                            <Text style={styles.buttonText}>Okay</Text>
+                        </TouchableOpacity>
+                    </View>
+                </Animated.View>
+            </View>
+        )
     );
 };
 
 const styles = StyleSheet.create({
-    title: {
-        fontSize: 20,
-        fontWeight: 'bold',
+    overlay: {
+        flex: 1,
+        justifyContent: 'center',
+        alignItems: 'center',
+        position: 'absolute',
+        width: width,
+        height: height,
+        backgroundColor: 'rgba(0, 0, 0, 0.5)', // Semi-transparent overlay
     },
-    message: {
-        fontSize: 16,
-        color: '#333',
+    alertWrapper: {
+        width: width * 0.85,
+        alignItems: 'center',
+        justifyContent: 'center',
     },
-    container: {
-        borderRadius: 10,
+    alertContent: {
+        width: '100%',
         backgroundColor: '#fff',
-        elevation: 10,
-        padding: 20,
+        borderRadius: 20,
+        paddingVertical: 30,
+        paddingHorizontal: 20,
         alignItems: 'center',
     },
-    overlay: {
-        backgroundColor: 'rgba(0, 0, 0, 0.5)', // Slightly darker background to make alert stand out
-    },
-    animationContainer: {
+    iconContainer: {
         width: 100,
         height: 100,
-        marginBottom: 10,
+        marginBottom: 20,
     },
-    animation: {
+    icon: {
         width: '100%',
         height: '100%',
+    },
+    title: {
+        fontSize: 18,
+        fontWeight: 'bold',
+        color: '#333',
+        marginBottom: 10,
+        textAlign: 'center',
+    },
+    message: {
+        fontSize: 14,
+        color: '#666',
+        textAlign: 'center',
+        marginBottom: 30,
+    },
+    button: {
+        width: '80%',
+        backgroundColor: '#148FFF',
+        paddingVertical: 12,
+        borderRadius: 30,
+        alignItems: 'center',
+    },
+    buttonText: {
+        color: '#fff',
+        fontSize: 16,
+        fontWeight: 'bold',
     },
 });
 
