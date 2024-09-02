@@ -8,6 +8,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { useNavigation } from '@react-navigation/native';
 import * as Font from 'expo-font';
 import ReusableAlert from '../components/ReusableAlert'; // Import ReusableAlert
+import { jwtDecode } from 'jwt-decode';
 
 const Login = () => {
     const [username, setUsername] = useState('');
@@ -51,7 +52,32 @@ const Login = () => {
 
         try {
             const data = await login(username, password);
+
+            // Log data response from API
+            console.log('Login successful. Response data:', data);
+
+            // Save login data to AsyncStorage
             await AsyncStorage.setItem('userData', JSON.stringify(data));
+            console.log('User data saved to AsyncStorage.');
+
+            // If there is a token, decode, save it, and log it
+            if (data.token) {
+                await AsyncStorage.setItem('token', data.token);
+                const decodedToken = jwtDecode(data.token);
+                console.log('ini yang udh di decode', decodedToken);
+                console.log('Token saved to AsyncStorage.');
+
+                const userJob = decodedToken.data.jobs_id.toString(); // Convert to string
+                const companyId = decodedToken.data.company_id.toString(); // Convert to string
+                const employeeId = decodedToken.data.id.toString(); // Convert to string
+
+                // Save the converted string values
+                await AsyncStorage.setItem('userJob', userJob);
+                await AsyncStorage.setItem('employeeId', employeeId);
+                await AsyncStorage.setItem('companyId', companyId);
+                console.log(companyId);
+            }
+
             setAlertMessage('Login Berhasil! Anda akan diarahkan ke halaman utama.');
             setAlertType('success');
             setShowAlert(true);
@@ -60,6 +86,7 @@ const Login = () => {
                 navigation.navigate('App');
             }, 1500);
         } catch (err) {
+            console.error('Login failed:', err);
             setAlertMessage(err.message);
             setAlertType('error');
             setShowAlert(true);
