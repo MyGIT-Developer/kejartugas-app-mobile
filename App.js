@@ -1,20 +1,36 @@
-import { StatusBar } from 'expo-status-bar';
-import { StyleSheet, Text, View } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { ActivityIndicator } from 'react-native';
+import SplashScreen from './src/screens/SplashScreen';
+import RootNavigator from './src/components/RootNavigator';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
-export default function App() {
-  return (
-    <View style={styles.container}>
-      <Text>Open up App.js to start working on your app!</Text>
-      <StatusBar style="auto" />
-    </View>
-  );
-}
+const App = () => {
+  const [isSplashVisible, setIsSplashVisible] = useState(true);
+  const [isUserLoggedIn, setIsUserLoggedIn] = useState(false);
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#fff',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-});
+  useEffect(() => {
+    const checkLoginStatus = async () => {
+      try {
+        const userData = await AsyncStorage.getItem('userData');
+        setIsUserLoggedIn(!!userData); // Set login status based on stored data
+      } catch (error) {
+        console.error('Failed to fetch user data:', error);
+      }
+    };
+
+    const timer = setTimeout(() => {
+      setIsSplashVisible(false);
+      checkLoginStatus();
+    }, 3000); // Set splash screen duration
+
+    return () => clearTimeout(timer);
+  }, []);
+
+  if (isSplashVisible) {
+    return <SplashScreen />;
+  }
+
+  return <RootNavigator />; // Use RootNavigator for app navigation
+};
+
+export default App;
