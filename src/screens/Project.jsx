@@ -1,12 +1,12 @@
-import { View, Text } from 'react-native'
-import React from 'react'
-import ColorList from '../components/ColorList'
+import { View, Text } from 'react-native';
+import React from 'react';
+import ColorList from '../components/ColorList';
 const Project = () => {
-  return (
-    <View>
-      <ColorList color="#0891b2" />
-    </View>
-  )
-}
+    return (
+        <View>
+            <ColorList color="#0891b2" />
+        </View>
+    );
+};
 
 export default Project;

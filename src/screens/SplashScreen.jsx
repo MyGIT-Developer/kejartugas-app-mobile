@@ -1,7 +1,56 @@
-import React from 'react';
-import { View, Image, StyleSheet } from 'react-native';
+import React, { useEffect } from 'react';
+import { View, Image, StyleSheet, ActivityIndicator } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
-export default function SplashScreen() {
+export default function SplashScreen({ onAuthCheck }) {
+    useEffect(() => {
+        const checkAuthentication = async () => {
+            try {
+                console.log('Checking authentication...');
+                const token = await AsyncStorage.getItem('token');
+                const expiredToken = await AsyncStorage.getItem('expiredToken');
+
+                console.log('Retrieved token:', token);
+                console.log('Retrieved expiredToken:', expiredToken);
+
+                if (token && expiredToken) {
+                    const currentTime = new Date();
+                    const expirationTime = new Date(expiredToken);
+
+                    console.log('Current time:', currentTime);
+                    console.log('Expiration time:', expirationTime);
+
+                    if (currentTime < expirationTime) {
+                        console.log('Token is valid');
+                        onAuthCheck(true);
+                    } else {
+                        console.log('Token expired, clearing storage');
+                        await AsyncStorage.multiRemove([
+                            'userData',
+                            'token',
+                            'userJob',
+                            'employeeId',
+                            'companyId',
+                            'expiredToken',
+                        ]);
+                        onAuthCheck(false);
+                    }
+                } else {
+                    console.log('No valid token');
+                    onAuthCheck(false);
+                }
+            } catch (error) {
+                console.error('Error checking authentication status:', error);
+                onAuthCheck(false);
+            }
+        };
+
+        // Simulate a delay for the splash screen (e.g., 3 seconds)
+        setTimeout(() => {
+            checkAuthentication();
+        }, 3000);
+    }, [onAuthCheck]);
+
     return (
         <View style={styles.container}>
             <Image source={require('./../../assets/images/kt_icon.png')} style={styles.logo} />
@@ -10,6 +59,7 @@ export default function SplashScreen() {
                 style={styles.cityscape}
                 onError={(error) => console.log(error)}
             />
+            <ActivityIndicator size="large" color="#148FFF" style={styles.activityIndicator} />
         </View>
     );
 }
@@ -31,7 +81,11 @@ const styles = StyleSheet.create({
         position: 'absolute',
         bottom: 0,
         width: 360,
-        height: 711, // Increased height to see if it appears
-        resizeMode: 'cover', // Try 'contain' or 'stretch' if 'cover' doesn't work
+        height: 711, // Maintained your original height
+        resizeMode: 'cover', // Adjust as necessary
+    },
+    activityIndicator: {
+        position: 'absolute',
+        bottom: 100,
     },
 });

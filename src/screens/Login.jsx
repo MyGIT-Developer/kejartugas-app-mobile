@@ -3,7 +3,7 @@ import { StatusBar, KeyboardAvoidingView, Platform, Text, View } from 'react-nat
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { StyledContainer, PageLogo, FormContainer, Input, SubmitButton, ButtonText } from '../components/styles';
 import { login } from './../api/auth';
-import LogoKTApp from './../../assets/images/kt_app.png';
+import LogoKTApp from '../../assets/images/kt_app.png';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useNavigation } from '@react-navigation/native';
 import * as Font from 'expo-font';
@@ -69,13 +69,25 @@ const Login = () => {
 
                 const userJob = decodedToken.data.jobs_id.toString(); // Convert to string
                 const companyId = decodedToken.data.company_id.toString(); // Convert to string
-                const employeeId = decodedToken.data.id.toString(); // Convert to string
+                const employeeId = decodedToken.data.id.toString(); // Convert to string                const expiredToken = new Date(data.expires_token * 1000).toISOString(); // Convert to ISO string
+                // Save token expiration time
+                const expiresToken = data.expires_token;
+                const expirationTime = new Date(expiresToken).toISOString();
+                await AsyncStorage.setItem('expiredToken', expirationTime);
+                console.log('Token expiration time saved to AsyncStorage.');
+
+                // Retrieve token expiration time
+                const retrievedExpirationTime = await AsyncStorage.getItem('expiredToken');
+                if (retrievedExpirationTime) {
+                    console.log('Retrieved token expiration time:', retrievedExpirationTime);
+                } else {
+                    console.error('Expiration time not found in AsyncStorage.');
+                }
 
                 // Save the converted string values
-                await AsyncStorage.setItem('userJob', userJob);
+                await AsyncStorage.setItem('zuserJob', userJob);
                 await AsyncStorage.setItem('employeeId', employeeId);
                 await AsyncStorage.setItem('companyId', companyId);
-                console.log(companyId);
             }
 
             setAlertMessage('Login Berhasil! Anda akan diarahkan ke halaman utama.');
