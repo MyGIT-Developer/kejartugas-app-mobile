@@ -1,17 +1,19 @@
-import { NavigationContainer } from '@react-navigation/native';
+import React from 'react';
 import { createStackNavigator } from '@react-navigation/stack';
-import Login from '../screens/Login'; // Assuming you have a Login screen
-import AppNavigator from './AppNavigator';
+import AppNavigator from '../components/AppNavigator';
+import Login from '../screens/Login';
+import ForgotPassword from '../screens/ForgotPassword';
+import SplashScreen from '../screens/SplashScreen'; // Ensure this import is correct
 
 const Stack = createStackNavigator();
 
 const RootNavigator = () => (
-  <Stack.Navigator screenOptions={{ headerShown: false }}>
-  {/* Uncomment the line below if you want a Login screen */}
-  <Stack.Screen name="Login" component={Login} />
-  <Stack.Screen name="App" component={AppNavigator} />
-  {/* Add other screens if necessary */}
-</Stack.Navigator>
+    <Stack.Navigator screenOptions={{ headerShown: false }}>
+        <Stack.Screen name="SplashScreen" component={SplashScreen} />
+        <Stack.Screen name="Login" component={Login} />
+        <Stack.Screen name="ForgotPassword" component={ForgotPassword} />
+        <Stack.Screen name="App" component={AppNavigator} />
+    </Stack.Navigator>
 );
 
 export default RootNavigator;

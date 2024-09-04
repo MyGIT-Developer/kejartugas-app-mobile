@@ -1,8 +1,11 @@
 import React, { useEffect } from 'react';
 import { View, Image, StyleSheet, ActivityIndicator } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useNavigation } from '@react-navigation/native';
 
-export default function SplashScreen({ onAuthCheck }) {
+export default function SplashScreen() {
+    const navigation = useNavigation();
+
     useEffect(() => {
         const checkAuthentication = async () => {
             try {
@@ -22,7 +25,10 @@ export default function SplashScreen({ onAuthCheck }) {
 
                     if (currentTime < expirationTime) {
                         console.log('Token is valid');
-                        onAuthCheck(true);
+                        navigation.reset({
+                            index: 0,
+                            routes: [{ name: 'App' }], // Navigate to the AppNavigator
+                        });
                     } else {
                         console.log('Token expired, clearing storage');
                         await AsyncStorage.multiRemove([
@@ -33,15 +39,15 @@ export default function SplashScreen({ onAuthCheck }) {
                             'companyId',
                             'expiredToken',
                         ]);
-                        onAuthCheck(false);
+                        navigation.navigate('Login');
                     }
                 } else {
                     console.log('No valid token');
-                    onAuthCheck(false);
+                    navigation.navigate('Login');
                 }
             } catch (error) {
                 console.error('Error checking authentication status:', error);
-                onAuthCheck(false);
+                navigation.navigate('Login');
             }
         };
 
@@ -49,7 +55,7 @@ export default function SplashScreen({ onAuthCheck }) {
         setTimeout(() => {
             checkAuthentication();
         }, 3000);
-    }, [onAuthCheck]);
+    }, [navigation]);
 
     return (
         <View style={styles.container}>

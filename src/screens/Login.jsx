@@ -1,18 +1,30 @@
+// Login.js
 import React, { useState, useEffect } from 'react';
-import { StatusBar, KeyboardAvoidingView, Platform, Text, View } from 'react-native';
+import {
+    StatusBar,
+    KeyboardAvoidingView,
+    Platform,
+    Text,
+    View,
+    TouchableOpacity,
+    StyleSheet,
+    Image,
+    TextInput,
+} from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { StyledContainer, PageLogo, FormContainer, Input, SubmitButton, ButtonText } from '../components/styles';
 import { login } from './../api/auth';
-import LogoKTApp from '../../assets/images/kt_app.png';
+import LogoKTApp from '../../assets/images/k_logo.png';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useNavigation } from '@react-navigation/native';
 import * as Font from 'expo-font';
-import ReusableAlert from '../components/ReusableAlert'; // Import ReusableAlert
+import ReusableAlert from '../components/ReusableAlert';
 import { jwtDecode } from 'jwt-decode';
 
 const Login = () => {
     const [username, setUsername] = useState('');
     const [password, setPassword] = useState('');
+    const [usernameFocused, setUsernameFocused] = useState(false);
+    const [passwordFocused, setPasswordFocused] = useState(false);
     const [showAlert, setShowAlert] = useState(false);
     const [alertMessage, setAlertMessage] = useState('');
     const [alertType, setAlertType] = useState('success');
@@ -53,38 +65,23 @@ const Login = () => {
         try {
             const data = await login(username, password);
 
-            // Log data response from API
             console.log('Login successful. Response data:', data);
 
-            // Save login data to AsyncStorage
             await AsyncStorage.setItem('userData', JSON.stringify(data));
             console.log('User data saved to AsyncStorage.');
 
-            // If there is a token, decode, save it, and log it
             if (data.token) {
                 await AsyncStorage.setItem('token', data.token);
                 const decodedToken = jwtDecode(data.token);
-                console.log('ini yang udh di decode', decodedToken);
-                console.log('Token saved to AsyncStorage.');
+                console.log('Decoded token:', decodedToken);
 
-                const userJob = decodedToken.data.jobs_id.toString(); // Convert to string
-                const companyId = decodedToken.data.company_id.toString(); // Convert to string
-                const employeeId = decodedToken.data.id.toString(); // Convert to string                const expiredToken = new Date(data.expires_token * 1000).toISOString(); // Convert to ISO string
-                // Save token expiration time
-                const expiresToken = data.expires_token;
-                const expirationTime = new Date(expiresToken).toISOString();
-                await AsyncStorage.setItem('expiredToken', expirationTime);
+                const userJob = decodedToken.data.jobs_id.toString();
+                const companyId = decodedToken.data.company_id.toString();
+                const employeeId = decodedToken.data.id.toString();
+                const expiredToken = data.expires_token;
+                await AsyncStorage.setItem('expiredToken', expiredToken);
                 console.log('Token expiration time saved to AsyncStorage.');
 
-                // Retrieve token expiration time
-                const retrievedExpirationTime = await AsyncStorage.getItem('expiredToken');
-                if (retrievedExpirationTime) {
-                    console.log('Retrieved token expiration time:', retrievedExpirationTime);
-                } else {
-                    console.error('Expiration time not found in AsyncStorage.');
-                }
-
-                // Save the converted string values
                 await AsyncStorage.setItem('userJob', userJob);
                 await AsyncStorage.setItem('employeeId', employeeId);
                 await AsyncStorage.setItem('companyId', companyId);
@@ -95,7 +92,7 @@ const Login = () => {
             setShowAlert(true);
             setTimeout(() => {
                 setShowAlert(false);
-                navigation.navigate('App');
+                navigation.navigate('App', { screen: 'Home' });
             }, 1500);
         } catch (err) {
             console.error('Login failed:', err);
@@ -105,91 +102,60 @@ const Login = () => {
         }
     };
 
+    const handleForgotPassword = () => {
+        navigation.navigate('ForgotPassword');
+    };
+
     if (!fontsLoaded) {
         return (
-            <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+            <View style={styles.loadingContainer}>
                 <Text>Loading...</Text>
             </View>
         );
     }
 
     return (
-        <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={{ flex: 1 }}>
+        <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={styles.container}>
             <LinearGradient
                 colors={['#0853AC', '#0086FF', '#9FD2FF']}
-                style={{ flex: 1 }}
+                style={styles.gradient}
                 start={{ x: 0, y: 0 }}
                 end={{ x: 1, y: 1 }}
             >
                 <StatusBar barStyle="dark-content" />
-                <StyledContainer
-                    style={{ backgroundColor: 'transparent', justifyContent: 'center', alignItems: 'center' }}
-                >
-                    <View
-                        style={{
-                            backgroundColor: '#fff',
-                            borderRadius: 15,
-                            padding: 20,
-                            width: 303,
-                            height: 385,
-                            alignItems: 'center',
-                            marginLeft: 24,
-                            marginRight: 24,
-                        }}
-                    >
-                        <PageLogo resizeMode="cover" source={LogoKTApp} />
-                        <Text style={{ color: '#148FFF', fontSize: 18, fontWeight: '700', fontFamily: 'Poppins-Bold' }}>
-                            Log In Akun
-                        </Text>
-                        <FormContainer>
-                            <Input
+                <View style={styles.innerContainer}>
+                    <View style={styles.formContainer}>
+                        <Image source={LogoKTApp} style={styles.pageLogo} resizeMode="cover" />
+                        <Text style={styles.title}>Log In Akun</Text>
+                        <View style={styles.form}>
+                            <TextInput
                                 placeholder="Username"
                                 value={username}
                                 onChangeText={setUsername}
+                                onFocus={() => setUsernameFocused(true)}
+                                onBlur={() => setUsernameFocused(false)}
                                 autoCapitalize="none"
-                                style={{ fontFamily: 'Poppins-Regular' }}
+                                style={[styles.input, { borderBottomColor: usernameFocused ? '#148FFF' : '#E5E7EB' }]}
                             />
-                            <Input
+                            <TextInput
                                 placeholder="Password"
                                 value={password}
                                 onChangeText={setPassword}
+                                onFocus={() => setPasswordFocused(true)}
+                                onBlur={() => setPasswordFocused(false)}
                                 secureTextEntry
                                 autoCapitalize="none"
-                                style={{ fontFamily: 'Poppins-Regular' }}
+                                style={[styles.input, { borderBottomColor: passwordFocused ? '#148FFF' : '#E5E7EB' }]}
                             />
-                            <Text
-                                style={{
-                                    color: '#148FFF',
-                                    fontSize: 13,
-                                    fontWeight: '500',
-                                    fontFamily: 'Poppins-Regular',
-                                    marginTop: 6,
-                                }}
-                            >
-                                Lupa Password?
-                            </Text>
-                            <SubmitButton
-                                onPress={handleLogin}
-                                style={{
-                                    backgroundColor: '#148FFF',
-                                    borderRadius: 12,
-                                    height: 36,
-                                    justifyContent: 'center',
-                                    alignItems: 'center',
-                                    elevation: 5,
-                                    shadowColor: '#000',
-                                    shadowOffset: { width: 0, height: 2 },
-                                    shadowOpacity: 0.3,
-                                    shadowRadius: 4,
-                                    marginTop: 18,
-                                }}
-                            >
-                                <ButtonText style={{ fontFamily: 'Poppins-Bold' }}>Masuk</ButtonText>
-                            </SubmitButton>
-                        </FormContainer>
+                            <TouchableOpacity onPress={handleForgotPassword}>
+                                <Text style={styles.forgotPasswordText}>Lupa Password?</Text>
+                            </TouchableOpacity>
+                            <TouchableOpacity onPress={handleLogin} style={styles.submitButton}>
+                                <Text style={styles.submitButtonText}>Masuk</Text>
+                            </TouchableOpacity>
+                        </View>
                     </View>
-                </StyledContainer>
-
+                </View>
                 <ReusableAlert
                     show={showAlert}
                     alertType={alertType}
@@ -200,5 +166,80 @@ const Login = () => {
         </KeyboardAvoidingView>
     );
 };
+
+const styles = StyleSheet.create({
+    container: {
+        flex: 1,
+    },
+    gradient: {
+        flex: 1,
+    },
+    innerContainer: {
+        flex: 1,
+        justifyContent: 'center',
+        alignItems: 'center',
+    },
+    formContainer: {
+        backgroundColor: '#fff',
+        borderRadius: 15,
+        padding: 20,
+        width: 320,
+        alignItems: 'center',
+    },
+    pageLogo: {
+        width: 80,
+        height: 80,
+        marginBottom: 20,
+    },
+    title: {
+        color: '#148FFF',
+        fontSize: 20,
+        fontWeight: '700',
+        fontFamily: 'Poppins-Bold',
+        marginBottom: 20,
+    },
+    form: {
+        width: '100%',
+    },
+    input: {
+        backgroundColor: 'transparent',
+        borderBottomWidth: 1,
+        padding: 12,
+        marginBottom: 12,
+        fontFamily: 'Poppins-Regular',
+    },
+    forgotPasswordText: {
+        color: '#148FFF',
+        fontSize: 13,
+        fontWeight: '500',
+        fontFamily: 'Poppins-Regular',
+        marginTop: 6,
+        alignSelf: 'flex-end',
+    },
+    submitButton: {
+        backgroundColor: '#148FFF',
+        borderRadius: 12,
+        height: 40,
+        justifyContent: 'center',
+        alignItems: 'center',
+        elevation: 5,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.3,
+        shadowRadius: 4,
+        marginTop: 18,
+    },
+    submitButtonText: {
+        color: '#FFFFFF',
+        fontSize: 16,
+        fontWeight: '600',
+        fontFamily: 'Poppins-Bold',
+    },
+    loadingContainer: {
+        flex: 1,
+        justifyContent: 'center',
+        alignItems: 'center',
+    },
+});
 
 export default Login;
