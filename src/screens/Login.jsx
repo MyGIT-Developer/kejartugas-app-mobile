@@ -85,7 +85,7 @@ const Login = () => {
                 }
 
                 // Save the converted string values
-                await AsyncStorage.setItem('zuserJob', userJob);
+                await AsyncStorage.setItem('userJob', userJob);
                 await AsyncStorage.setItem('employeeId', employeeId);
                 await AsyncStorage.setItem('companyId', companyId);
             }
