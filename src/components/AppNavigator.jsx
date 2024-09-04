@@ -1,7 +1,5 @@
-// src/components/AppNavigator.js
-
 import React from 'react';
-import { View, Platform } from 'react-native';
+import { View, Animated, Platform } from 'react-native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import Home from '../screens/Home';
 import Kehadiran from '../screens/Kehadiran';
@@ -17,12 +15,19 @@ const screenOptions = {
     headerShown: false,
     tabBarStyle: {
         position: 'absolute',
-        bottom: 0,
-        right: 0,
-        left: 0,
-        elevation: 0,
-        height: Platform.OS === 'ios' ? 80 : 60, // Adjust height for iOS
+        bottom: 10,
+        right: 10,
+        left: 10,
+        elevation: 4,
+        height: Platform.OS === 'ios' ? 80 : 60,
         backgroundColor: '#fff',
+        margin: 10,
+        borderRadius: 100,
+        shadowColor: '#000',
+        shadowOpacity: 0.25,
+        shadowOffset: { width: 0, height: 5 },
+        shadowRadius: 10,
+        overflow: 'visible',
     },
 };
 
@@ -33,8 +38,8 @@ const AppNavigator = () => (
             component={Home}
             options={{
                 tabBarIcon: ({ focused }) => (
-                    <View style={{ alignItems: 'center', justifyContent: 'center' }}>
-                        <HomeIcon focused={focused} />
+                    <View style={[styles.iconContainer, focused && styles.activeIconContainer]}>
+                        <HomeIcon focused={focused} style={[styles.icon, focused && styles.activeIcon]} />
                     </View>
                 ),
             }}
@@ -44,13 +49,13 @@ const AppNavigator = () => (
             component={Project}
             options={{
                 tabBarIcon: ({ focused }) => (
-                    <View style={{ alignItems: 'center', justifyContent: 'center' }}>
-                        <ProjectIcon focused={focused} />
+                    <View style={[styles.iconContainer, focused && styles.activeIconContainer]}>
+                        <ProjectIcon focused={focused} style={[styles.icon, focused && styles.activeIcon]} />
                     </View>
                 ),
             }}
         />
-        <Tab.Screen
+          <Tab.Screen
             name="Kehadiran"
             component={Kehadiran}
             options={{
@@ -60,7 +65,7 @@ const AppNavigator = () => (
                             top: Platform.OS === 'ios' ? -10 : -20,
                             width: Platform.OS === 'ios' ? 50 : 60,
                             height: Platform.OS === 'ios' ? 50 : 60,
-                            backgroundColor: focused ? '#fff' : '#16247d',
+                            backgroundColor: focused ? '#16247d' : '#2c3da5',
                             borderRadius: Platform.OS === 'ios' ? 25 : 30,
                             justifyContent: 'center',
                             alignItems: 'center',
@@ -77,8 +82,8 @@ const AppNavigator = () => (
             component={Tugas}
             options={{
                 tabBarIcon: ({ focused }) => (
-                    <View style={{ alignItems: 'center', justifyContent: 'center' }}>
-                        <TugasIcon focused={focused} />
+                    <View style={[styles.iconContainer, focused && styles.activeIconContainer]}>
+                        <TugasIcon focused={focused} style={[styles.icon, focused && styles.activeIcon]} />
                     </View>
                 ),
             }}
@@ -88,13 +93,44 @@ const AppNavigator = () => (
             component={Profile}
             options={{
                 tabBarIcon: ({ focused }) => (
-                    <View style={{ alignItems: 'center', justifyContent: 'center' }}>
-                        <ProfileIcon focused={focused} />
+                    <View style={[styles.iconContainer, focused && styles.activeIconContainer]}>
+                        <ProfileIcon focused={focused} style={[styles.icon, focused && styles.activeIcon]} />
                     </View>
                 ),
             }}
         />
     </Tab.Navigator>
 );
+
+const styles = {
+    iconContainer: {
+        alignItems: 'center',
+        justifyContent: 'center',
+        width: 50,
+        height: 50,
+        marginBottom: 0, // No offset when not focused
+    },
+    activeIconContainer: {
+        marginBottom: Platform.OS === 'ios' ? 10 : 20, // Move icon up when focused
+    },
+    activeKehadiranIconContainer: {
+        marginBottom: 0, // No offset as it is already centered when focused
+    },
+    icon: {
+        width: 30,
+        height: 30,
+        transition: 'all 0.3s ease',
+    },
+    activeIcon: {
+        width: 35, // Increase icon size when focused
+        height: 35,
+    },
+    activeKehadiranIcon: {
+        width: Platform.OS === 'ios' ? 60 : 70, // Size for the focused icon
+        height: Platform.OS === 'ios' ? 60 : 70,
+        backgroundColor: '#16247d', // Background color when focused
+        borderRadius: Platform.OS === 'ios' ? 30 : 35,
+    },
+};
 
 export default AppNavigator;

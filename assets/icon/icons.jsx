@@ -16,7 +16,7 @@ export const KehadiranIcon = ({ focused }) => (
         <MaterialCommunityIcons
             name="calendar-check" // Choose an appropriate icon name for attendance
             size={24}
-            color={focused ? '#16247d' : '#fff'}
+            color={focused ? '#fff' : '#fff'}
         />
     </View>
 );

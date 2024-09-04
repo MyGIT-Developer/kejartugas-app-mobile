@@ -1,14 +1,14 @@
 import apiService from '../utils/apiService';
 
 // Function to mark an employee as absent
-// export const markAbsent = async (employeeId) => {
-//     try {
-//         const response = await apiService.post(`/attendance/`, {companyId, employeeId, note, attendance_image, location});
-//         return response.data;
-//     } catch (error) {
-//         throw new Error(error.response?.data?.message || 'Marking absent failed');
-//     }
-// };
+export const markAbsent = async (companyId, employeeId, note, attendance_image, location) => {
+    try {
+        const response = await apiService.post(`/attendance/`, {companyId, employeeId, note, attendance_image, location});
+        return response.data;
+    } catch (error) {
+        throw new Error(error.response?.data?.message || 'Marking absent failed');
+    }
+};
 
 // Function to get attendance details for an employee
 export const getAttendance = async (employeeId) => {

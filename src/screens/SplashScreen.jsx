@@ -54,7 +54,7 @@ export default function SplashScreen() {
         // Simulate a delay for the splash screen (e.g., 3 seconds)
         setTimeout(() => {
             checkAuthentication();
-        }, 3000);
+        }, 2000);
     }, [navigation]);
 
     return (

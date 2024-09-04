@@ -3,11 +3,11 @@ import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import { LinearGradient } from 'expo-linear-gradient'; // Import the LinearGradient component
 
-const CircularButton = ({ title, onPress }) => {
+const CircularButton = ({ title, onPress, colors }) => {
     return (
         <TouchableOpacity style={styles.button} onPress={onPress}>
             <LinearGradient
-                colors={['#0853AC', '#0086FF', '#9FD2FF']} // Adjust colors as needed
+                colors={colors} // Adjust colors as needed
                 style={styles.gradient}
                 start={{ x: 0, y: 0 }}
                 end={{ x: 1, y: 1 }}

@@ -85,11 +85,13 @@ const Login = () => {
                 await AsyncStorage.setItem('userJob', userJob);
                 await AsyncStorage.setItem('employeeId', employeeId);
                 await AsyncStorage.setItem('companyId', companyId);
+                await AsyncStorage.setItem('employee_name', username);
             }
 
             setAlertMessage('Login Berhasil! Anda akan diarahkan ke halaman utama.');
             setAlertType('success');
             setShowAlert(true);
+            console.log('Before navigation:', navigation); // Check if navigation is defined
             setTimeout(() => {
                 setShowAlert(false);
                 navigation.navigate('App', { screen: 'Home' });
@@ -117,7 +119,7 @@ const Login = () => {
     return (
         <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={styles.container}>
             <LinearGradient
-                colors={['#0853AC', '#0086FF', '#9FD2FF']}
+                colors={['#0E509E', '#5FA0DC', '#9FD2FF']}
                 style={styles.gradient}
                 start={{ x: 0, y: 0 }}
                 end={{ x: 1, y: 1 }}
