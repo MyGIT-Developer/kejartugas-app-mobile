@@ -30,22 +30,35 @@ export const getAttendanceReport = async () => {
     }
 };
 
-// Function to update attendance for a specific employee
-export const updateAttendance = async (employeeId, data) => {
+export const checkIn = async (employeeId, companyId, note, attendanceImage, location) => {
     try {
-        const response = await apiService.put(`/attendance/${employeeId}`, data);
-        return response.data;
+        const formDataWithUserId = {
+            company_id: companyId,
+            employee_id: employeeId,
+            note: note,
+            attendance_image: attendanceImage,
+            location: location,
+          };
+
+          const response = await apiService.post(`/attendance/`, formDataWithUserId);
     } catch (error) {
-        throw new Error(error.response?.data?.message || 'Updating attendance failed');
+        throw new Error(error.response?.data?.message || 'Checking in failed');
     }
 };
 
-// Function to delete attendance record for a specific employee
-export const deleteAttendance = async (employeeId) => {
+export const checkOut = async (employeeId, companyId) => {
     try {
-        const response = await apiService.delete(`/attendance/${employeeId}`);
-        return response.data;
+        const checkOutData = {
+            employee_id: employeeId,
+          };
+        const response = await apiService.put(`/attendance/`, checkOutData, {
+            params : {
+                action: "checkout",
+                company_id: companyId,
+            }
+        });
+        return response.data.message;
     } catch (error) {
-        throw new Error(error.response?.data?.message || 'Deleting attendance failed');
+        throw new Error(error.response?.data?.message || 'Checking out failed');
     }
 };

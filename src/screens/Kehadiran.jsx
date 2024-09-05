@@ -1,4 +1,4 @@
-import { View, Text, StyleSheet, Button } from 'react-native';
+import { View, Text, StyleSheet, Button, Alert, TextInput } from 'react-native';
 import React, { useState, useEffect } from 'react';
 import ColorList from '../components/ColorList';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -7,31 +7,64 @@ import Icon from 'react-native-vector-icons/MaterialIcons'; // Import the icon l
 import CircularButton from '../components/CircularButton';
 import DateTimePicker from '@react-native-community/datetimepicker'; // Import the date picker
 import { ScrollView } from 'react-native-gesture-handler';
-import { markAbsent, getAttendance, getAttendanceReport, updateAttendance, deleteAttendance } from '../api/absent';
+import { markAbsent, getAttendance, getAttendanceReport, checkOut, checkIn } from '../api/absent';
+import { getParameter } from '../api/parameter';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Table, TableWrapper, Row, Rows, Col, Cols, Cell } from 'react-native-table-component';
 import axios from 'axios';
+import { launchCameraAsync, MediaTypeOptions } from 'expo-image-picker';
+import * as FileSystem from 'expo-file-system'; // To convert image to base64
 
 const Kehadiran = () => {
     const [currentTime, setCurrentTime] = useState('');
     const [locationName, setLocationName] = useState('Waiting for location...');
     const [errorMsg, setErrorMsg] = useState(null);
-    const employeeId = AsyncStorage.getItem('employeeId');
+    const [employeeId, setEmployeeId] = useState(null);
+    const [companyId, setCompanyId] = useState(null);
     const [attendanceData, setAttendanceData] = useState([]);
     const [isCheckedIn, setIsCheckedIn] = useState(false);
+    const [jamTelat, setjamTelat] = useState('');
+
+    useEffect(() => {
+        const getData = async () => {
+            try {
+                const employeeId = await AsyncStorage.getItem('employeeId');
+                const companyId = await AsyncStorage.getItem('companyId');
+
+                setEmployeeId(employeeId);
+                setCompanyId(companyId);
+            } catch (error) {
+                console.error('Error fetching AsyncStorage data:', error);
+            }
+        };
+
+        getData(); // Call the async function
+    }, []); // Empty array ensures this effect runs only once after the component mounts
 
     const startDate = new Date('2024-09-01'); // 1st September 2024
     const today = new Date(); // Today's date
 
+    const fetchOfficeHour = async () => {
+        try {
+            const response = await getParameter(companyId);
+
+            setjamTelat(response.data.jam_telat);
+        } catch (error) {
+            // console.error("Error fetching office hour data:", error);
+        }
+    };
+
+    useEffect(() => {
+        fetchOfficeHour();
+    }, [companyId]);
+
+    console.log('response', jamTelat);
+
     const fetchAttendanceData = async () => {
         try {
-            const response = await getAttendance(27);
-            if (response.status >= 200 && response.status < 300) {
-                setAttendanceData(response.attendance);
-                setIsCheckedIn(response.isCheckedInToday);
-            } else {
-                // console.error("Failed to fetch attendance data:", response.message);
-            }
+            const response = await getAttendance(employeeId);
+            setAttendanceData(response.attendance);
+            setIsCheckedIn(response.isCheckedInToday);
         } catch (error) {
             // console.error("Error fetching attendance data:", error);
         }
@@ -41,7 +74,35 @@ const Kehadiran = () => {
         fetchAttendanceData();
     }, [employeeId]);
 
-    console.log('data absen:', attendanceData);
+    const getBackgroundColor = (absenStatus) => {
+        switch (absenStatus) {
+            case 'On Time':
+                return '#6d8de4';
+            case 'Early':
+                return '#9de8bf';
+            case 'Late':
+                return '#f99c92';
+            case 'Holiday':
+                return '#c0c0c0';
+            default:
+                return '#c0c0c0';
+        }
+    };
+
+    const getIndicatorColor = (absenStatus) => {
+        switch (absenStatus) {
+            case 'On Time':
+                return '#2066ae';
+            case 'Early':
+                return '#20ae60';
+            case 'Late':
+                return '#ae2920';
+            case 'Holiday':
+                return '#6e6e6e';
+            default:
+                return '#6e6e6e';
+        }
+    };
 
     // Calculate the number of days between startDate and today
     const daysDiff = Math.floor((today - startDate) / (1000 * 60 * 60 * 24));
@@ -52,29 +113,52 @@ const Kehadiran = () => {
         const currentDate = new Date(startDate);
         currentDate.setDate(startDate.getDate() + i);
 
+        const formattedDateForUpper = currentDate.toLocaleDateString('en-US', {
+            weekday: 'short',
+            month: 'short',
+            day: 'numeric',
+            year: 'numeric',
+        });
+
         // Format the date to match the format in your attendance data
         const formattedDate = currentDate.toISOString().split('T')[0]; // Format as 'YYYY-MM-DD'
 
         // Find attendance data for the current date
         const attendanceForDate = attendanceData.find((attendance) => {
-            // Extract only the date part from checkin and compare
             const checkinDate = new Date(attendance.checkin).toISOString().split('T')[0];
             return checkinDate === formattedDate;
         });
 
         // If attendance data exists for the current date, display the relevant information
         const status = attendanceForDate ? attendanceForDate.status : 'No Status';
-        const checkIn = attendanceForDate ? new Date(attendanceForDate.checkin).toLocaleTimeString() : 'N/A';
-        const checkOut = attendanceForDate ? new Date(attendanceForDate.checkout).toLocaleTimeString() : 'N/A';
-        const duration = attendanceForDate ? attendanceForDate.duration : 'N/A';
-        const notes = attendanceForDate ? attendanceForDate.notes : 'No notes';
+        const checkIn = attendanceForDate
+            ? new Date(attendanceForDate.checkin).toLocaleTimeString('en-GB', {
+                  hour: '2-digit',
+                  minute: '2-digit',
+                  hour12: false,
+              })
+            : 'N/A';
 
+        const checkOut = attendanceForDate
+            ? new Date(attendanceForDate.checkout).toLocaleTimeString('en-GB', {
+                  hour: '2-digit',
+                  minute: '2-digit',
+                  hour12: false,
+              })
+            : attendanceForDate === 'null'
+            ? '-'
+            : 'N/A';
+
+        const duration = attendanceForDate ? attendanceForDate.duration : 'N/A';
+        const notes = attendanceForDate ? attendanceForDate.note : 'No notes';
+
+        // Push the views into the array to render later
         dateViews.push(
             <View key={i} style={styles.containerPerDate}>
                 <View style={styles.upperAbsent}>
-                    <Text>{currentDate.toDateString()}</Text>
-                    <View style={styles.statusView}>
-                        <Text>{status}</Text>
+                    <Text>{formattedDateForUpper}</Text>
+                    <View style={[styles.statusView, { backgroundColor: getBackgroundColor(status) }]}>
+                        <Text style={{ color: getIndicatorColor(status) }}>{status}</Text>
                     </View>
                 </View>
 
@@ -90,10 +174,6 @@ const Kehadiran = () => {
                     <View style={styles.column}>
                         <Text style={styles.tableHeader}>Durasi</Text>
                         <Text style={styles.tableCell}>{duration}</Text>
-                    </View>
-                    <View style={styles.column}>
-                        <Text style={styles.tableHeader}>Keterangan</Text>
-                        <Text style={styles.tableCell}>{notes}</Text>
                     </View>
                 </View>
 
@@ -124,6 +204,8 @@ const Kehadiran = () => {
         return () => clearInterval(interval);
     }, []);
 
+    const [location, setLocation] = useState(null);
+
     useEffect(() => {
         // Get location permissions and device location
         (async () => {
@@ -134,9 +216,17 @@ const Kehadiran = () => {
             }
 
             let location = await Location.getCurrentPositionAsync({});
+            const latitude = location.coords.latitude;
+            const longitude = location.coords.longitude;
+
+            // Format latitude and longitude
+            const formattedCoordinates = `${latitude.toFixed(6)}, ${longitude.toFixed(6)}`;
+            setLocation(formattedCoordinates);
+
+            // Reverse geocode to get location name
             const [reverseGeocodeResult] = await Location.reverseGeocodeAsync({
-                latitude: location.coords.latitude,
-                longitude: location.coords.longitude,
+                latitude,
+                longitude,
             });
 
             if (reverseGeocodeResult) {
@@ -150,14 +240,114 @@ const Kehadiran = () => {
     }, []);
 
     const [isCheckedInToday, setIsCheckedInToday] = useState(false);
-    const handleClockIn = () => {
-        setIsCheckedInToday(true);
-        alert('You have successfully clocked in!');
+    const [lateReason, setLateReason] = useState("Saya Telat Oi");
+
+    const calculateLateStatus = () => {
+        const currentDate = new Date();
+        const jamTelatParts = jamTelat.split(':');
+        const officeStartTime = new Date();
+        officeStartTime.setHours(parseInt(jamTelatParts[0], 10));
+        officeStartTime.setMinutes(parseInt(jamTelatParts[1], 10));
+        officeStartTime.setSeconds(0);
+
+        return currentDate > officeStartTime;
     };
 
-    const handleClockOut = () => {
-        setIsCheckedInToday(false);
-        alert('You have successfully clocked out!');
+    const handleClockIn = async () => {
+        let attendanceImage = '';
+
+        try {
+            // Open the camera with base64 option enabled
+            const result = await launchCameraAsync({
+                mediaTypes: MediaTypeOptions.Images,
+                allowsEditing: false,
+                quality: 1,
+                base64: true,
+            });
+
+            // Check if the camera operation was successful
+            if (!result.canceled && result.assets && result.assets[0].uri) {
+                // Use base64 from the result if available
+                attendanceImage = result.assets[0].base64
+                    ? `data:image/jpeg;base64,${result.assets[0].base64}`
+                    : await FileSystem.readAsStringAsync(result.assets[0].uri, {
+                          encoding: FileSystem.EncodingType.Base64,
+                      });
+
+                // Log data to verify
+                console.log(companyId, employeeId, lateReason, location);
+
+                // completeCheckIn(attendanceImage, null);
+                // Calculate if the user is late
+                const isLate = calculateLateStatus();
+                const response = await checkIn(employeeId, companyId, lateReason, attendanceImage, location);
+                console.log(response.data)
+                // if (isLate) {
+                //     // Show an alert or modal to input the late reason
+                //     Alert.prompt(
+                //         'Anda Terlambat!',
+                //         'Silakan berikan alasan keterlambatan Anda:',
+                //         [
+                //             {
+                //                 text: 'Batal',
+                //                 style: 'cancel',
+                //                 onPress: () => console.log('Check-in canceled'),
+                //             },
+                //             {
+                //                 text: 'Kirim',
+                //                 onPress: (reason) => {
+                //                     setLateReason(reason);
+                //                     completeCheckIn(attendanceImage, reason);
+                //                 },
+                //             },
+                //         ],
+                //         'plain-text',
+                //     );
+                // } else {
+                //     // Proceed with the check-in without late reason
+                //     completeCheckIn(attendanceImage, lateReason);
+                // }
+            } else {
+                return; // Exit if the camera was cancelled or no valid URI was returned
+            }
+        } catch (error) {
+            const errorMessage = error || 'Unknown error';
+            console.log('Check-in error:', errorMessage);
+            alert(`Error when checking in: ${errorMessage}`);
+        }
+    };
+
+    // Complete check-in function
+    const completeCheckIn = async (attendanceImage, note) => {
+        try {
+            // Continue with the API call using attendanceImage, lateReason, and location
+            const response = await checkIn(employeeId, companyId, note, attendanceImage, location);
+            console.log('Check-in success:', response.data);
+            alert('Anda berhasil check-in!');
+        } catch (error) {
+            const errorMessage = error || 'Unknown error';
+            console.log('Check-in error:', errorMessage);
+            alert(`Error when checking in: ${errorMessage}`);
+        }
+    };
+
+    const handleClockOut = async () => {
+        // setIsCheckedInToday(false);
+        try {
+            const updateResponse = await checkOut(employeeId, companyId);
+
+            console.log('Check-out success:', updateResponse.data);
+
+            alert('You have successfully checked out!');
+
+            fetchAttendanceData();
+        } catch (error) {
+            // console.error("Error when checking out:", error);
+            const errorMessage = error || 'Unknown error';
+
+            console.log('Check-out error:', errorMessage);
+            alert(`Error when checking out: ${errorMessage}`);
+        }
     };
 
     const [date, setDate] = useState(new Date()); // State to hold the selected date
@@ -199,9 +389,17 @@ const Kehadiran = () => {
 
                     <View style={styles.buttonContainer}>
                         {isCheckedInToday ? (
-   <CircularButton title="Clock Out" onPress={handleClockOut} colors={['#E11414', '#EA4545', '#EA8F8F']}/>
-                        ):(
-                            <CircularButton title="Clock In" onPress={handleClockIn}  colors={['#0E509E', '#5FA0DC', '#9FD2FF']}/>
+                            <CircularButton
+                                title="Clock Out"
+                                onPress={handleClockOut}
+                                colors={['#E11414', '#EA4545', '#EA8F8F']}
+                            />
+                        ) : (
+                            <CircularButton
+                                title="Clock In"
+                                onPress={handleClockIn}
+                                colors={['#0E509E', '#5FA0DC', '#9FD2FF']}
+                            />
                         )}
                     </View>
                     {/* <Button title="Clock In" onPress={handleClockIn} /> */}
@@ -328,7 +526,7 @@ const styles = StyleSheet.create({
         borderRadius: 20,
         marginHorizontal: 20,
         marginTop: 20,
-        height: 300,
+        height: 250,
     },
     containerPerDate: {
         marginBottom: 20,
@@ -373,7 +571,6 @@ const styles = StyleSheet.create({
     },
     tableCell: {
         flex: 1,
-        textAlign: 'center',
         padding: 5,
     },
     column: {
