@@ -1,4 +1,3 @@
-// Login.js
 import React, { useState, useEffect } from 'react';
 import {
     StatusBar,
@@ -16,9 +15,8 @@ import { login } from './../api/auth';
 import LogoKTApp from '../../assets/images/k_logo.png';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useNavigation } from '@react-navigation/native';
-import * as Font from 'expo-font';
 import ReusableAlert from '../components/ReusableAlert';
-import { jwtDecode } from 'jwt-decode';
+import { useFonts } from '../utils/UseFonts'; // Adjust the path as needed
 
 const Login = () => {
     const [username, setUsername] = useState('');
@@ -28,23 +26,8 @@ const Login = () => {
     const [showAlert, setShowAlert] = useState(false);
     const [alertMessage, setAlertMessage] = useState('');
     const [alertType, setAlertType] = useState('success');
-    const [fontsLoaded, setFontsLoaded] = useState(false);
+    const fontsLoaded = useFonts(); // Use the custom hook
     const navigation = useNavigation();
-
-    useEffect(() => {
-        const loadFonts = async () => {
-            try {
-                await Font.loadAsync({
-                    'Poppins-Regular': require('./../../assets/fonts/Poppins-Regular.ttf'),
-                    'Poppins-Bold': require('./../../assets/fonts/Poppins-Bold.ttf'),
-                });
-                setFontsLoaded(true);
-            } catch (error) {
-                console.warn(error);
-            }
-        };
-        loadFonts();
-    }, []);
 
     const handleLogin = async () => {
         if (!username || !password) {

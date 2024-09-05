@@ -10,6 +10,7 @@ const ForgotPassword = () => {
 
     const handlePasswordReset = () => {
         console.log('Permintaan reset kata sandi untuk:', email);
+        navigation.navigate('WaitingMail'); // Navigasi ke halaman WaitingMail.jsx
     };
 
     return (

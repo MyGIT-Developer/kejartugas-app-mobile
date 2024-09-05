@@ -1,10 +1,12 @@
 import React, { useEffect } from 'react';
-import { View, Image, StyleSheet, ActivityIndicator } from 'react-native';
+import { View, Image, StyleSheet, ActivityIndicator, Text } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useNavigation } from '@react-navigation/native';
+import { useFonts } from '../utils/UseFonts'; // Adjust the path as needed
 
 export default function SplashScreen() {
     const navigation = useNavigation();
+    const fontsLoaded = useFonts();
 
     useEffect(() => {
         const checkAuthentication = async () => {
@@ -27,7 +29,7 @@ export default function SplashScreen() {
                         console.log('Token is valid');
                         navigation.reset({
                             index: 0,
-                            routes: [{ name: 'App' }], // Navigate to the AppNavigator
+                            routes: [{ name: 'App' }],
                         });
                     } else {
                         console.log('Token expired, clearing storage');
@@ -51,11 +53,14 @@ export default function SplashScreen() {
             }
         };
 
-        // Simulate a delay for the splash screen (e.g., 3 seconds)
         setTimeout(() => {
             checkAuthentication();
         }, 2000);
     }, [navigation]);
+
+    if (!fontsLoaded) {
+        return <ActivityIndicator size="small" color="#148FFF" style={styles.activityIndicator} />;
+    }
 
     return (
         <View style={styles.container}>
@@ -87,8 +92,8 @@ const styles = StyleSheet.create({
         position: 'absolute',
         bottom: 0,
         width: 360,
-        height: 711, // Maintained your original height
-        resizeMode: 'cover', // Adjust as necessary
+        height: 711,
+        resizeMode: 'cover',
     },
     activityIndicator: {
         position: 'absolute',
