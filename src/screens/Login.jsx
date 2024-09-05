@@ -61,6 +61,8 @@ const Login = () => {
                 const userJob = decodedToken.data.jobs_id.toString();
                 const companyId = decodedToken.data.company_id.toString();
                 const employeeId = decodedToken.data.id.toString();
+                console.log(employeeId, companyId, userJob);
+                
                 const expiredToken = data.expires_token;
                 await AsyncStorage.setItem('expiredToken', expiredToken);
                 console.log('Token expiration time saved to AsyncStorage.');
