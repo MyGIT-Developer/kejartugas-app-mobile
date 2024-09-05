@@ -65,7 +65,7 @@ export default function SplashScreen() {
                 style={styles.cityscape}
                 onError={(error) => console.log(error)}
             />
-            <ActivityIndicator size="large" color="#148FFF" style={styles.activityIndicator} />
+            <ActivityIndicator size="small" color="#148FFF" style={styles.activityIndicator} />
         </View>
     );
 }

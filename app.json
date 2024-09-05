@@ -7,14 +7,30 @@
     "icon": "./assets/images/icon.png",
     "userInterfaceStyle": "light",
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "bundleIdentifier": "com.danu09.mykejartugas"
     },
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/images/adaptive-icon.png",
         "backgroundColor": "#ffffff"
       },
-      "package": "com.danu09.mykejartugas"
+      "package": "com.danu09.mykejartugas",
+      "permissions": [
+        "CAMERA",
+        "READ_EXTERNAL_STORAGE",
+        "WRITE_EXTERNAL_STORAGE",
+        "ACCESS_FINE_LOCATION",
+        "ACCESS_COARSE_LOCATION",
+        "RECORD_AUDIO",
+        "READ_CONTACTS",
+        "WRITE_CONTACTS",
+        "CALL_PHONE",
+        "SEND_SMS",
+        "READ_PHONE_STATE",
+        "ACCESS_NETWORK_STATE",
+        "INTERNET"
+      ]
     },
     "web": {
       "favicon": "./assets/images/favicon.png"
@@ -23,6 +39,9 @@
       "eas": {
         "projectId": "94e37562-9996-4811-a658-715e06d31970"
       }
-    }
+    },
+    "plugins": [
+      "expo-font"
+    ]
   }
 }
