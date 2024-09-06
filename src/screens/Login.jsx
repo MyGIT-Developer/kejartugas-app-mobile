@@ -17,6 +17,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { useNavigation } from '@react-navigation/native';
 import ReusableAlert from '../components/ReusableAlert';
 import { useFonts } from '../utils/UseFonts'; // Adjust the path as needed
+import { Ionicons } from '@expo/vector-icons'; // Use Ionicons or any other icon library
 
 const Login = () => {
     const [username, setUsername] = useState('');
@@ -28,6 +29,21 @@ const Login = () => {
     const [alertType, setAlertType] = useState('success');
     const fontsLoaded = useFonts(); // Use the custom hook
     const navigation = useNavigation();
+
+    useEffect(() => {
+        const loadFonts = async () => {
+            try {
+                await Font.loadAsync({
+                    'Poppins-Regular': require('./../../assets/fonts/Poppins-Regular.ttf'),
+                    'Poppins-Bold': require('./../../assets/fonts/Poppins-Bold.ttf'),
+                });
+                setFontsLoaded(true);
+            } catch (error) {
+                console.warn(error);
+            }
+        };
+        loadFonts();
+    }, []);
 
     const handleLogin = async () => {
         if (!username || !password) {
@@ -62,7 +78,7 @@ const Login = () => {
                 const companyId = decodedToken.data.company_id.toString();
                 const employeeId = decodedToken.data.id.toString();
                 console.log(employeeId, companyId, userJob);
-                
+
                 const expiredToken = data.expires_token;
                 await AsyncStorage.setItem('expiredToken', expiredToken);
                 console.log('Token expiration time saved to AsyncStorage.');
@@ -124,16 +140,28 @@ const Login = () => {
                                 autoCapitalize="none"
                                 style={[styles.input, { borderBottomColor: usernameFocused ? '#148FFF' : '#E5E7EB' }]}
                             />
-                            <TextInput
-                                placeholder="Password"
-                                value={password}
-                                onChangeText={setPassword}
-                                onFocus={() => setPasswordFocused(true)}
-                                onBlur={() => setPasswordFocused(false)}
-                                secureTextEntry
-                                autoCapitalize="none"
-                                style={[styles.input, { borderBottomColor: passwordFocused ? '#148FFF' : '#E5E7EB' }]}
-                            />
+                            <View style={styles.passwordContainer}>
+                                <TextInput
+                                    placeholder="Password"
+                                    value={password}
+                                    onChangeText={setPassword}
+                                    onFocus={() => setPasswordFocused(true)}
+                                    onBlur={() => setPasswordFocused(false)}
+                                    secureTextEntry={!passwordVisible}
+                                    autoCapitalize="none"
+                                    style={[
+                                        styles.input,
+                                        { borderBottomColor: passwordFocused ? '#148FFF' : '#E5E7EB' },
+                                    ]}
+                                />
+                                {/* Icon for showing/hiding password */}
+                                <TouchableOpacity
+                                    onPress={() => setPasswordVisible(!passwordVisible)}
+                                    style={styles.iconContainer}
+                                >
+                                    <Ionicons name={passwordVisible ? 'eye-off' : 'eye'} size={24} color="gray" />
+                                </TouchableOpacity>
+                            </View>
                             <TouchableOpacity onPress={handleForgotPassword}>
                                 <Text style={styles.forgotPasswordText}>Lupa Password?</Text>
                             </TouchableOpacity>
@@ -194,6 +222,21 @@ const styles = StyleSheet.create({
         padding: 12,
         marginBottom: 12,
         fontFamily: 'Poppins-Regular',
+    },
+    passwordContainer: {
+        position: 'relative', // To position the icon inside the input field
+        marginBottom: 20,
+    },
+    passwordInput: {
+        height: 40,
+        borderBottomWidth: 1,
+        borderBottomColor: '#E5E7EB',
+        paddingRight: 40, // Padding to make space for the eye icon
+    },
+    iconContainer: {
+        position: 'absolute',
+        right: 10, // Align the icon to the right
+        top: 10, // Align the icon vertically to the middle
     },
     forgotPasswordText: {
         color: '#148FFF',

@@ -10,13 +10,12 @@ import { ScrollView } from 'react-native-gesture-handler';
 import { markAbsent, getAttendance, getAttendanceReport, checkOut, checkIn } from '../api/absent';
 import { getParameter } from '../api/parameter';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { Table, TableWrapper, Row, Rows, Col, Cols, Cell } from 'react-native-table-component';
-import axios from 'axios';
+import { useNavigation } from '@react-navigation/native';
 import { launchCameraAsync, MediaTypeOptions } from 'expo-image-picker';
 import * as FileSystem from 'expo-file-system'; // To convert image to base64
-import { useNavigation } from '@react-navigation/native';
+import MyMap from '../components/Maps';
 
-const Kehadiran = () => {
+const DetailKehadiran = () => {
     const [currentTime, setCurrentTime] = useState('');
     const [locationName, setLocationName] = useState('Waiting for location...');
     const [errorMsg, setErrorMsg] = useState(null);
@@ -26,6 +25,7 @@ const Kehadiran = () => {
     const [isCheckedIn, setIsCheckedIn] = useState(false);
     const [jamTelat, setjamTelat] = useState('');
     const navigation = useNavigation();
+    const [textAreaValue, setTextAreaValue] = useState(''); // State for text input
 
     useEffect(() => {
         const getData = async () => {
@@ -106,107 +106,6 @@ const Kehadiran = () => {
         }
     };
 
-    // Calculate the number of days between startDate and today
-    const daysDiff = Math.floor((today - startDate) / (1000 * 60 * 60 * 24));
-
-    const [currentPage, setCurrentPage] = useState(0);
-    const itemsPerPage = 7;
-
-    const dateViews = [];
-    for (let i = 0; i <= daysDiff; i++) {
-        const currentDate = new Date(startDate);
-        currentDate.setDate(startDate.getDate() + i);
-
-        const formattedDateForUpper = currentDate.toLocaleDateString('en-US', {
-            weekday: 'short',
-            month: 'short',
-            day: 'numeric',
-            year: 'numeric',
-        });
-
-        const formattedDate = currentDate.toISOString().split('T')[0]; // Format as 'YYYY-MM-DD'
-
-        const attendanceForDate = attendanceData.find((attendance) => {
-            const checkinDate = new Date(attendance.checkin).toISOString().split('T')[0];
-            return checkinDate === formattedDate;
-        });
-
-        const status = attendanceForDate ? attendanceForDate.status : 'No Status';
-        const checkIn = attendanceForDate
-            ? new Date(attendanceForDate.checkin).toLocaleTimeString('en-GB', {
-                  hour: '2-digit',
-                  minute: '2-digit',
-                  hour12: false,
-              })
-            : 'N/A';
-
-        const checkOut = attendanceForDate
-            ? new Date(attendanceForDate.checkout).toLocaleTimeString('en-GB', {
-                  hour: '2-digit',
-                  minute: '2-digit',
-                  hour12: false,
-              })
-            : attendanceForDate === 'null'
-            ? '-'
-            : 'N/A';
-
-        const duration = attendanceForDate ? attendanceForDate.duration : 'N/A';
-        const notes = attendanceForDate ? attendanceForDate.note : 'No notes';
-
-        // Push the views into the array to render later
-        dateViews.push(
-            <View key={i} style={styles.containerPerDate}>
-                <View style={styles.upperAbsent}>
-                    <Text>{formattedDateForUpper}</Text>
-                    <View style={[styles.statusView, { backgroundColor: getBackgroundColor(status) }]}>
-                        <Text style={{ color: getIndicatorColor(status) }}>{status}</Text>
-                    </View>
-                </View>
-
-                <View style={styles.midAbsent}>
-                    <View style={styles.column}>
-                        <Text style={styles.tableHeader}>Check In</Text>
-                        <Text style={styles.tableCell}>{checkIn}</Text>
-                    </View>
-                    <View style={styles.column}>
-                        <Text style={styles.tableHeader}>Check Out</Text>
-                        <Text style={styles.tableCell}>{checkOut}</Text>
-                    </View>
-                    <View style={styles.column}>
-                        <Text style={styles.tableHeader}>Durasi</Text>
-                        <Text style={styles.tableCell}>{duration}</Text>
-                    </View>
-                </View>
-
-                <View style={styles.lowerAbsent}>
-                    <Text>Notes</Text>
-                    <View style={styles.statusView}>
-                        <Text>{notes}</Text>
-                    </View>
-                </View>
-            </View>,
-        );
-    }
-
-    // Calculate the current page's date views
-    const paginatedDateViews = dateViews.slice(currentPage * itemsPerPage, (currentPage + 1) * itemsPerPage);
-
-    // Calculate the total number of pages
-    const totalPages = Math.ceil(dateViews.length / itemsPerPage);
-
-    // Handle "Next" and "Previous" page navigation
-    const handleNextPage = () => {
-        if (currentPage < totalPages - 1) {
-            setCurrentPage(currentPage + 1);
-        }
-    };
-
-    const handlePreviousPage = () => {
-        if (currentPage > 0) {
-            setCurrentPage(currentPage - 1);
-        }
-    };
-
     useEffect(() => {
         // Update time every second
         const interval = setInterval(() => {
@@ -225,6 +124,8 @@ const Kehadiran = () => {
     }, []);
 
     const [location, setLocation] = useState(null);
+    const [latitude, setLatitude] = useState(null);
+    const [longitude, setLongitude] = useState(null);
 
     useEffect(() => {
         // Get location permissions and device location
@@ -238,11 +139,13 @@ const Kehadiran = () => {
             let location = await Location.getCurrentPositionAsync({});
             const latitude = location.coords.latitude;
             const longitude = location.coords.longitude;
-
+            console.log('latitude', latitude);
+            console.log('longitude', longitude);
             // Format latitude and longitude
             const formattedCoordinates = `${latitude.toFixed(6)}, ${longitude.toFixed(6)}`;
             setLocation(formattedCoordinates);
-
+            setLongitude(longitude);
+            setLatitude(latitude);
             // Reverse geocode to get location name
             const [reverseGeocodeResult] = await Location.reverseGeocodeAsync({
                 latitude,
@@ -272,10 +175,6 @@ const Kehadiran = () => {
 
         return currentDate > officeStartTime;
     };
-
-    // const handleClockIn = async () => {
-    //     navigation.navigate('DetailKehadiran');
-    // };
 
     const handleClockIn = async () => {
         let attendanceImage = '';
@@ -347,17 +246,13 @@ const Kehadiran = () => {
             // Continue with the API call using attendanceImage, lateReason, and location
             const response = await checkIn(employeeId, companyId, note, attendanceImage, location);
             console.log('Check-in success:', response.data);
-            alert('Anda berhasil check-in!');
+        alert('Anda berhasil check-in!');
         } catch (error) {
             const errorMessage = error || 'Unknown error';
             console.log('Check-in error:', errorMessage);
             alert(`Error when checking in: ${errorMessage}`);
-        } finally {
-            fetchAttendanceData();
-            setIsCheckedInToday(true);
         }
     };
-
 
     const handleClockOut = async () => {
         // setIsCheckedInToday(false);
@@ -393,93 +288,39 @@ const Kehadiran = () => {
         setShow(true);
     };
 
+    const handleGoBack = () => {
+        navigation.goBack();
+    };
+
     return (
         <View style={{ flex: 1 }}>
-            {/* Ensure the parent View takes the full available space */}
-            <View style={styles.backgroundBox}>
-                <LinearGradient
-                    colors={['#0E509E', '#5FA0DC', '#9FD2FF']}
-                    style={styles.linearGradient} // Apply the gradient to the entire backgroundBox
-                    start={{ x: 0, y: 0 }}
-                    end={{ x: 1, y: 1 }}
-                />
-            </View>
+            <Icon name="arrow-back" size={30} color="black" style={styles.backIcon} onPress={handleGoBack} />
 
-            <Text style={styles.header}>Kehadiran</Text>
-            <ScrollView>
-                <View style={styles.upperContainer}>
+            {/* Map View */}
+            <MyMap />
+
+            {/* Time and Location Overlay */}
+            <View style={styles.overlay}>
+                <View>
                     <Text style={styles.timeText}>{currentTime}</Text>
-                    {/* <View style={styles.locationContainer}>
-                    <Icon name="location-on" size={24} color="#000" style={styles.icon} />
-                    <Text style={styles.locationText}>{errorMsg || locationName}</Text>
-                </View> */}
-                    <Text style={styles.locationText}>{errorMsg || locationName}</Text>
-
-                    <View style={styles.buttonContainer}>
-                        {isCheckedInToday ? (
-                            <CircularButton
-                                title="Clock Out"
-                                onPress={handleClockOut}
-                                colors={['#E11414', '#EA4545', '#EA8F8F']}
-                            />
-                        ) : (
-                            <CircularButton
-                                title="Clock In"
-                                onPress={handleClockIn}
-                                colors={['#0E509E', '#5FA0DC', '#9FD2FF']}
-                            />
-                        )}
-                    </View>
-                    {/* <Button title="Clock In" onPress={handleClockIn} /> */}
+                <Text style={styles.locationText}>{locationName}</Text>
                 </View>
                 <View style={styles.midContainer}>
-                    <Text style={styles.label}>Mulai</Text>
-                    {show && (
-                        <DateTimePicker
-                            testID="dateTimePicker"
-                            value={date}
-                            mode="date"
-                            display="default"
-                            onChange={onChange}
-                            style={styles.datePicker}
-                        />
-                    )}
-                    <View style={styles.datepickerBox}>
-                        <Text style={styles.dateText} onPress={showDatePicker}>
-                            {date.toDateString()}
-                        </Text>
-                    </View>
 
-                    <Button title="Cari" style={styles.searchButton} onPress={showDatePicker} />
+      {/* Text area (TextInput) */}
+      <TextInput
+        style={styles.textArea}
+        placeholder="Enter your text here"
+        multiline
+        numberOfLines={4}
+        value={textAreaValue}
+        onChangeText={(text) => setTextAreaValue(text)}
+      />
+    </View>
+                <View style={styles.buttonContainer}>
+                      <Button title="Clock In" style={styles.checkInButton} onPress={handleClockIn} />
                 </View>
-
-                {/* <View style={styles.midContainer}>
-                    <View style={styles.paginationControls}>
-                        <TouchableOpacity onPress={handlePreviousPage} disabled={currentPage === 0}>
-                            <Text style={[styles.paginationButton, currentPage === 0 && styles.disabledButton]}>
-                                Previous
-                            </Text>
-                        </TouchableOpacity>
-
-                        <Text>
-                            Page {currentPage + 1} of {totalPages}
-                        </Text>
-
-                        <TouchableOpacity onPress={handleNextPage} disabled={currentPage === totalPages - 1}>
-                            <Text
-                                style={[
-                                    styles.paginationButton,
-                                    currentPage === totalPages - 1 && styles.disabledButton,
-                                ]}
-                            >
-                                Next
-                            </Text>
-                        </TouchableOpacity>
-                    </View>
-                </View> */}
-                {/* <View style={styles.lowerContainer}>{paginatedDateViews}</View> */}
-                <ScrollView style={styles.lowerContainer}>{dateViews}</ScrollView>
-            </ScrollView>
+            </View>
         </View>
     );
 };
@@ -488,22 +329,37 @@ const styles = StyleSheet.create({
     container: {
         flex: 1,
     },
-    locationContainer: {
-        flexDirection: 'row', // Align items horizontally
-        alignItems: 'center', // Center items vertically
-        padding: 10,
+    backIcon: {
+        position: 'absolute',
+        top: 50,
+        left: 20,
+        zIndex: 1, // Make sure it's above the map
     },
-    backgroundBox: {
-        height: 125, // Set your desired height
-        width: '100%', // Set your desired width
-        position: 'absolute', // Position it behind other elements
-        top: 0,
-        left: 0,
+    overlay: {
+        position: 'absolute',
+        bottom: 0,
+        height:'50%',
+        width: '100%',
+        backgroundColor: 'white', // Semi-transparent background
+        borderTopLeftRadius: 50,
+        borderTopRightRadius: 50,
+        padding: 20,
+        alignItems: 'center',
+        shadowColor: '#000',
+        shadowOffset: {
+            width: 30,
+            height: 10,
+        },
+        shadowOpacity: 0.5,
     },
-    linearGradient: {
-        flex: 1, // Ensure the gradient covers the entire view
-        borderBottomLeftRadius: 50,
-        borderBottomRightRadius: 30,
+    timeText: {
+        color: 'white',
+        fontSize: 18,
+    },
+    locationText: {
+        color: 'white',
+        fontSize: 16,
+        marginTop: 5,
     },
     header: {
         fontSize: 20,
@@ -539,10 +395,28 @@ const styles = StyleSheet.create({
     icon: {
         marginRight: 10, // Space between the icon and text
     },
+    textArea: {
+        height: 100,
+        width: '100%',
+        borderColor: 'gray',
+        borderWidth: 1,
+        marginTop: 10,
+        padding: 10,
+        borderRadius: 10,
+        textAlignVertical: 'top', // Ensures text starts at the top of the area
+      },
     buttonContainer: {
         flex: 1,
         justifyContent: 'center',
         alignItems: 'center',
+        width: '100%',
+    },
+    checkInButton: {
+        backgroundColor: '#6d8de4',
+        color: 'white',
+        width: '100%',
+        padding: 10,
+        borderRadius: 10,
     },
     midContainer: {
         backgroundColor: 'white',
@@ -556,24 +430,6 @@ const styles = StyleSheet.create({
         justifyContent: 'space-between',
         alignItems: 'center',
     },
-    label: {
-        fontSize: 18,
-        marginBottom: 10,
-    },
-    dateText: {
-        fontSize: 16,
-        marginTop: 10,
-    },
-    datePicker: {
-        width: '100%',
-        marginVertical: 10,
-    },
-    datepickerBox: {
-        backgroundBox: '#d7d7d7',
-    },
-    searchButton: {
-        backgroundColor: '000',
-    },
     lowerContainer: {
         flex: 1,
         borderRadius: 20,
@@ -581,82 +437,6 @@ const styles = StyleSheet.create({
         marginTop: 20,
         height: 250,
     },
-    containerPerDate: {
-        marginBottom: 20,
-        padding: 10,
-        backgroundColor: 'white',
-        borderRadius: 8,
-        shadowColor: '#000',
-        shadowOffset: {
-            width: 0,
-            height: 2,
-        },
-        shadowOpacity: 0.25,
-    },
-    upperAbsent: {
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        borderBottomWidth: 1,
-        borderBottomColor: 'gray',
-        paddingBottom: 10,
-    },
-    midAbsent: {
-        display: 'flex',
-        flexDirection: 'row',
-        marginTop: 10,
-    },
-    tableContainer: {
-        flexDirection: 'row',
-        borderBottomWidth: 1,
-        borderBottomColor: '#ccc',
-        paddingVertical: 10,
-        paddingHorizontal: 10,
-    },
-    tableHeader: {
-        fontWeight: 'bold',
-        marginBottom: 5,
-    },
-    tableRow: {
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        marginVertical: 5,
-    },
-    tableCell: {
-        flex: 1,
-        padding: 5,
-    },
-    column: {
-        flexDirection: 'column',
-        flex: 1,
-        justifyContent: 'center',
-        alignContent: 'center',
-    },
-    lowerAbsent: {
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        marginTop: 10,
-        borderTopWidth: 1,
-        borderTopColor: 'gray',
-        paddingTop: 10,
-    },
-    statusView: {
-        backgroundColor: '#ddd',
-        padding: 5,
-        borderRadius: 4,
-    },
-    paginationControls: {
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        marginVertical: 20,
-    },
-    paginationButton: {
-        fontSize: 16,
-        color: '#148FFF',
-    },
-    disabledButton: {
-        color: '#ccc',
-    },
 });
 
-export default Kehadiran;
+export default DetailKehadiran;

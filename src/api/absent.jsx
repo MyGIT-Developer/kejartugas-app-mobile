@@ -3,7 +3,13 @@ import apiService from '../utils/apiService';
 // Function to mark an employee as absent
 export const markAbsent = async (companyId, employeeId, note, attendance_image, location) => {
     try {
-        const response = await apiService.post(`/attendance/`, {companyId, employeeId, note, attendance_image, location});
+        const response = await apiService.post(`/attendance/`, {
+            companyId,
+            employeeId,
+            note,
+            attendance_image,
+            location,
+        });
         return response.data;
     } catch (error) {
         throw new Error(error.response?.data?.message || 'Marking absent failed');
@@ -30,32 +36,42 @@ export const getAttendanceReport = async () => {
     }
 };
 
-export const checkIn = async (employeeId, companyId, note, attendanceImage, location) => {
+export const checkIn = async (employeeId, companyId, note, attendanceImageBase64, location) => {
     try {
-        const formDataWithUserId = {
-            company_id: companyId,
+        const requestData = {
+            company_id: parseInt(companyId),
             employee_id: employeeId,
             note: note,
-            attendance_image: attendanceImage,
-            location: location,
-          };
+            attendance_image: attendanceImageBase64, // Base64 encoded image
+            location: location, // Assuming location is an object
+        };
 
-          const response = await apiService.post(`/attendance/`, formDataWithUserId);
+        // Send POST request using apiService (no need for FormData, just a JSON payload)
+        const response = await apiService.post(`/attendance/`, requestData, {
+            headers: {
+                'Content-Type': 'application/json', // JSON payload
+            }
+        });
+
+        return response.data;
     } catch (error) {
-        throw new Error(error.response?.data?.message || 'Checking in failed');
+        // Error handling
+        console.error('Check-in failed:', error.response.data.message);
+        throw new Error(error.response.data.message || 'Checking in failed');
     }
 };
+
 
 export const checkOut = async (employeeId, companyId) => {
     try {
         const checkOutData = {
             employee_id: employeeId,
-          };
+        };
         const response = await apiService.put(`/attendance/`, checkOutData, {
-            params : {
-                action: "checkout",
+            params: {
+                action: 'checkout',
                 company_id: companyId,
-            }
+            },
         });
         return response.data.message;
     } catch (error) {
