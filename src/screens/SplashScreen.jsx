@@ -1,8 +1,8 @@
 import React, { useEffect } from 'react';
-import { View, Image, StyleSheet, ActivityIndicator, Text } from 'react-native';
+import { View, Image, StyleSheet, ActivityIndicator } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useNavigation } from '@react-navigation/native';
-import { useFonts } from '../utils/UseFonts'; // Adjust the path as needed
+import { useFonts } from '../utils/UseFonts';
 
 export default function SplashScreen() {
     const navigation = useNavigation();
@@ -18,44 +18,48 @@ export default function SplashScreen() {
                 console.log('Retrieved token:', token);
                 console.log('Retrieved expiredToken:', expiredToken);
 
-                if (token && expiredToken) {
-                    const currentTime = new Date();
-                    const expirationTime = new Date(expiredToken);
+                if (token) {
+                    if (expiredToken) {
+                        const currentTime = new Date();
+                        const expirationTime = new Date(expiredToken);
 
-                    console.log('Current time:', currentTime);
-                    console.log('Expiration time:', expirationTime);
+                        console.log('Current time:', currentTime);
+                        console.log('Expiration time:', expirationTime);
 
-                    if (currentTime < expirationTime) {
-                        console.log('Token is valid');
+                        if (currentTime < expirationTime) {
+                            console.log('Token is valid');
+                            navigation.reset({
+                                index: 0,
+                                routes: [{ name: 'App' }],
+                            });
+                        } else {
+                            console.log('Token expired, clearing storage');
+                            await clearAuthData();
+                            navigation.navigate('Login');
+                        }
+                    } else {
+                        console.log('Token exists but no expiration time. Proceeding to App.');
                         navigation.reset({
                             index: 0,
                             routes: [{ name: 'App' }],
                         });
-                    } else {
-                        console.log('Token expired, clearing storage');
-                        await AsyncStorage.multiRemove([
-                            'userData',
-                            'token',
-                            'userJob',
-                            'employeeId',
-                            'companyId',
-                            'expiredToken',
-                        ]);
-                        navigation.navigate('Login');
                     }
                 } else {
-                    console.log('No valid token');
+                    console.log('No token found');
                     navigation.navigate('Login');
                 }
             } catch (error) {
                 console.error('Error checking authentication status:', error);
+                await clearAuthData();
                 navigation.navigate('Login');
             }
         };
 
-        setTimeout(() => {
-            checkAuthentication();
-        }, 2000);
+        const clearAuthData = async () => {
+            await AsyncStorage.multiRemove(['userData', 'token', 'userJob', 'employeeId', 'companyId', 'expiredToken']);
+        };
+
+        setTimeout(checkAuthentication, 2000);
     }, [navigation]);
 
     if (!fontsLoaded) {
@@ -68,7 +72,7 @@ export default function SplashScreen() {
             <Image
                 source={require('./../../assets/images/kt_city_scapes.png')}
                 style={styles.cityscape}
-                onError={(error) => console.log(error)}
+                onError={(error) => console.log('Image loading error:', error)}
             />
             <ActivityIndicator size="small" color="#148FFF" style={styles.activityIndicator} />
         </View>

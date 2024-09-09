@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useCallback } from 'react';
 import {
     StatusBar,
     KeyboardAvoidingView,
@@ -16,98 +16,70 @@ import LogoKTApp from '../../assets/images/k_logo.png';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useNavigation } from '@react-navigation/native';
 import ReusableAlert from '../components/ReusableAlert';
-import { useFonts } from '../utils/UseFonts'; // Adjust the path as needed
-import { Ionicons } from '@expo/vector-icons'; // Use Ionicons or any other icon library
+import { useFonts } from '../utils/UseFonts';
+import { Ionicons } from '@expo/vector-icons';
+import { jwtDecode } from 'jwt-decode';
 
 const Login = () => {
-    const [username, setUsername] = useState('');
-    const [password, setPassword] = useState('');
-    const [usernameFocused, setUsernameFocused] = useState(false);
-    const [passwordFocused, setPasswordFocused] = useState(false);
-    const [showAlert, setShowAlert] = useState(false);
-    const [alertMessage, setAlertMessage] = useState('');
-    const [alertType, setAlertType] = useState('success');
-    const fontsLoaded = useFonts(); // Use the custom hook
+    const [credentials, setCredentials] = useState({ username: '', password: '' });
+    const [focusedField, setFocusedField] = useState(null);
+    const [alert, setAlert] = useState({ show: false, message: '', type: 'success' });
+    const [passwordVisible, setPasswordVisible] = useState(false);
+    const fontsLoaded = useFonts();
     const navigation = useNavigation();
 
-    useEffect(() => {
-        const loadFonts = async () => {
-            try {
-                await Font.loadAsync({
-                    'Poppins-Regular': require('./../../assets/fonts/Poppins-Regular.ttf'),
-                    'Poppins-Bold': require('./../../assets/fonts/Poppins-Bold.ttf'),
-                });
-                setFontsLoaded(true);
-            } catch (error) {
-                console.warn(error);
-            }
-        };
-        loadFonts();
+    const handleInputChange = useCallback((field, value) => {
+        setCredentials((prev) => ({ ...prev, [field]: value }));
     }, []);
 
-    const handleLogin = async () => {
+    const handleFocus = useCallback((field) => setFocusedField(field), []);
+    const handleBlur = useCallback(() => setFocusedField(null), []);
+
+    const showAlert = useCallback((message, type = 'error') => {
+        setAlert({ show: true, message, type });
+    }, []);
+
+    const handleLogin = useCallback(async () => {
+        const { username, password } = credentials;
         if (!username || !password) {
-            let message = '';
-            if (!username && !password) {
-                message = 'Username dan Password harus diisi';
-            } else if (!username) {
-                message = 'Username harus diisi';
-            } else if (!password) {
-                message = 'Password harus diisi';
-            }
-            setAlertMessage(message);
-            setAlertType('error');
-            setShowAlert(true);
+            showAlert(
+                !username && !password
+                    ? 'Username dan Password harus diisi'
+                    : !username
+                    ? 'Username harus diisi'
+                    : 'Password harus diisi',
+            );
             return;
         }
 
         try {
             const data = await login(username, password);
-
-            console.log('Login successful. Response data:', data);
-
             await AsyncStorage.setItem('userData', JSON.stringify(data));
-            console.log('User data saved to AsyncStorage.');
 
             if (data.token) {
                 await AsyncStorage.setItem('token', data.token);
                 const decodedToken = jwtDecode(data.token);
-                console.log('Decoded token:', decodedToken);
+                const { jobs_id, company_id, id } = decodedToken.data;
 
-                const userJob = decodedToken.data.jobs_id.toString();
-                const companyId = decodedToken.data.company_id.toString();
-                const employeeId = decodedToken.data.id.toString();
-                console.log(employeeId, companyId, userJob);
-
-                const expiredToken = data.expires_token;
-                await AsyncStorage.setItem('expiredToken', expiredToken);
-                console.log('Token expiration time saved to AsyncStorage.');
-
-                await AsyncStorage.setItem('userJob', userJob);
-                await AsyncStorage.setItem('employeeId', employeeId);
-                await AsyncStorage.setItem('companyId', companyId);
-                await AsyncStorage.setItem('employee_name', username);
+                await Promise.all([
+                    AsyncStorage.setItem('expiredToken', data.expires_token),
+                    AsyncStorage.setItem('userJob', jobs_id.toString()),
+                    AsyncStorage.setItem('employeeId', id.toString()),
+                    AsyncStorage.setItem('companyId', company_id.toString()),
+                    AsyncStorage.setItem('employee_name', username),
+                ]);
             }
 
-            setAlertMessage('Login Berhasil! Anda akan diarahkan ke halaman utama.');
-            setAlertType('success');
-            setShowAlert(true);
-            console.log('Before navigation:', navigation); // Check if navigation is defined
+            showAlert('Login Berhasil! Anda akan diarahkan ke halaman utama.', 'success');
             setTimeout(() => {
-                setShowAlert(false);
+                setAlert((prev) => ({ ...prev, show: false }));
                 navigation.navigate('App', { screen: 'Home' });
             }, 1500);
         } catch (err) {
             console.error('Login failed:', err);
-            setAlertMessage(err.message);
-            setAlertType('error');
-            setShowAlert(true);
+            showAlert(err.message);
         }
-    };
-
-    const handleForgotPassword = () => {
-        navigation.navigate('ForgotPassword');
-    };
+    }, [credentials, navigation, showAlert]);
 
     if (!fontsLoaded) {
         return (
@@ -133,28 +105,30 @@ const Login = () => {
                         <View style={styles.form}>
                             <TextInput
                                 placeholder="Username"
-                                value={username}
-                                onChangeText={setUsername}
-                                onFocus={() => setUsernameFocused(true)}
-                                onBlur={() => setUsernameFocused(false)}
+                                value={credentials.username}
+                                onChangeText={(value) => handleInputChange('username', value)}
+                                onFocus={() => handleFocus('username')}
+                                onBlur={handleBlur}
                                 autoCapitalize="none"
-                                style={[styles.input, { borderBottomColor: usernameFocused ? '#148FFF' : '#E5E7EB' }]}
+                                style={[
+                                    styles.input,
+                                    { borderBottomColor: focusedField === 'username' ? '#148FFF' : '#E5E7EB' },
+                                ]}
                             />
                             <View style={styles.passwordContainer}>
                                 <TextInput
                                     placeholder="Password"
-                                    value={password}
-                                    onChangeText={setPassword}
-                                    onFocus={() => setPasswordFocused(true)}
-                                    onBlur={() => setPasswordFocused(false)}
+                                    value={credentials.password}
+                                    onChangeText={(value) => handleInputChange('password', value)}
+                                    onFocus={() => handleFocus('password')}
+                                    onBlur={handleBlur}
                                     secureTextEntry={!passwordVisible}
                                     autoCapitalize="none"
                                     style={[
                                         styles.input,
-                                        { borderBottomColor: passwordFocused ? '#148FFF' : '#E5E7EB' },
+                                        { borderBottomColor: focusedField === 'password' ? '#148FFF' : '#E5E7EB' },
                                     ]}
                                 />
-                                {/* Icon for showing/hiding password */}
                                 <TouchableOpacity
                                     onPress={() => setPasswordVisible(!passwordVisible)}
                                     style={styles.iconContainer}
@@ -162,7 +136,7 @@ const Login = () => {
                                     <Ionicons name={passwordVisible ? 'eye-off' : 'eye'} size={24} color="gray" />
                                 </TouchableOpacity>
                             </View>
-                            <TouchableOpacity onPress={handleForgotPassword}>
+                            <TouchableOpacity onPress={() => navigation.navigate('SentEmail')}>
                                 <Text style={styles.forgotPasswordText}>Lupa Password?</Text>
                             </TouchableOpacity>
                             <TouchableOpacity onPress={handleLogin} style={styles.submitButton}>
@@ -172,10 +146,10 @@ const Login = () => {
                     </View>
                 </View>
                 <ReusableAlert
-                    show={showAlert}
-                    alertType={alertType}
-                    message={alertMessage}
-                    onConfirm={() => setShowAlert(false)}
+                    show={alert.show}
+                    alertType={alert.type}
+                    message={alert.message}
+                    onConfirm={() => setAlert((prev) => ({ ...prev, show: false }))}
                 />
             </LinearGradient>
         </KeyboardAvoidingView>
@@ -224,19 +198,13 @@ const styles = StyleSheet.create({
         fontFamily: 'Poppins-Regular',
     },
     passwordContainer: {
-        position: 'relative', // To position the icon inside the input field
+        position: 'relative',
         marginBottom: 20,
-    },
-    passwordInput: {
-        height: 40,
-        borderBottomWidth: 1,
-        borderBottomColor: '#E5E7EB',
-        paddingRight: 40, // Padding to make space for the eye icon
     },
     iconContainer: {
         position: 'absolute',
-        right: 10, // Align the icon to the right
-        top: 10, // Align the icon vertically to the middle
+        right: 10,
+        top: 10,
     },
     forgotPasswordText: {
         color: '#148FFF',

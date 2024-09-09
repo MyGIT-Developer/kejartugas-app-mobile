@@ -1,107 +1,259 @@
-import React, { useState } from 'react';
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, Image, Platform } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import {
+    View,
+    Text,
+    TextInput,
+    Image,
+    TouchableOpacity,
+    StyleSheet,
+    KeyboardAvoidingView,
+    ScrollView,
+    Platform,
+    Alert,
+} from 'react-native';
 import Icon from 'react-native-vector-icons/Ionicons';
-import { useNavigation } from '@react-navigation/native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import LottieView from 'lottie-react-native';
+import ReusableWaitingScreen from '../components/ReusableWaitingScreen';
+import { forgotPassword } from '../api/auth';
 
-const ForgotPassword = () => {
+const ForgotPassword = ({ navigation }) => {
     const [email, setEmail] = useState('');
-    const [isFocused, setIsFocused] = useState(false); // State untuk melacak fokus input
-    const navigation = useNavigation();
+    const [otp_code, setOtpCode] = useState('');
+    const [password, setPassword] = useState('');
+    const [confirmPassword, setConfirmPassword] = useState('');
+    const [isPasswordVisible, setIsPasswordVisible] = useState(false);
+    const [isConfirmPasswordVisible, setIsConfirmPasswordVisible] = useState(false);
+    const [passwordStrength, setPasswordStrength] = useState(0);
+    const [passwordStrengthLabel, setPasswordStrengthLabel] = useState('');
+    const [isCompleted, setIsCompleted] = useState(false);
+    const [isLoading, setIsLoading] = useState(false);
 
-    const handlePasswordReset = () => {
-        console.log('Permintaan reset kata sandi untuk:', email);
-        navigation.navigate('WaitingMail'); // Navigasi ke halaman WaitingMail.jsx
+    useEffect(() => {
+        const loadEmail = async () => {
+            try {
+                const userEmail = await AsyncStorage.getItem('userEmail');
+                if (userEmail) {
+                    setEmail(userEmail);
+                }
+            } catch (error) {
+                console.log('Error loading email from AsyncStorage:', error);
+            }
+        };
+        loadEmail();
+    }, []);
+
+    useEffect(() => {
+        calculatePasswordStrength(password);
+    }, [password]);
+
+    const handlePasswordReset = async () => {
+        if (!email || !otp_code || !password) {
+            Alert.alert('Error', 'Please fill in all fields.');
+            return;
+        }
+        if (passwordStrength <= 2) {
+            Alert.alert('Weak Password', 'Please choose a stronger password.');
+            return;
+        }
+        if (password !== confirmPassword) {
+            Alert.alert('Password Mismatch', 'Both passwords must match.');
+            return;
+        }
+
+        setIsLoading(true);
+        try {
+            await forgotPassword(email, otp_code, password);
+            setIsCompleted(true);
+        } catch (error) {
+            Alert.alert('Error', error.message);
+        } finally {
+            setIsLoading(false);
+        }
     };
 
-    return (
-        <View style={styles.container}>
-            {/* Bagian Header */}
-            <View style={styles.header}>
-                {/* Panah Kembali */}
-                <TouchableOpacity onPress={() => navigation.goBack()}>
-                    <Icon name="arrow-back-outline" size={24} color="#000" />
-                </TouchableOpacity>
+    const calculatePasswordStrength = (pass) => {
+        let strength = 0;
+        if (pass.length >= 8) strength += 1;
+        if (pass.length >= 12) strength += 1;
+        if (/[A-Z]/.test(pass)) strength += 1;
+        if (/[a-z]/.test(pass)) strength += 1;
+        if (/[0-9]/.test(pass)) strength += 1;
+        if (/[^A-Za-z0-9]/.test(pass)) strength += 1;
 
-                {/* Ikon Kanan */}
-                <Image
-                    source={require('../../assets/images/kt_icon.png')}
-                    style={styles.rightIcon}
-                    resizeMode="contain"
+        setPasswordStrength(strength);
+
+        if (strength <= 2) setPasswordStrengthLabel('Weak');
+        else if (strength <= 4) setPasswordStrengthLabel('Medium');
+        else setPasswordStrengthLabel('Strong');
+    };
+
+    const getStrengthBarColor = (index) => {
+        if (passwordStrength <= 2) return index === 0 ? '#EF4444' : '#E5E7EB';
+        if (passwordStrength <= 4) return index <= 1 ? '#FBBF24' : '#E5E7EB';
+        return '#10B981';
+    };
+
+    if (isLoading) {
+        return (
+            <View style={styles.loadingContainer}>
+                <LottieView
+                    source={require('../../assets/animations/loading.json')}
+                    autoPlay
+                    loop
+                    style={styles.loadingAnimation}
                 />
+                <Text style={styles.loadingText}>Please wait...</Text>
             </View>
+        );
+    }
 
-            {/* Judul dan Subjudul */}
-            <View style={styles.titleContainer}>
-                <Text style={styles.title}>Reset Kata Sandi</Text>
-                <Text style={styles.subtitle}>
-                    Masukkan alamat email yang Anda gunakan saat mendaftar dan kami akan mengirimkan instruksi untuk
-                    mengatur ulang kata sandi Anda.
-                </Text>
+    if (isCompleted) {
+        return (
+            <ReusableWaitingScreen
+                title="Kata Sandi Berhasil Direset"
+                subtitle="Kata sandi Anda telah berhasil direset. Silakan masuk dengan kata sandi baru Anda."
+                animationFile={require('../../assets/animations/success.json')}
+                buttonText="Masuk"
+                onButtonPress={() => navigation.navigate('Login')}
+            />
+        );
+    }
 
-                {/* Input Email */}
-                <View style={styles.inputContainer}>
-                    <TextInput
-                        style={[
-                            styles.input,
-                            { borderColor: isFocused ? '#148FFF' : '#E5E7EB' }, // Ubah warna border saat fokus
-                        ]}
-                        placeholder="Masukkan email Anda..."
-                        value={email}
-                        onChangeText={setEmail}
-                        keyboardType="email-address"
-                        autoCapitalize="none"
-                        onFocus={() => setIsFocused(true)} // Atur fokus saat input difokuskan
-                        onBlur={() => setIsFocused(false)} // Kembalikan state fokus saat input blur
+    return (
+        <KeyboardAvoidingView style={styles.container} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
+            <ScrollView contentContainerStyle={styles.scrollContainer}>
+                <View style={styles.header}>
+                    <TouchableOpacity onPress={() => navigation.goBack()}>
+                        <Icon name="arrow-back-outline" size={24} color="#000" />
+                    </TouchableOpacity>
+                    <Image
+                        source={require('../../assets/images/kt_icon.png')}
+                        style={styles.rightIcon}
+                        resizeMode="contain"
                     />
                 </View>
-            </View>
 
-            {/* Bagian Footer */}
-            <View style={styles.footer}>
-                {/* Tombol Reset Kata Sandi */}
-                <TouchableOpacity onPress={handlePasswordReset} style={styles.resetButton}>
-                    <Text style={styles.resetButtonText}>Minta Reset Kata Sandi</Text>
-                </TouchableOpacity>
+                <View style={styles.content}>
+                    <Text style={styles.title}>Reset Password</Text>
+                    <Text style={styles.subtitle}>
+                        Enter your email, OTP code, and new password to reset your password.
+                    </Text>
 
-                {/* Tautan Login */}
-                <View style={styles.loginContainer}>
-                    <Text style={styles.loginText}>Ingat kata sandi Anda? </Text>
-                    <TouchableOpacity onPress={() => navigation.navigate('Login')}>
-                        <Text style={styles.loginLink}>Masuk</Text>
+                    <View style={styles.inputContainer}>
+                        <TextInput
+                            style={styles.input}
+                            placeholder="Email"
+                            value={email}
+                            onChangeText={setEmail}
+                            keyboardType="email-address"
+                            autoCapitalize="none"
+                        />
+                    </View>
+
+                    <View style={styles.inputContainer}>
+                        <TextInput
+                            style={styles.input}
+                            placeholder="Enter OTP Code"
+                            value={otp_code}
+                            onChangeText={setOtpCode}
+                            keyboardType="default"
+                        />
+                    </View>
+
+                    <View style={styles.inputContainer}>
+                        <TextInput
+                            style={styles.input}
+                            placeholder="New Password"
+                            secureTextEntry={!isPasswordVisible}
+                            value={password}
+                            onChangeText={setPassword}
+                        />
+                        <TouchableOpacity
+                            style={styles.eyeIcon}
+                            onPress={() => setIsPasswordVisible(!isPasswordVisible)}
+                        >
+                            <Icon name={isPasswordVisible ? 'eye-off-outline' : 'eye-outline'} size={20} color="#888" />
+                        </TouchableOpacity>
+                    </View>
+
+                    <View style={styles.strengthIndicatorContainer}>
+                        {[0, 1, 2].map((index) => (
+                            <View
+                                key={index}
+                                style={[
+                                    styles.strengthBar,
+                                    { backgroundColor: getStrengthBarColor(index) },
+                                    index < 2 && styles.strengthBarMargin,
+                                ]}
+                            />
+                        ))}
+                    </View>
+                    <Text style={[styles.strengthText, { color: getStrengthBarColor(0) }]}>
+                        {passwordStrengthLabel}
+                    </Text>
+
+                    <Text style={styles.requirementsText}>
+                        Password must contain at least 8 characters, including uppercase, lowercase, number, and special
+                        character.
+                    </Text>
+
+                    <View style={styles.inputContainer}>
+                        <TextInput
+                            style={styles.input}
+                            placeholder="Confirm New Password"
+                            secureTextEntry={!isConfirmPasswordVisible}
+                            value={confirmPassword}
+                            onChangeText={setConfirmPassword}
+                        />
+                        <TouchableOpacity
+                            style={styles.eyeIcon}
+                            onPress={() => setIsConfirmPasswordVisible(!isConfirmPasswordVisible)}
+                        >
+                            <Icon
+                                name={isConfirmPasswordVisible ? 'eye-off-outline' : 'eye-outline'}
+                                size={20}
+                                color="#888"
+                            />
+                        </TouchableOpacity>
+                    </View>
+                    {password !== confirmPassword && <Text style={styles.errorText}>Both passwords must match.</Text>}
+
+                    <TouchableOpacity
+                        style={[
+                            styles.resetButton,
+                            (passwordStrength <= 2 || password !== confirmPassword) && styles.disabledButton,
+                        ]}
+                        onPress={handlePasswordReset}
+                        disabled={passwordStrength <= 2 || password !== confirmPassword}
+                    >
+                        <Text style={styles.resetButtonText}>Reset Password</Text>
                     </TouchableOpacity>
                 </View>
-            </View>
-        </View>
+            </ScrollView>
+        </KeyboardAvoidingView>
     );
 };
 
 const styles = StyleSheet.create({
     container: {
         flex: 1,
-        backgroundColor: '#FFFFFF',
-        paddingHorizontal: 24,
-        paddingVertical: 30,
-        paddingTop: Platform.OS === 'ios' ? 20 : 0, // Sesuaikan untuk iOS dan Android
-        justifyContent: 'flex-start', // Sejajarkan item dari atas
+        backgroundColor: '#fff',
+    },
+    scrollContainer: {
+        padding: 20,
     },
     header: {
         flexDirection: 'row',
         justifyContent: 'space-between',
         alignItems: 'center',
-        position: 'absolute',
-        top: Platform.OS === 'ios' ? 20 : 0, // Sesuaikan untuk iOS dan Android
-        left: 20,
-        right: 20,
-        height: 60,
-        zIndex: 1,
     },
     rightIcon: {
-        width: 80,
-        height: 30,
+        width: 40,
+        height: 40,
     },
-    titleContainer: {
-        marginTop: 100, // Ruang di bawah header
-        flex: 1,
+    content: {
+        marginTop: 40,
     },
     title: {
         fontSize: 24,
@@ -109,49 +261,78 @@ const styles = StyleSheet.create({
         marginBottom: 10,
     },
     subtitle: {
-        fontSize: 14,
-        textAlign: 'left',
-        color: '#6B7280',
-        marginBottom: 20,
+        fontSize: 16,
+        marginBottom: 30,
     },
     inputContainer: {
-        width: '100%',
-        marginBottom: 20,
+        marginBottom: 15,
+        position: 'relative',
     },
     input: {
+        height: 50,
+        borderColor: '#ddd',
         borderWidth: 1,
-        borderColor: '#E5E7EB', // Warna border default
         borderRadius: 8,
-        padding: 12,
-        backgroundColor: '#F9FAFB',
+        paddingHorizontal: 10,
+        fontSize: 16,
     },
-    footer: {
-        alignItems: 'center',
-        marginBottom: 20, // Sesuaikan jarak dari bawah
+    eyeIcon: {
+        position: 'absolute',
+        right: 10,
+        top: 15,
     },
-    resetButton: {
-        width: '100%',
-        backgroundColor: '#007BFF',
-        borderRadius: 8,
-        paddingVertical: 14,
-        alignItems: 'center',
+    strengthIndicatorContainer: {
+        flexDirection: 'row',
+        marginBottom: 10,
+    },
+    strengthBar: {
+        flex: 1,
+        height: 4,
+        borderRadius: 2,
+    },
+    strengthBarMargin: {
+        marginRight: 5,
+    },
+    strengthText: {
+        fontSize: 14,
         marginBottom: 20,
     },
+    requirementsText: {
+        fontSize: 12,
+        color: '#888',
+        marginBottom: 20,
+    },
+    errorText: {
+        color: '#EF4444',
+        fontSize: 14,
+        marginBottom: 10,
+    },
+    resetButton: {
+        backgroundColor: '#148FFF',
+        paddingVertical: 15,
+        borderRadius: 8,
+        alignItems: 'center',
+    },
     resetButtonText: {
-        color: '#FFFFFF',
-        fontSize: 16,
-        fontWeight: '600',
+        color: '#fff',
+        fontSize: 18,
+        fontWeight: 'bold',
     },
-    loginContainer: {
-        flexDirection: 'row',
+    disabledButton: {
+        backgroundColor: '#BEBEBE',
+    },
+    loadingContainer: {
+        flex: 1,
         justifyContent: 'center',
+        alignItems: 'center',
     },
-    loginText: {
-        color: '#6B7280',
+    loadingAnimation: {
+        width: 100,
+        height: 100,
     },
-    loginLink: {
-        color: '#007BFF',
-        fontWeight: '600',
+    loadingText: {
+        fontSize: 18,
+        marginTop: 10,
     },
 });
 
