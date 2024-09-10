@@ -9,7 +9,6 @@ import {
     KeyboardAvoidingView,
     ScrollView,
     Platform,
-    ActivityIndicator,
 } from 'react-native';
 import Icon from 'react-native-vector-icons/Ionicons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -32,10 +31,8 @@ const ForgotPassword = ({ navigation }) => {
     const [isLoading, setIsLoading] = useState(false);
     const [showAlert, setShowAlert] = useState(false);
     const [alertMessage, setAlertMessage] = useState('');
-    const [focusedField, setFocusedField] = useState(null); // Single state for focus
 
     const fontsLoaded = useFonts(); // Use the custom hook to load fonts
-
     useEffect(() => {
         const loadEmail = async () => {
             try {
@@ -104,13 +101,8 @@ const ForgotPassword = ({ navigation }) => {
         if (passwordStrength <= 4) return index <= 1 ? '#FBBF24' : '#E5E7EB';
         return '#10B981';
     };
-
     if (!fontsLoaded) {
-        return (
-            <View style={styles.loadingContainer}>
-                <ActivityIndicator size="large" color="#148FFF" />
-            </View>
-        );
+        return null; // or a loading indicator
     }
 
     if (isLoading) {
@@ -159,40 +151,35 @@ const ForgotPassword = ({ navigation }) => {
                         Masukkan email, kode OTP, dan kata sandi baru untuk mereset kata sandi Anda.
                     </Text>
 
-                    <View style={[styles.inputContainer, focusedField === 'email' && styles.inputFocused]}>
+                    <View style={styles.inputContainer}>
                         <TextInput
                             style={styles.input}
                             placeholder="Email"
                             value={email}
+                            onChangeText={setEmail}
                             keyboardType="email-address"
                             autoCapitalize="none"
                             editable={false}
-                            onFocus={() => setFocusedField('email')}
-                            onBlur={() => setFocusedField(null)}
                         />
                     </View>
 
-                    <View style={[styles.inputContainer, focusedField === 'otp' && styles.inputFocused]}>
+                    <View style={styles.inputContainer}>
                         <TextInput
                             style={styles.input}
                             placeholder="Masukkan Kode OTP"
                             value={otp_code}
                             onChangeText={setOtpCode}
                             keyboardType="default"
-                            onFocus={() => setFocusedField('otp')}
-                            onBlur={() => setFocusedField(null)}
                         />
                     </View>
 
-                    <View style={[styles.inputContainer, focusedField === 'password' && styles.inputFocused]}>
+                    <View style={styles.inputContainer}>
                         <TextInput
                             style={styles.input}
                             placeholder="Kata Sandi Baru"
                             secureTextEntry={!isPasswordVisible}
                             value={password}
                             onChangeText={setPassword}
-                            onFocus={() => setFocusedField('password')}
-                            onBlur={() => setFocusedField(null)}
                         />
                         <TouchableOpacity
                             style={styles.eyeIcon}
@@ -223,15 +210,13 @@ const ForgotPassword = ({ navigation }) => {
                         karakter khusus.
                     </Text>
 
-                    <View style={[styles.inputContainer, focusedField === 'confirmPassword' && styles.inputFocused]}>
+                    <View style={styles.inputContainer}>
                         <TextInput
                             style={styles.input}
                             placeholder="Konfirmasi Kata Sandi Baru"
                             secureTextEntry={!isConfirmPasswordVisible}
                             value={confirmPassword}
                             onChangeText={setConfirmPassword}
-                            onFocus={() => setFocusedField('confirmPassword')}
-                            onBlur={() => setFocusedField(null)}
                         />
                         <TouchableOpacity
                             style={styles.eyeIcon}
@@ -244,63 +229,136 @@ const ForgotPassword = ({ navigation }) => {
                             />
                         </TouchableOpacity>
                     </View>
+                    {password !== confirmPassword && <Text style={styles.errorText}>Kedua kata sandi harus sama.</Text>}
 
-                    <TouchableOpacity style={styles.submitButton} onPress={handlePasswordReset}>
-                        <Text style={styles.submitButtonText}>Reset Kata Sandi</Text>
+                    <TouchableOpacity
+                        style={[
+                            styles.resetButton,
+                            (passwordStrength <= 2 || password !== confirmPassword) && styles.disabledButton,
+                        ]}
+                        onPress={handlePasswordReset}
+                        disabled={passwordStrength <= 2 || password !== confirmPassword}
+                    >
+                        <Text style={styles.resetButtonText}>Reset Kata Sandi</Text>
                     </TouchableOpacity>
                 </View>
             </ScrollView>
 
             <ReusableAlert
-                visible={showAlert}
+                show={showAlert}
+                alertType="error"
                 message={alertMessage}
-                onClose={() => setShowAlert(false)}
-                animationFile={require('../../assets/animations/error.json')}
+                onConfirm={() => setShowAlert(false)}
             />
         </KeyboardAvoidingView>
     );
 };
-
 const styles = StyleSheet.create({
-    container: { flex: 1, backgroundColor: '#fff' },
-    scrollContainer: { flexGrow: 1 },
-    header: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        justifyContent: 'space-between',
+    container: {
+        flex: 1,
+        backgroundColor: '#fff',
+    },
+    scrollContainer: {
         padding: 20,
     },
-    rightIcon: { width: 40, height: 40 },
-    content: { paddingHorizontal: 20, paddingBottom: 30 },
-    title: { fontSize: 24, fontFamily: 'Poppins-Bold', color: '#148FFF', marginBottom: 10 },
-    subtitle: { fontSize: 16, fontFamily: 'Poppins-Regular', color: '#777', marginBottom: 20 },
+    header: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+    },
+    rightIcon: {
+        width: 40,
+        height: 40,
+    },
+    content: {
+        marginTop: 40,
+    },
+    title: {
+        fontFamily: 'Poppins-Bold',
+        fontSize: 24,
+        color: '#148FFF',
+        marginBottom: 10,
+    },
+    subtitle: {
+        fontFamily: 'Poppins-Regular',
+        fontSize: 16,
+        marginBottom: 30,
+    },
     inputContainer: {
-        borderColor: '#E5E7EB',
+        marginBottom: 15,
+        position: 'relative',
+    },
+    input: {
+        fontFamily: 'Poppins-Regular',
+        height: 50,
+        borderColor: '#ddd',
         borderWidth: 1,
         borderRadius: 8,
-        flexDirection: 'row',
-        alignItems: 'center',
-        marginBottom: 15,
         paddingHorizontal: 10,
+        fontSize: 16,
     },
-    inputFocused: { borderColor: '#148FFF' },
-    input: { flex: 1, paddingVertical: 10, fontSize: 16, fontFamily: 'Poppins-Regular', color: '#333' },
-    eyeIcon: { padding: 10 },
-    strengthIndicatorContainer: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 5 },
-    strengthBar: { height: 6, flex: 1 },
-    strengthBarMargin: { marginRight: 4 },
-    strengthText: { textAlign: 'right', fontSize: 14, fontFamily: 'Poppins-Regular', marginBottom: 15 },
-    requirementsText: { fontSize: 12, fontFamily: 'Poppins-Regular', color: '#888', marginBottom: 20 },
-    submitButton: {
+    eyeIcon: {
+        position: 'absolute',
+        right: 10,
+        top: 15,
+    },
+    strengthIndicatorContainer: {
+        flexDirection: 'row',
+        marginBottom: 10,
+    },
+    strengthBar: {
+        flex: 1,
+        height: 4,
+        borderRadius: 2,
+    },
+    strengthBarMargin: {
+        marginRight: 5,
+    },
+    strengthText: {
+        fontFamily: 'Poppins-Medium',
+        fontSize: 14,
+        marginBottom: 20,
+    },
+    requirementsText: {
+        fontFamily: 'Poppins-Regular',
+        fontSize: 12,
+        color: '#888',
+        marginBottom: 20,
+    },
+    errorText: {
+        fontFamily: 'Poppins-Regular',
+        color: '#EF4444',
+        fontSize: 14,
+        marginBottom: 10,
+    },
+    resetButton: {
         backgroundColor: '#148FFF',
         paddingVertical: 15,
         borderRadius: 8,
         alignItems: 'center',
     },
-    submitButtonText: { fontSize: 18, fontFamily: 'Poppins-Bold', color: '#fff' },
-    loadingContainer: { flex: 1, justifyContent: 'center', alignItems: 'center' },
-    loadingAnimation: { width: 100, height: 100 },
-    loadingText: { fontFamily: 'Poppins-Regular', fontSize: 16, color: '#148FFF', marginTop: 20 },
+    resetButtonText: {
+        fontFamily: 'Poppins-Bold',
+        color: '#fff',
+        fontSize: 18,
+    },
+    disabledButton: {
+        backgroundColor: '#BEBEBE',
+    },
+    loadingContainer: {
+        flex: 1,
+        justifyContent: 'center',
+        alignItems: 'center',
+    },
+    loadingAnimation: {
+        width: 100,
+        height: 100,
+    },
+    loadingText: {
+        fontFamily: 'Poppins-Regular',
+        fontSize: 18,
+        marginTop: 10,
+    },
 });
 
 export default ForgotPassword;
