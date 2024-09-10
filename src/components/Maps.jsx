@@ -2,25 +2,62 @@ import React, {useState, useEffect} from 'react';
 import MapView, { UrlTile, Marker, Circle } from 'react-native-maps';
 import { StyleSheet, View, Text, PermissionsAndroid, Platform } from 'react-native';
 import Geolocation from 'react-native-geolocation-service'; // Make sure to install react-native-geolocation-service
+import { getParameter } from '../api/parameter';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const MyMap = () => {
     const [userLocation, setUserLocation] = useState(null);
+    const [companyId, setCompanyId] = useState(null);
+    const [location, setLocation] = useState(null);
+    const [radius, setRadius] = useState(0);
+
+    useEffect(() => {
+      const getData = async () => {
+          try {
+              const companyId = await AsyncStorage.getItem('companyId');
+
+              setCompanyId(companyId);
+          } catch (error) {
+              console.error('Error fetching AsyncStorage data:', error);
+          }
+      };
+
+      getData(); // Call the async function
+  }, []);
+
+    const fetchOfficeHour = async () => {
+      try {
+          const response = await getParameter(companyId);
+          setRadius(response.data.radius);
+          setLocation(response.data.location);
+
+      } catch (error) {
+          console.error('Error fetching office hour data:', error);
+          return null;
+      }
+  };
+
+  useEffect(() => {
+      fetchOfficeHour();
+  }, [companyId]);
+
+  const [latitude, longitude] = location ? location.split(',') : [0, 0];
   
   // Function to request location permission (needed for Android)
-  const requestLocationPermission = async () => {
-    if (Platform.OS === 'android') {
-      const granted = await PermissionsAndroid.request(
-        PermissionsAndroid.PERMISSIONS.ACCESS_FINE_LOCATION,
-        {
-          title: 'Location Access Required',
-          message: 'This app needs to access your location.',
-          buttonPositive: 'OK',
-        },
-      );
-      return granted === PermissionsAndroid.RESULTS.GRANTED;
-    }
-    return true; // iOS has its own permission flow
-  };
+  // const requestLocationPermission = async () => {
+  //   if (Platform.OS === 'android') {
+  //     const granted = await PermissionsAndroid.request(
+  //       PermissionsAndroid.PERMISSIONS.ACCESS_FINE_LOCATION,
+  //       {
+  //         title: 'Location Access Required',
+  //         message: 'This app needs to access your location.',
+  //         buttonPositive: 'OK',
+  //       },
+  //     );
+  //     return granted === PermissionsAndroid.RESULTS.GRANTED;
+  //   }
+  //   return true; // iOS has its own permission flow
+  // };
 
   // Get user's current location
   useEffect(() => {
@@ -46,8 +83,8 @@ const MyMap = () => {
   }, []);
 
     const markerCoordinates = {
-        latitude: -6.2218876,
-        longitude: 106.7911055,
+        latitude: latitude,
+        longitude: longitude,
       };
       
       return (
@@ -79,7 +116,7 @@ const MyMap = () => {
             {/* Radius Circle */}
             <Circle
               center={markerCoordinates}
-              radius={1000} // Radius in meters (1 km)
+              radius={500} // Radius in meters (1 km)
               strokeWidth={2}
               strokeColor="rgba(0, 150, 255, 0.5)" // Semi-transparent border
               fillColor="rgba(0, 150, 255, 0.2)" // Semi-transparent fill
@@ -95,7 +132,7 @@ const MyMap = () => {
                 />
                 <Circle
                   center={userLocation}
-                  radius={500} // Radius in meters around the user's location
+                  radius={radius} // Radius in meters around the user's location
                   strokeWidth={2}
                   strokeColor="rgba(0, 255, 0, 0.5)"
                   fillColor="rgba(0, 255, 0, 0.2)"

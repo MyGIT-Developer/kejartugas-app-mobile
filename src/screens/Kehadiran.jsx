@@ -1,4 +1,14 @@
-import { View, Text, StyleSheet, Button, Alert, TextInput, TouchableOpacity } from 'react-native';
+import {
+    View,
+    Text,
+    StyleSheet,
+    Button,
+    Alert,
+    Modal,
+    TextInput,
+    TouchableOpacity,
+    RefreshControl,
+} from 'react-native';
 import React, { useState, useEffect } from 'react';
 import ColorList from '../components/ColorList';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -10,11 +20,10 @@ import { ScrollView } from 'react-native-gesture-handler';
 import { markAbsent, getAttendance, getAttendanceReport, checkOut, checkIn } from '../api/absent';
 import { getParameter } from '../api/parameter';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { Table, TableWrapper, Row, Rows, Col, Cols, Cell } from 'react-native-table-component';
-import axios from 'axios';
 import { launchCameraAsync, MediaTypeOptions } from 'expo-image-picker';
 import * as FileSystem from 'expo-file-system'; // To convert image to base64
 import { useNavigation } from '@react-navigation/native';
+import { Feather } from '@expo/vector-icons';
 
 const Kehadiran = () => {
     const [currentTime, setCurrentTime] = useState('');
@@ -46,22 +55,6 @@ const Kehadiran = () => {
     const startDate = new Date('2024-09-01'); // 1st September 2024
     const today = new Date(); // Today's date
 
-    const fetchOfficeHour = async () => {
-        try {
-            const response = await getParameter(companyId);
-
-            setjamTelat(response.data.jam_telat);
-        } catch (error) {
-            // console.error("Error fetching office hour data:", error);
-        }
-    };
-
-    useEffect(() => {
-        fetchOfficeHour();
-    }, [companyId]);
-
-    console.log('response', jamTelat);
-
     const fetchAttendanceData = async () => {
         try {
             const response = await getAttendance(employeeId);
@@ -75,6 +68,18 @@ const Kehadiran = () => {
     useEffect(() => {
         fetchAttendanceData();
     }, [employeeId]);
+
+    const [refreshing, setRefreshing] = useState(false);
+
+    const onRefresh = () => {
+        setRefreshing(true);
+        // Perform the refreshing task (e.g., re-fetch data)
+        setTimeout(() => {
+            setRefreshing(false);
+            fetchAttendanceData();
+            console.log('Refreshed!');
+        });
+    };
 
     const getBackgroundColor = (absenStatus) => {
         switch (absenStatus) {
@@ -124,13 +129,16 @@ const Kehadiran = () => {
             year: 'numeric',
         });
 
+        // Format the date to match the format in your attendance data
         const formattedDate = currentDate.toISOString().split('T')[0]; // Format as 'YYYY-MM-DD'
 
+        // Find attendance data for the current date
         const attendanceForDate = attendanceData.find((attendance) => {
             const checkinDate = new Date(attendance.checkin).toISOString().split('T')[0];
             return checkinDate === formattedDate;
         });
 
+        // If attendance data exists for the current date, display the relevant information
         const status = attendanceForDate ? attendanceForDate.status : 'No Status';
         const checkIn = attendanceForDate
             ? new Date(attendanceForDate.checkin).toLocaleTimeString('en-GB', {
@@ -153,13 +161,14 @@ const Kehadiran = () => {
         const duration = attendanceForDate ? attendanceForDate.duration : 'N/A';
         const notes = attendanceForDate ? attendanceForDate.note : 'No notes';
 
-        // Push the views into the array to render later
-        dateViews.push(
+        // Insert the views at the start of the array to sort by the newest date first
+        dateViews.unshift(
             <View key={i} style={styles.containerPerDate}>
                 <View style={styles.upperAbsent}>
                     <Text>{formattedDateForUpper}</Text>
                     <View style={[styles.statusView, { backgroundColor: getBackgroundColor(status) }]}>
-                        <Text style={{ color: getIndicatorColor(status) }}>{status}</Text>
+                        <View style={{ padding: 5, backgroundColor: getIndicatorColor(status), borderRadius: 50 }} />
+                        <Text style={{ color: 'black' }}>{status}</Text>
                     </View>
                 </View>
 
@@ -259,105 +268,9 @@ const Kehadiran = () => {
         })();
     }, []);
 
-    const [isCheckedInToday, setIsCheckedInToday] = useState(false);
-    const [lateReason, setLateReason] = useState('Saya Telat Oi');
-
-    const calculateLateStatus = () => {
-        const currentDate = new Date();
-        const jamTelatParts = jamTelat.split(':');
-        const officeStartTime = new Date();
-        officeStartTime.setHours(parseInt(jamTelatParts[0], 10));
-        officeStartTime.setMinutes(parseInt(jamTelatParts[1], 10));
-        officeStartTime.setSeconds(0);
-
-        return currentDate > officeStartTime;
-    };
-
-    // const handleClockIn = async () => {
-    //     navigation.navigate('DetailKehadiran');
-    // };
-
     const handleClockIn = async () => {
-        let attendanceImage = '';
-
-        try {
-            // Open the camera with base64 option enabled
-            const result = await launchCameraAsync({
-                mediaTypes: MediaTypeOptions.Images,
-                allowsEditing: false,
-                quality: 1,
-                base64: true,
-            });
-
-            // Check if the camera operation was successful
-            if (!result.canceled && result.assets && result.assets[0].uri) {
-                // Use base64 from the result if available
-                attendanceImage = result.assets[0].base64
-                    ? `data:image/jpeg;base64,${result.assets[0].base64}`
-                    : await FileSystem.readAsStringAsync(result.assets[0].uri, {
-                          encoding: FileSystem.EncodingType.Base64,
-                      });
-
-                // Log data to verify
-                console.log(companyId, employeeId, lateReason, location);
-
-                // completeCheckIn(attendanceImage, null);
-                // Calculate if the user is late
-                const isLate = calculateLateStatus();
-                const response = await checkIn(employeeId, companyId, lateReason, attendanceImage, location);
-                console.log(response.data);
-                if (isLate) {
-                    // Show an alert or modal to input the late reason
-                    Alert.prompt(
-                        'Anda Terlambat!',
-                        'Silakan berikan alasan keterlambatan Anda:',
-                        [
-                            {
-                                text: 'Batal',
-                                style: 'cancel',
-                                onPress: () => console.log('Check-in canceled'),
-                            },
-                            {
-                                text: 'Kirim',
-                                onPress: (reason) => {
-                                    setLateReason(reason);
-                                    completeCheckIn(attendanceImage, reason);
-                                },
-                            },
-                        ],
-                        'plain-text',
-                    );
-                } else {
-                    // Proceed with the check-in without late reason
-                    completeCheckIn(attendanceImage, lateReason);
-                }
-            } else {
-                return; // Exit if the camera was cancelled or no valid URI was returned
-            }
-        } catch (error) {
-            const errorMessage = error || 'Unknown error';
-            console.log('Check-in error:', errorMessage);
-            alert(`Error when checking in: ${errorMessage}`);
-        }
+        navigation.navigate('DetailKehadiran');
     };
-
-    // Complete check-in function
-    const completeCheckIn = async (attendanceImage, note) => {
-        try {
-            // Continue with the API call using attendanceImage, lateReason, and location
-            const response = await checkIn(employeeId, companyId, note, attendanceImage, location);
-            console.log('Check-in success:', response.data);
-            alert('Anda berhasil check-in!');
-        } catch (error) {
-            const errorMessage = error || 'Unknown error';
-            console.log('Check-in error:', errorMessage);
-            alert(`Error when checking in: ${errorMessage}`);
-        } finally {
-            fetchAttendanceData();
-            setIsCheckedInToday(true);
-        }
-    };
-
 
     const handleClockOut = async () => {
         // setIsCheckedInToday(false);
@@ -406,17 +319,18 @@ const Kehadiran = () => {
             </View>
 
             <Text style={styles.header}>Kehadiran</Text>
-            <ScrollView>
+            <ScrollView
+                style={styles.mainContainer}
+                refreshControl={
+                    <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+                }
+            >
                 <View style={styles.upperContainer}>
                     <Text style={styles.timeText}>{currentTime}</Text>
-                    {/* <View style={styles.locationContainer}>
-                    <Icon name="location-on" size={24} color="#000" style={styles.icon} />
-                    <Text style={styles.locationText}>{errorMsg || locationName}</Text>
-                </View> */}
                     <Text style={styles.locationText}>{errorMsg || locationName}</Text>
 
                     <View style={styles.buttonContainer}>
-                        {isCheckedInToday ? (
+                        {isCheckedIn ? (
                             <CircularButton
                                 title="Clock Out"
                                 onPress={handleClockOut}
@@ -430,6 +344,7 @@ const Kehadiran = () => {
                             />
                         )}
                     </View>
+
                     {/* <Button title="Clock In" onPress={handleClockIn} /> */}
                 </View>
                 <View style={styles.midContainer}>
@@ -449,11 +364,13 @@ const Kehadiran = () => {
                             {date.toDateString()}
                         </Text>
                     </View>
-
-                    <Button title="Cari" style={styles.searchButton} onPress={showDatePicker} />
+                    <TouchableOpacity onPress={showDatePicker} style={styles.searchButton}>
+                        <Feather name="search" size={15} color="white" />
+                        <Text style={{ color: 'white' }}>Cari</Text>
+                    </TouchableOpacity>
                 </View>
 
-                {/* <View style={styles.midContainer}>
+                <View style={styles.midContainer}>
                     <View style={styles.paginationControls}>
                         <TouchableOpacity onPress={handlePreviousPage} disabled={currentPage === 0}>
                             <Text style={[styles.paginationButton, currentPage === 0 && styles.disabledButton]}>
@@ -476,17 +393,20 @@ const Kehadiran = () => {
                             </Text>
                         </TouchableOpacity>
                     </View>
-                </View> */}
+                </View>
                 {/* <View style={styles.lowerContainer}>{paginatedDateViews}</View> */}
-                <ScrollView style={styles.lowerContainer}>{dateViews}</ScrollView>
+                <View style={styles.lowerContainer}>
+                    <ScrollView style={styles.lowerInsideContainer}>{paginatedDateViews}</ScrollView>
+                </View>
             </ScrollView>
         </View>
     );
 };
 
 const styles = StyleSheet.create({
-    container: {
+    mainContainer: {
         flex: 1,
+        height: '100%',
     },
     locationContainer: {
         flexDirection: 'row', // Align items horizontally
@@ -515,7 +435,7 @@ const styles = StyleSheet.create({
     upperContainer: {
         backgroundColor: 'white',
         flex: 1,
-        borderRadius: 20,
+        borderRadius: 10,
         marginHorizontal: 20,
         marginTop: 20,
         // height: 200,
@@ -524,6 +444,18 @@ const styles = StyleSheet.create({
         flexDirection: 'column',
         gap: 10,
         padding: 20,
+
+        // iOS Shadow
+        shadowColor: '#000',
+        shadowOffset: {
+            width: 0,
+            height: 5,
+        },
+        shadowOpacity: 0.3,
+        shadowRadius: 6,
+
+        // Android Shadow
+        elevation: 8,
     },
     timeText: {
         fontSize: 34,
@@ -547,55 +479,87 @@ const styles = StyleSheet.create({
     midContainer: {
         backgroundColor: 'white',
         flex: 1,
-        borderRadius: 20,
+        borderRadius: 10,
         marginHorizontal: 20,
         marginTop: 20,
         maxHeight: 75,
         display: 'flex',
         flexDirection: 'row',
-        justifyContent: 'space-between',
+        justifyContent: 'center',
         alignItems: 'center',
+        gap: 10,
+        paddingVertical: 10,
+        paddingHorizontal: 20,
+
+        // iOS Shadow
+        shadowColor: '#000',
+        shadowOffset: {
+            width: 0,
+            height: 5,
+        },
+        shadowOpacity: 0.3,
+        shadowRadius: 6,
+
+        // Android Shadow
+        elevation: 8,
     },
     label: {
-        fontSize: 18,
-        marginBottom: 10,
+        fontSize: 14,
     },
     dateText: {
-        fontSize: 16,
-        marginTop: 10,
+        fontSize: 14,
+        backgroundColor: '#d7d7d7',
+        padding: 10,
+        borderRadius: 10,
     },
     datePicker: {
         width: '100%',
-        marginVertical: 10,
+        backgroundColor: 'black',
     },
     datepickerBox: {
         backgroundBox: '#d7d7d7',
     },
     searchButton: {
-        backgroundColor: '000',
+        display: 'flex',
+        flexDirection: 'row',
+        justifyContent: 'center',
+        alignItems: 'center',
+        backgroundColor: '#000',
+        padding: 10,
+        borderRadius: 10,
+        gap: 5,
     },
     lowerContainer: {
         flex: 1,
-        borderRadius: 20,
-        marginHorizontal: 20,
+        height: 250,
         marginTop: 20,
+        paddingHorizontal: 20,
+    },
+    lowerInsideContainer: {
         height: 250,
     },
     containerPerDate: {
         marginBottom: 20,
-        padding: 10,
+        padding: 15, // Increased padding
         backgroundColor: 'white',
         borderRadius: 8,
+
+        // iOS Shadow
         shadowColor: '#000',
         shadowOffset: {
             width: 0,
-            height: 2,
+            height: 5,
         },
-        shadowOpacity: 0.25,
+        shadowOpacity: 0.3,
+        shadowRadius: 6,
+
+        // Android Shadow
+        elevation: 8,
     },
     upperAbsent: {
         flexDirection: 'row',
         justifyContent: 'space-between',
+        alignItems: 'center',
         alignItems: 'center',
         borderBottomWidth: 1,
         borderBottomColor: 'gray',
@@ -634,6 +598,7 @@ const styles = StyleSheet.create({
     },
     lowerAbsent: {
         flexDirection: 'row',
+        alignItems: 'center',
         justifyContent: 'space-between',
         marginTop: 10,
         borderTopWidth: 1,
@@ -644,11 +609,16 @@ const styles = StyleSheet.create({
         backgroundColor: '#ddd',
         padding: 5,
         borderRadius: 4,
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 5,
     },
     paginationControls: {
         flexDirection: 'row',
         justifyContent: 'space-between',
+        alignItems: 'center',
         marginVertical: 20,
+        width: '100%',
     },
     paginationButton: {
         fontSize: 16,

@@ -41,3 +41,9 @@ export const TugasIcon = ({ focused }) => (
         <Text style={{ fontSize: 12, color: focused ? '#16247d' : '#111' }}>Tugas</Text>
     </View>
 );
+
+export const backIcon = ({ focused }) => (
+    <View style={{ alignItems: 'center' }}>
+         <Feather name="chevron-left" size={24} color={focused ? '#16247d' : '#111'} />
+    </View>
+);
