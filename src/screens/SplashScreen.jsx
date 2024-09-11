@@ -30,28 +30,28 @@ export default function SplashScreen() {
                             console.log('Token is valid');
                             navigation.reset({
                                 index: 0,
-                                routes: [{ name: 'App' }],
+                                routes: [{ name: 'BoardingScreen' }],
                             });
                         } else {
                             console.log('Token expired, clearing storage');
                             await clearAuthData();
-                            navigation.navigate('Login');
+                            navigation.navigate('BoardingScreen');
                         }
                     } else {
                         console.log('Token exists but no expiration time. Proceeding to App.');
                         navigation.reset({
                             index: 0,
-                            routes: [{ name: 'App' }],
+                            routes: [{ name: 'BoardingScreen' }],
                         });
                     }
                 } else {
                     console.log('No token found');
-                    navigation.navigate('Login');
+                    navigation.navigate('BoardingScreen');
                 }
             } catch (error) {
                 console.error('Error checking authentication status:', error);
                 await clearAuthData();
-                navigation.navigate('Login');
+                navigation.navigate('BoardingScreen');
             }
         };
 
@@ -68,7 +68,7 @@ export default function SplashScreen() {
 
     return (
         <View style={styles.container}>
-            <Image source={require('./../../assets/images/kt_icon.png')} style={styles.logo} />
+            <Image source={require('./../../assets/images/kt_app.png')} style={styles.logo} />
             <Image
                 source={require('./../../assets/images/kt_city_scapes.png')}
                 style={styles.cityscape}

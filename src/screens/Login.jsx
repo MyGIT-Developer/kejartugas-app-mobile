@@ -1,6 +1,5 @@
 import React, { useState, useCallback } from 'react';
 import {
-    StatusBar,
     KeyboardAvoidingView,
     Platform,
     Text,
@@ -9,11 +8,13 @@ import {
     StyleSheet,
     Image,
     TextInput,
+    ImageBackground,
+    Keyboard,
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { login } from './../api/auth';
-import LogoKTApp from '../../assets/images/k_logo.png';
-import { LinearGradient } from 'expo-linear-gradient';
+import LogoKTApp from '../../assets/images/kt_app.png';
+import BackgroundImage from '../../assets/images/kt_city_scapes.png';
 import { useNavigation } from '@react-navigation/native';
 import ReusableAlert from '../components/ReusableAlert';
 import { useFonts } from '../utils/UseFonts';
@@ -22,18 +23,26 @@ import { jwtDecode } from 'jwt-decode';
 
 const Login = () => {
     const [credentials, setCredentials] = useState({ username: '', password: '' });
-    const [focusedField, setFocusedField] = useState(null);
-    const [alert, setAlert] = useState({ show: false, message: '', type: 'success' });
     const [passwordVisible, setPasswordVisible] = useState(false);
+    const [alert, setAlert] = useState({ show: false, message: '', type: 'success' });
+    const [focusedInput, setFocusedInput] = useState(null);
+    const [keyboardVisible, setKeyboardVisible] = useState(false);
     const fontsLoaded = useFonts();
     const navigation = useNavigation();
+
+    React.useEffect(() => {
+        const keyboardDidShowListener = Keyboard.addListener('keyboardDidShow', () => setKeyboardVisible(true));
+        const keyboardDidHideListener = Keyboard.addListener('keyboardDidHide', () => setKeyboardVisible(false));
+
+        return () => {
+            keyboardDidShowListener.remove();
+            keyboardDidHideListener.remove();
+        };
+    }, []);
 
     const handleInputChange = useCallback((field, value) => {
         setCredentials((prev) => ({ ...prev, [field]: value }));
     }, []);
-
-    const handleFocus = useCallback((field) => setFocusedField(field), []);
-    const handleBlur = useCallback(() => setFocusedField(null), []);
 
     const showAlert = useCallback((message, type = 'error') => {
         setAlert({ show: true, message, type });
@@ -81,6 +90,10 @@ const Login = () => {
         }
     }, [credentials, navigation, showAlert]);
 
+    const togglePasswordVisibility = () => {
+        setPasswordVisible(!passwordVisible);
+    };
+
     if (!fontsLoaded) {
         return (
             <View style={styles.loadingContainer}>
@@ -90,153 +103,166 @@ const Login = () => {
     }
 
     return (
-        <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={styles.container}>
-            <LinearGradient
-                colors={['#0E509E', '#5FA0DC', '#9FD2FF']}
-                style={styles.gradient}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 1 }}
-            >
-                <StatusBar barStyle="dark-content" />
-                <View style={styles.innerContainer}>
-                    <View style={styles.formContainer}>
-                        <Image source={LogoKTApp} style={styles.pageLogo} resizeMode="cover" />
-                        <Text style={styles.title}>Log In Akun</Text>
-                        <View style={styles.form}>
+        <ImageBackground source={BackgroundImage} style={styles.backgroundImage}>
+            <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={styles.container}>
+                <View style={styles.card}>
+                    <Image source={LogoKTApp} style={styles.logo} resizeMode="contain" />
+                    <View style={styles.inputContainer}>
+                        <Text style={styles.label}>User Name</Text>
+                        <TextInput
+                            placeholder="Masukkan Username"
+                            value={credentials.username}
+                            onChangeText={(value) => handleInputChange('username', value)}
+                            style={styles.input}
+                        />
+                    </View>
+                    <View style={styles.inputContainer}>
+                        <Text style={styles.label}>Password</Text>
+                        <View style={styles.passwordContainer}>
                             <TextInput
-                                placeholder="Username"
-                                value={credentials.username}
-                                onChangeText={(value) => handleInputChange('username', value)}
-                                onFocus={() => handleFocus('username')}
-                                onBlur={handleBlur}
-                                autoCapitalize="none"
-                                style={[
-                                    styles.input,
-                                    { borderBottomColor: focusedField === 'username' ? '#148FFF' : '#E5E7EB' },
-                                ]}
+                                placeholder="Masukkan Password"
+                                value={credentials.password}
+                                onChangeText={(value) => handleInputChange('password', value)}
+                                secureTextEntry={!passwordVisible}
+                                style={styles.passwordInput}
                             />
-                            <View style={styles.passwordContainer}>
-                                <TextInput
-                                    placeholder="Password"
-                                    value={credentials.password}
-                                    onChangeText={(value) => handleInputChange('password', value)}
-                                    onFocus={() => handleFocus('password')}
-                                    onBlur={handleBlur}
-                                    secureTextEntry={!passwordVisible}
-                                    autoCapitalize="none"
-                                    style={[
-                                        styles.input,
-                                        { borderBottomColor: focusedField === 'password' ? '#148FFF' : '#E5E7EB' },
-                                    ]}
-                                />
-                                <TouchableOpacity
-                                    onPress={() => setPasswordVisible(!passwordVisible)}
-                                    style={styles.iconContainer}
-                                >
-                                    <Ionicons name={passwordVisible ? 'eye-off' : 'eye'} size={24} color="gray" />
-                                </TouchableOpacity>
-                            </View>
-                            <TouchableOpacity onPress={() => navigation.navigate('SentEmail')}>
-                                <Text style={styles.forgotPasswordText}>Lupa Password?</Text>
-                            </TouchableOpacity>
-                            <TouchableOpacity onPress={handleLogin} style={styles.submitButton}>
-                                <Text style={styles.submitButtonText}>Masuk</Text>
+                            <TouchableOpacity onPress={togglePasswordVisibility} style={styles.showButton}>
+                                <Text style={styles.showButtonText}>{passwordVisible ? 'Hide' : 'Show'}</Text>
                             </TouchableOpacity>
                         </View>
                     </View>
+                    <TouchableOpacity
+                        onPress={() => navigation.navigate('ForgotPassword')}
+                        style={styles.forgotPasswordContainer}
+                    >
+                        <Text style={styles.forgotPasswordText}>Lupa Password?</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity onPress={handleLogin} style={styles.loginButton}>
+                        <Text style={styles.loginButtonText}>Login</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity onPress={() => navigation.navigate('Step1')}>
+                        <Text style={styles.registerText}>
+                            <Text style={styles.registerTextBlack}>Belum punya akun? </Text>
+                            <Text style={styles.registerTextBlue}>Daftar sekarang!</Text>
+                        </Text>
+                    </TouchableOpacity>
                 </View>
-                <ReusableAlert
-                    show={alert.show}
-                    alertType={alert.type}
-                    message={alert.message}
-                    onConfirm={() => setAlert((prev) => ({ ...prev, show: false }))}
-                />
-            </LinearGradient>
-        </KeyboardAvoidingView>
+            </KeyboardAvoidingView>
+            {!keyboardVisible && (
+                <Text style={styles.footerText}>
+                    © 2024 KejarTugas.com by PT Global Innovation Technology. All rights reserved.
+                </Text>
+            )}
+            <ReusableAlert
+                show={alert.show}
+                alertType={alert.type}
+                message={alert.message}
+                onConfirm={() => setAlert((prev) => ({ ...prev, show: false }))}
+            />
+        </ImageBackground>
     );
 };
 
 const styles = StyleSheet.create({
+    backgroundImage: {
+        flex: 1,
+        width: '100%',
+        height: '100%',
+    },
     container: {
-        flex: 1,
-    },
-    gradient: {
-        flex: 1,
-    },
-    innerContainer: {
         flex: 1,
         justifyContent: 'center',
         alignItems: 'center',
     },
-    formContainer: {
-        backgroundColor: '#fff',
-        borderRadius: 15,
+    card: {
+        backgroundColor: 'rgba(255, 255, 255, 0.9)',
+        borderRadius: 10,
         padding: 20,
-        width: 320,
+        width: '90%',
+        maxWidth: 400,
         alignItems: 'center',
     },
-    pageLogo: {
-        width: 80,
+    logo: {
+        width: 200,
         height: 80,
         marginBottom: 20,
     },
-    title: {
-        color: '#148FFF',
-        fontSize: 20,
-        fontWeight: '700',
-        fontFamily: 'Poppins-Bold',
-        marginBottom: 20,
-    },
-    form: {
+    inputContainer: {
         width: '100%',
+        marginBottom: 15,
+    },
+    label: {
+        fontSize: 16,
+        marginBottom: 5,
+        fontWeight: 'bold',
     },
     input: {
-        backgroundColor: 'transparent',
-        borderBottomWidth: 1,
-        padding: 12,
-        marginBottom: 12,
-        fontFamily: 'Poppins-Regular',
+        backgroundColor: '#fff',
+        borderRadius: 5,
+        padding: 10,
+        fontSize: 16,
+        borderWidth: 1,
+        borderColor: '#ccc',
     },
     passwordContainer: {
-        position: 'relative',
+        flexDirection: 'row',
+        alignItems: 'center',
+        backgroundColor: '#fff',
+        borderRadius: 5,
+        borderWidth: 1,
+        borderColor: '#ccc',
+    },
+    passwordInput: {
+        flex: 1,
+        padding: 10,
+        fontSize: 16,
+    },
+    showButton: {
+        padding: 10,
+        borderLeftWidth: 1,
+        borderLeftColor: '#ccc',
+    },
+    showButtonText: {
+        color: '#007AFF',
+        fontSize: 14,
+    },
+    forgotPasswordContainer: {
+        alignSelf: 'flex-start',
         marginBottom: 20,
     },
-    iconContainer: {
-        position: 'absolute',
-        right: 10,
-        top: 10,
-    },
     forgotPasswordText: {
-        color: '#148FFF',
-        fontSize: 13,
-        fontWeight: '500',
-        fontFamily: 'Poppins-Regular',
-        marginTop: 6,
-        alignSelf: 'flex-end',
+        color: '#000',
+        fontSize: 14,
     },
-    submitButton: {
-        backgroundColor: '#148FFF',
-        borderRadius: 12,
-        height: 40,
-        justifyContent: 'center',
+    loginButton: {
+        backgroundColor: '#007AFF',
+        borderRadius: 5,
+        padding: 15,
+        width: '100%',
         alignItems: 'center',
-        elevation: 5,
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.3,
-        shadowRadius: 4,
-        marginTop: 18,
     },
-    submitButtonText: {
-        color: '#FFFFFF',
-        fontSize: 16,
-        fontWeight: '600',
-        fontFamily: 'Poppins-Bold',
+    loginButtonText: {
+        color: '#fff',
+        fontSize: 18,
+        fontWeight: 'bold',
     },
-    loadingContainer: {
-        flex: 1,
-        justifyContent: 'center',
-        alignItems: 'center',
+    registerText: {
+        marginTop: 20,
+        flexDirection: 'row',
+    },
+    registerTextBlack: {
+        color: '#000',
+    },
+    registerTextBlue: {
+        color: '#007AFF',
+    },
+    footerText: {
+        position: 'absolute',
+        bottom: 10,
+        width: '100%',
+        textAlign: 'center',
+        color: '#333',
+        fontSize: 12,
     },
 });
 

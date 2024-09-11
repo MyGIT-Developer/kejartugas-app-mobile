@@ -4,10 +4,13 @@ import AppNavigator from '../components/AppNavigator';
 import Login from '../screens/Login';
 import WaitingMail from '../screens/WaitingMail';
 import SentEmail from '../screens/SentEmail';
-import SplashScreen from '../screens/SplashScreen'; // Ensure this import is correct
+import SplashScreen from '../screens/SplashScreen';
 import Register from '../screens/Register';
 import DetailKehadiran from '../screens/DetailKehadiran';
 import ForgotPassword from '../screens/ForgotPassword';
+import BoardingScreen from '../screens/BoardingScreen';
+import Step1 from '../screens/Step1'; // Add this import
+import Step2 from '../screens/Step2'; // Add this import
 
 const Stack = createStackNavigator();
 
@@ -16,7 +19,7 @@ const RootNavigator = () => (
         screenOptions={{
             headerShown: false,
             gestureEnabled: true,
-            gestureDirection: 'horizontal', // Enable sliding gestures
+            gestureDirection: 'horizontal',
             cardStyleInterpolator: CardStyleInterpolators.forHorizontalIOS,
         }}
     >
@@ -28,6 +31,9 @@ const RootNavigator = () => (
         <Stack.Screen name="App" component={AppNavigator} />
         <Stack.Screen name="DetailKehadiran" component={DetailKehadiran} />
         <Stack.Screen name="ForgotPassword" component={ForgotPassword} />
+        <Stack.Screen name="BoardingScreen" component={BoardingScreen} />
+        <Stack.Screen name="Step1" component={Step1} />
+        <Stack.Screen name="Step2" component={Step2} />
     </Stack.Navigator>
 );
 

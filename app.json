@@ -4,7 +4,7 @@
         "slug": "kejar-tugas",
         "version": "1.0.0",
         "orientation": "portrait",
-        "icon": "./assets/images/icon.png",
+        "icon": "./assets/images/k_logo.png",
         "userInterfaceStyle": "light",
         "updates": {
             "fallbackToCacheTimeout": 0
@@ -16,7 +16,7 @@
         },
         "android": {
             "adaptiveIcon": {
-                "foregroundImage": "./assets/images/adaptive-icon.png",
+                "foregroundImage": "./assets/images/k_logo.png",
                 "backgroundColor": "#FFFFFF"
             },
             "package": "com.innovation.kejartugas",
@@ -37,7 +37,7 @@
             ]
         },
         "web": {
-            "favicon": "./assets/images/favicon.png"
+            "favicon": "./assets/images/k_logo.png"
         },
         "extra": {
             "eas": {
