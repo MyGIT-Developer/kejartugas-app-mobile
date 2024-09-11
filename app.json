@@ -4,8 +4,13 @@
         "slug": "kejar-tugas",
         "version": "1.0.0",
         "orientation": "portrait",
-        "icon": "./assets/images/k_logo.png",
+        "icon": "./assets/images/icon.png",
         "userInterfaceStyle": "light",
+        "splash": {
+            "image": "./assets/images/k_logo.png",
+            "resizeMode": "contain",
+            "backgroundColor": "#FFFFFF"
+        },
         "updates": {
             "fallbackToCacheTimeout": 0
         },
@@ -16,7 +21,7 @@
         },
         "android": {
             "adaptiveIcon": {
-                "foregroundImage": "./assets/images/k_logo.png",
+                "foregroundImage": "./assets/images/adaptive-icon.png",
                 "backgroundColor": "#FFFFFF"
             },
             "package": "com.innovation.kejartugas",
@@ -37,13 +42,13 @@
             ]
         },
         "web": {
-            "favicon": "./assets/images/k_logo.png"
+            "favicon": "./assets/images/favicon.png"
         },
+        "plugins": ["expo-font"],
         "extra": {
             "eas": {
-                "projectId": "94e37562-9996-4811-a658-715e06d31970"
+                "projectId": "e1ce8215-b7b5-4f6e-93e9-395c28377593"
             }
-        },
-        "plugins": ["expo-font"]
+        }
     }
 }
