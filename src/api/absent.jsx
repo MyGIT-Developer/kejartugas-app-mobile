@@ -36,7 +36,7 @@ export const getAttendanceReport = async () => {
     }
 };
 
-export const checkIn = async (employeeId, companyId, note, attendanceImageBase64, location) => {
+export const checkIn = async (employeeId, companyId, note, attendanceImageBase64, location, isWFH) => {
     try {
         const requestData = {
             company_id: parseInt(companyId),
@@ -44,6 +44,7 @@ export const checkIn = async (employeeId, companyId, note, attendanceImageBase64
             note: note,
             attendance_image: attendanceImageBase64, // Base64 encoded image
             location: location, // Assuming location is an object
+            isWFH: isWFH,
         };
 
         // Send POST request using apiService (no need for FormData, just a JSON payload)

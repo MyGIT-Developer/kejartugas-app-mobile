@@ -25,15 +25,13 @@ const RootNavigator = () => (
     >
         <Stack.Screen name="SplashScreen" component={SplashScreen} />
         <Stack.Screen name="Login" component={Login} />
-        <Stack.Screen name="SentEmail" component={SentEmail} />
-        <Stack.Screen name="WaitingMail" component={WaitingMail} />
+        <Stack.Screen name="Register" component={Register} />                                                                                                          
         <Stack.Screen name="App" component={AppNavigator} />
         <Stack.Screen name="DetailKehadiran" component={DetailKehadiran} />
         <Stack.Screen name="ForgotPassword" component={ForgotPassword} />
         <Stack.Screen name="BoardingScreen" component={BoardingScreen} />
         <Stack.Screen name="Step1" component={Step1} />
         <Stack.Screen name="Step2" component={Step2} />
-        <Stack.Screen name="SuccessRegist" component={success} />
     </Stack.Navigator>
 );
 

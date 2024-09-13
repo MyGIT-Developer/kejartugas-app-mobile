@@ -36,9 +36,16 @@ export default function SplashScreenWrapper() {
                 const token = await AsyncStorage.getItem('token');
                 const expiredToken = await AsyncStorage.getItem('expiredToken');
 
-                if (token && expiredToken) {
-                    const currentTime = new Date();
-                    const expirationTime = new Date(expiredToken);
+                console.log('Retrieved token:', token);
+                console.log('Retrieved expiredToken:', expiredToken);
+
+                if (token) {
+                    if (expiredToken) {
+                        const currentTime = new Date();
+                        const expirationTime = new Date(expiredToken);
+
+                        console.log('Current time:', currentTime);
+                        console.log('Expiration time:', expirationTime);
 
                     if (currentTime < expirationTime) {
                         navigateTo('App');
