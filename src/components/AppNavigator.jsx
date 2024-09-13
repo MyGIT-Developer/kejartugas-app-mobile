@@ -45,12 +45,12 @@ const AppNavigator = () => (
             }}
         />
         <Tab.Screen
-            name="Project"
-            component={Project}
+            name="Tugas"
+            component={Tugas}
             options={{
                 tabBarIcon: ({ focused }) => (
                     <View style={[styles.iconContainer, focused && styles.activeIconContainer]}>
-                        <ProjectIcon focused={focused} style={[styles.icon, focused && styles.activeIcon]} />
+                        <TugasIcon focused={focused} style={[styles.icon, focused && styles.activeIcon]} />
                     </View>
                 ),
             }}
@@ -77,13 +77,13 @@ const AppNavigator = () => (
                 ),
             }}
         />
-        <Tab.Screen
-            name="Tugas"
-            component={Tugas}
+         <Tab.Screen
+            name="Project"
+            component={Project}
             options={{
                 tabBarIcon: ({ focused }) => (
                     <View style={[styles.iconContainer, focused && styles.activeIconContainer]}>
-                        <TugasIcon focused={focused} style={[styles.icon, focused && styles.activeIcon]} />
+                        <ProjectIcon focused={focused} style={[styles.icon, focused && styles.activeIcon]} />
                     </View>
                 ),
             }}

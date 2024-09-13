@@ -15,9 +15,6 @@ export default function SplashScreen() {
                 const token = await AsyncStorage.getItem('token');
                 const expiredToken = await AsyncStorage.getItem('expiredToken');
 
-                console.log('Retrieved token:', token);
-                console.log('Retrieved expiredToken:', expiredToken);
-
                 if (token) {
                     if (expiredToken) {
                         const currentTime = new Date();

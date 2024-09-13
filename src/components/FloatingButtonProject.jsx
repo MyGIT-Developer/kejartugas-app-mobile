@@ -36,7 +36,7 @@ const FloatingButtonProject = () => {
 const styles = StyleSheet.create({
     container: {
         position: 'absolute',
-        bottom: 80,
+        bottom: 100,
         right: 20,
         alignItems: 'center',
     },
