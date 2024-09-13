@@ -1,106 +1,78 @@
-import React, { useEffect } from 'react';
-import { View, Image, StyleSheet, ActivityIndicator } from 'react-native';
+import React, { useEffect, useState, useCallback } from 'react';
+import { View, StyleSheet } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useNavigation } from '@react-navigation/native';
 import { useFonts } from '../utils/UseFonts';
+import * as SplashScreen from 'expo-splash-screen';
 
-export default function SplashScreen() {
+const SPLASH_DELAY = 2000;
+const AUTH_KEYS = ['userData', 'token', 'userJob', 'employeeId', 'companyId', 'expiredToken'];
+
+// Prevent the splash screen from auto-hiding
+SplashScreen.preventAutoHideAsync();
+
+export default function SplashScreenWrapper() {
     const navigation = useNavigation();
     const fontsLoaded = useFonts();
+    const [isLoading, setIsLoading] = useState(true);
+
+    const clearAuthData = useCallback(async () => {
+        await AsyncStorage.multiRemove(AUTH_KEYS);
+    }, []);
+
+    const navigateTo = useCallback(
+        (routeName) => {
+            navigation.reset({
+                index: 0,
+                routes: [{ name: routeName }],
+            });
+        },
+        [navigation],
+    );
 
     useEffect(() => {
         const checkAuthentication = async () => {
             try {
-                console.log('Checking authentication...');
                 const token = await AsyncStorage.getItem('token');
                 const expiredToken = await AsyncStorage.getItem('expiredToken');
 
-                console.log('Retrieved token:', token);
-                console.log('Retrieved expiredToken:', expiredToken);
+                if (token && expiredToken) {
+                    const currentTime = new Date();
+                    const expirationTime = new Date(expiredToken);
 
-                if (token) {
-                    if (expiredToken) {
-                        const currentTime = new Date();
-                        const expirationTime = new Date(expiredToken);
-
-                        console.log('Current time:', currentTime);
-                        console.log('Expiration time:', expirationTime);
-
-                        if (currentTime < expirationTime) {
-                            console.log('Token is valid');
-                            navigation.reset({
-                                index: 0,
-                                routes: [{ name: 'App' }],
-                            });
-                        } else {
-                            console.log('Token expired, clearing storage');
-                            await clearAuthData();
-                            navigation.navigate('BoardingScreen');
-                        }
+                    if (currentTime < expirationTime) {
+                        navigateTo('App');
                     } else {
-                        console.log('Token exists but no expiration time. Proceeding to App.');
-                        navigation.reset({
-                            index: 0,
-                            routes: [{ name: 'BoardingScreen' }],
-                        });
+                        await clearAuthData();
+                        navigateTo('BoardingScreen');
                     }
                 } else {
-                    console.log('No token found');
-                    navigation.navigate('BoardingScreen');
+                    navigateTo('BoardingScreen');
                 }
             } catch (error) {
                 console.error('Error checking authentication status:', error);
                 await clearAuthData();
-                navigation.navigate('BoardingScreen');
+                navigateTo('BoardingScreen');
+            } finally {
+                setIsLoading(false);
+                // Hide the splash screen
+                await SplashScreen.hideAsync();
             }
         };
 
-        const clearAuthData = async () => {
-            await AsyncStorage.multiRemove(['userData', 'token', 'userJob', 'employeeId', 'companyId', 'expiredToken']);
-        };
+        const timer = setTimeout(checkAuthentication, SPLASH_DELAY);
+        return () => clearTimeout(timer);
+    }, [clearAuthData, navigateTo]);
 
-        setTimeout(checkAuthentication, 2000);
-    }, [navigation]);
-
-    if (!fontsLoaded) {
-        return <ActivityIndicator size="small" color="#148FFF" style={styles.activityIndicator} />;
+    if (!fontsLoaded || isLoading) {
+        return null; // Return null to keep showing the native splash screen
     }
 
-    return (
-        <View style={styles.container}>
-            <Image source={require('./../../assets/images/kt_app.png')} style={styles.logo} />
-            <Image
-                source={require('./../../assets/images/kt_city_scapes.png')}
-                style={styles.cityscape}
-                onError={(error) => console.log('Image loading error:', error)}
-            />
-            <ActivityIndicator size="small" color="#148FFF" style={styles.activityIndicator} />
-        </View>
-    );
+    return <View style={styles.container} />;
 }
 
 const styles = StyleSheet.create({
     container: {
         flex: 1,
-        backgroundColor: '#E7E7E7',
-        alignItems: 'center',
-        justifyContent: 'center',
-    },
-    logo: {
-        width: 200,
-        height: 100,
-        resizeMode: 'contain',
-        marginBottom: 20,
-    },
-    cityscape: {
-        position: 'absolute',
-        bottom: 0,
-        width: 360,
-        height: 711,
-        resizeMode: 'cover',
-    },
-    activityIndicator: {
-        position: 'absolute',
-        bottom: 100,
     },
 });
