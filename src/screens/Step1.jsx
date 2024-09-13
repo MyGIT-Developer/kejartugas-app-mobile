@@ -10,31 +10,31 @@ import {
     KeyboardAvoidingView,
     ScrollView,
     Platform,
-    Keyboard, // Added import for Keyboard API
+    Linking,
+    Keyboard,
 } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 
 const Step1 = ({ navigation }) => {
-    const [organizationName, setOrganizationName] = useState('');
-    const [email, setEmail] = useState('');
+    const [company_name, setCompanyName] = useState('');
+    const [company_email, setCompanyEmail] = useState('');
     const [agreeToTerms, setAgreeToTerms] = useState(false);
     const [isFormValid, setIsFormValid] = useState(false);
-    const [footerVisible, setFooterVisible] = useState(true); // State to control footer visibility
+    const [footerVisible, setFooterVisible] = useState(true);
+    const [keyboardVisible, setKeyboardVisible] = useState(false);
 
     useEffect(() => {
-        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/; // Regex untuk validasi email
-        setIsFormValid(
-            organizationName.trim() !== '' &&
-                emailRegex.test(email) && // Validasi email
-                agreeToTerms,
-        );
-    }, [organizationName, email, agreeToTerms]);
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        setIsFormValid(company_name.trim() !== '' && emailRegex.test(company_email) && agreeToTerms);
+    }, [company_name, company_email, agreeToTerms]);
 
     useEffect(() => {
         const keyboardDidShowListener = Keyboard.addListener('keyboardDidShow', () => {
+            setKeyboardVisible(true);
             setFooterVisible(false); // Hide footer when keyboard is shown
         });
         const keyboardDidHideListener = Keyboard.addListener('keyboardDidHide', () => {
+            setKeyboardVisible(false);
             setFooterVisible(true); // Show footer when keyboard is hidden
         });
 
@@ -44,8 +44,17 @@ const Step1 = ({ navigation }) => {
         };
     }, []);
 
+    const handleLoginPress = () => {
+        navigation.navigate('Login');
+    };
     const handleNext = () => {
-        navigation.navigate('Step2');
+        navigation.navigate('Step2', {
+            company_name,
+            company_email,
+        });
+    };
+    const handleContactUs = () => {
+        Linking.openURL('mailto:HelpDesk@innovation.co.id');
     };
 
     return (
@@ -59,29 +68,29 @@ const Step1 = ({ navigation }) => {
                         <Image source={require('../../assets/images/k_logo.png')} style={styles.logo} />
                         <Text style={styles.welcomeText}>Selamat Datang di</Text>
                         <Text style={styles.appName}>Kejar Tugas</Text>
-                        <View style={styles.progressBar}>
-                            <View style={styles.progressIndicator} />
-                        </View>
-                        <Text style={styles.stepText}>Step 1: Buat Akun Organisasi</Text>
                         <Text style={styles.label}>
                             Nama Organisasi <Text style={styles.required}>*</Text>
                         </Text>
                         <TextInput
                             style={styles.input}
                             placeholder="Masukkan Nama Organisasi"
-                            value={organizationName}
-                            onChangeText={setOrganizationName}
+                            value={company_name}
+                            onChangeText={setCompanyName}
+                            onFocus={() => setFooterVisible(false)} // Hide footer when input is focused
+                            onBlur={() => setFooterVisible(true)} // Show footer when input is blurred
                         />
                         <Text style={styles.label}>
-                            Email <Text style={styles.required}>*</Text>
+                            Email Perusahaan <Text style={styles.required}>*</Text>
                         </Text>
                         <TextInput
                             style={styles.input}
                             placeholder="e.g. xx@gmail.com"
-                            value={email}
-                            onChangeText={setEmail}
+                            value={company_email}
+                            onChangeText={setCompanyEmail}
                             keyboardType="email-address"
                             autoCapitalize="none"
+                            onFocus={() => setFooterVisible(false)} // Hide footer when input is focused
+                            onBlur={() => setFooterVisible(true)} // Show footer when input is blurred
                         />
                         <View style={styles.checkboxContainer}>
                             <TouchableOpacity onPress={() => setAgreeToTerms(!agreeToTerms)} style={styles.checkbox}>
@@ -91,6 +100,11 @@ const Step1 = ({ navigation }) => {
                                 Saya setuju dengan <Text style={styles.linkText}>syarat dan ketentuan</Text>.
                             </Text>
                         </View>
+                        <TouchableOpacity
+                            onPress={() => Linking.openURL('http://202.10.36.103:8000/link/S&K_KejarTugas_2024.pdf')}
+                        >
+                            <Text style={styles.linkText}>Syarat dan Ketentuan</Text>
+                        </TouchableOpacity>
                         <View style={styles.buttonRow}>
                             <TouchableOpacity style={styles.secondaryButton} onPress={() => navigation.goBack()}>
                                 <Text style={styles.secondaryButtonText}>Tutup</Text>
@@ -105,17 +119,20 @@ const Step1 = ({ navigation }) => {
                             </TouchableOpacity>
                         </View>
                         <Text style={styles.questionText}>Ada pertanyaan?</Text>
-                        <TouchableOpacity style={styles.contactButton}>
+                        <TouchableOpacity style={styles.contactButton} onPress={handleContactUs}>
                             <Feather name="mail" size={20} color="#0056b3" style={styles.contactButtonIcon} />
                             <Text style={styles.contactButtonText}>Hubungi Kami</Text>
                         </TouchableOpacity>
                         <Text style={styles.loginText}>
-                            Sudah punya akun? <Text style={styles.loginLink}>Masuk</Text>
+                            Sudah punya akun?
+                            <Text style={styles.loginLink} onPress={handleLoginPress}>
+                                Masuk
+                            </Text>
                         </Text>
                     </View>
                 </ScrollView>
             </KeyboardAvoidingView>
-            {footerVisible && ( // Conditionally render footer
+            {footerVisible && ( // Show footer based on footerVisible state
                 <View style={styles.footerContainer}>
                     <Text style={styles.footerText}>
                         © 2024 KejarTugas.com by PT Global Innovation Technology. All rights reserved.
@@ -283,7 +300,7 @@ const styles = StyleSheet.create({
         marginBottom: 20,
     },
     contactButtonIcon: {
-        marginRight: 10,
+        marginRight: 8,
     },
     contactButtonText: {
         color: '#0056b3',
@@ -301,7 +318,7 @@ const styles = StyleSheet.create({
         bottom: 0,
         left: 0,
         right: 0,
-        backgroundColor: 'rgba(255, 255, 255, 0.7)',
+        backgroundColor: 'transparent',
         padding: 5,
     },
     footerText: {

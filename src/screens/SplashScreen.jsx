@@ -30,7 +30,7 @@ export default function SplashScreen() {
                             console.log('Token is valid');
                             navigation.reset({
                                 index: 0,
-                                routes: [{ name: 'BoardingScreen' }],
+                                routes: [{ name: 'App' }],
                             });
                         } else {
                             console.log('Token expired, clearing storage');

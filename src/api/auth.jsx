@@ -32,3 +32,27 @@ export const forgotPassword = async (email, otp_code, password) => {
         throw new Error(error.response?.data?.message || 'Failed to reset password');
     }
 };
+
+export const registerCompanies = async (
+    company_name,
+    company_email,
+    username,
+    employee_name,
+    password,
+    company_image,
+) => {
+    try {
+        const response = await apiService.post('/companies', {
+            company_name,
+            company_email, // Correct parameter name
+            employee_name,
+            username,
+            password,
+            company_image,
+        });
+        return response.data;
+    } catch (error) {
+        const errorMessage = error.response?.data?.message || 'Failed to create Perusahaan/organisasi';
+        throw new Error(errorMessage);
+    }
+};

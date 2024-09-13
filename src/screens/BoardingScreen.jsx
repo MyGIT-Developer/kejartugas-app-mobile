@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, Image, ImageBackground } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, Image, Linking, ImageBackground } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 
@@ -12,6 +12,9 @@ const BoardingScreen = () => {
 
     const handleRegisterPress = () => {
         navigation.navigate('Step1');
+    };
+    const handleContactUs = () => {
+        Linking.openURL('mailto:HelpDesk@innovation.co.id');
     };
 
     return (
@@ -26,8 +29,8 @@ const BoardingScreen = () => {
                         <Text style={styles.buttonText}>Daftar Baru</Text>
                     </TouchableOpacity>
                     <Text style={styles.questionText}>Ada pertanyaan?</Text>
-                    <TouchableOpacity style={styles.contactButton}>
-                        <Feather name="phone-call" size={20} color="#0056b3" style={styles.buttonIcon} />
+                    <TouchableOpacity style={styles.contactButton} onPress={handleContactUs}>
+                        <Feather name="mail" size={20} color="#0056b3" style={styles.contactButtonIcon} />
                         <Text style={styles.contactButtonText}>Hubungi Kami</Text>
                     </TouchableOpacity>
                     <Text style={styles.loginText}>
@@ -211,6 +214,9 @@ const styles = StyleSheet.create({
     contactButtonText: {
         color: '#0056b3',
         fontSize: 16,
+    },
+    contactButtonIcon: {
+        marginRight: 8, // Tambahkan margin kanan
     },
     loginText: {
         color: '#666',

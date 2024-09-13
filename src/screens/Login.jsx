@@ -85,7 +85,7 @@ const Login = () => {
                 navigation.navigate('App', { screen: 'Home' });
             }, 1500);
         } catch (err) {
-            console.error('Login failed:', err);
+            // console.error('Login failed:', err);
             showAlert(err.message);
         }
     }, [credentials, navigation, showAlert]);
@@ -140,7 +140,7 @@ const Login = () => {
                     <TouchableOpacity onPress={handleLogin} style={styles.loginButton}>
                         <Text style={styles.loginButtonText}>Login</Text>
                     </TouchableOpacity>
-                    <TouchableOpacity onPress={() => navigation.navigate('Step1')}>
+                    <TouchableOpacity onPress={() => navigation.navigate('BoardingScreen')}>
                         <Text style={styles.registerText}>
                             <Text style={styles.registerTextBlack}>Belum punya akun? </Text>
                             <Text style={styles.registerTextBlue}>Daftar sekarang!</Text>
