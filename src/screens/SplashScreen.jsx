@@ -47,10 +47,13 @@ export default function SplashScreenWrapper() {
                         console.log('Current time:', currentTime);
                         console.log('Expiration time:', expirationTime);
 
-                    if (currentTime < expirationTime) {
-                        navigateTo('App');
+                        if (currentTime < expirationTime) {
+                            navigateTo('App');
+                        } else {
+                            await clearAuthData();
+                            navigateTo('BoardingScreen');
+                        }
                     } else {
-                        await clearAuthData();
                         navigateTo('BoardingScreen');
                     }
                 } else {

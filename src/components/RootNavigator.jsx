@@ -25,7 +25,6 @@ const RootNavigator = () => (
     >
         <Stack.Screen name="SplashScreen" component={SplashScreen} />
         <Stack.Screen name="Login" component={Login} />
-        <Stack.Screen name="Register" component={Register} />                                                                                                          
         <Stack.Screen name="App" component={AppNavigator} />
         <Stack.Screen name="DetailKehadiran" component={DetailKehadiran} />
         <Stack.Screen name="ForgotPassword" component={ForgotPassword} />

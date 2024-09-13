@@ -93,18 +93,20 @@ const Step1 = ({ navigation }) => {
                             onBlur={() => setFooterVisible(true)} // Show footer when input is blurred
                         />
                         <View style={styles.checkboxContainer}>
-                            <TouchableOpacity onPress={() => setAgreeToTerms(!agreeToTerms)} style={styles.checkbox}>
+                            <TouchableOpacity
+                                onPress={() => {
+                                    setAgreeToTerms(!agreeToTerms);
+                                    Linking.openURL('http://202.10.36.103:8000/link/S&K_KejarTugas_2024.pdf');
+                                }}
+                                style={styles.checkbox}
+                            >
                                 {agreeToTerms && <Feather name="check" size={16} color="#0056b3" />}
                             </TouchableOpacity>
                             <Text style={styles.checkboxText}>
                                 Saya setuju dengan <Text style={styles.linkText}>syarat dan ketentuan</Text>.
                             </Text>
                         </View>
-                        <TouchableOpacity
-                            onPress={() => Linking.openURL('http://202.10.36.103:8000/link/S&K_KejarTugas_2024.pdf')}
-                        >
-                            <Text style={styles.linkText}>Syarat dan Ketentuan</Text>
-                        </TouchableOpacity>
+
                         <View style={styles.buttonRow}>
                             <TouchableOpacity style={styles.secondaryButton} onPress={() => navigation.goBack()}>
                                 <Text style={styles.secondaryButtonText}>Tutup</Text>
