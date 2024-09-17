@@ -49,10 +49,10 @@ const Home = () => {
         { id: 2, src: "Feather", icon: 'credit-card', description: 'Cuti'},
         { id: 3, src: "Feather", icon: 'check-circle', description: 'Klaim'},
         { id: 4, src: "Feather", icon: 'user-plus', description: 'Riwayat Tugas'},
-        { id: 1, src: "Feather", icon: 'users', description: 'Tugas Ad Hoc'},
-        { id: 2, src: "Feather", icon: 'credit-card', description: 'Cuti'},
-        { id: 3, src: "Feather", icon: 'check-circle', description: 'Klaim'},
-        { id: 4, src: "Feather", icon: 'user-plus', description: 'Riwayat Tugas'},
+        { id: 5, src: "Feather", icon: 'users', description: 'Tugas Ad Hoc'},
+        { id: 6, src: "Feather", icon: 'credit-card', description: 'Cuti'},
+        { id: 7, src: "Feather", icon: 'check-circle', description: 'Klaim'},
+        { id: 8, src: "Feather", icon: 'user-plus', description: 'Riwayat Tugas'},
     ];
     
 

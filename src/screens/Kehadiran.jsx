@@ -10,11 +10,7 @@ import { ScrollView } from 'react-native-gesture-handler';
 import { markAbsent, getAttendance, getAttendanceReport, checkOut, checkIn } from '../api/absent';
 import { getParameter } from '../api/parameter';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { Table, TableWrapper, Row, Rows, Col, Cols, Cell } from 'react-native-table-component';
-import axios from 'axios';
-import { launchCameraAsync, MediaTypeOptions } from 'expo-image-picker';
-import * as FileSystem from 'expo-file-system'; // To convert image to base64
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { Feather } from '@expo/vector-icons';
 import ReusableBottomPopUp from '../components/ReusableBottomPopUp';
 const { height } = Dimensions.get('window');
@@ -65,8 +61,6 @@ const Kehadiran = () => {
         fetchOfficeHour();
     }, [companyId]);
 
-    console.log('response', jamTelat);
-
     const fetchAttendanceData = useCallback(async () => {
         if (!employeeId) return;
 
@@ -86,6 +80,12 @@ const Kehadiran = () => {
             fetchAttendanceData();
         }
     }, [employeeId, fetchAttendanceData]);
+
+    useFocusEffect(
+        useCallback(() => {
+            fetchAttendanceData();
+        }, [fetchAttendanceData])
+    );
 
     const onRefresh = useCallback(async () => {
         console.log('onRefresh called');
@@ -310,8 +310,6 @@ const Kehadiran = () => {
         // setIsCheckedInToday(false);
         try {
             const updateResponse = await checkOut(employeeId, companyId);
-
-            console.log('Check-out success:', updateResponse.data);
 
             showAlert('You have successfully checked out!', 'success');
             setTimeout(() => {
