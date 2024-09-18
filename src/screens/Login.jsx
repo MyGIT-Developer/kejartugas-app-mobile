@@ -16,7 +16,7 @@ import { login } from './../api/auth';
 import LogoKTApp from '../../assets/images/kt_app.png';
 import BackgroundImage from '../../assets/images/kt_city_scapes.png';
 import { useNavigation } from '@react-navigation/native';
-import ReusableAlert from '../components/ReusableAlert';
+import ReusableAlertBottomPopUp from '../components/ReusableBottomPopUp'; // Import the new component
 import { useFonts } from '../utils/UseFonts';
 import { Ionicons } from '@expo/vector-icons';
 import { jwtDecode } from 'jwt-decode';
@@ -153,11 +153,11 @@ const Login = () => {
                     © 2024 KejarTugas.com by PT Global Innovation Technology. All rights reserved.
                 </Text>
             )}
-            <ReusableAlert
+            <ReusableAlertBottomPopUp
                 show={alert.show}
                 alertType={alert.type}
                 message={alert.message}
-                onConfirm={() => setAlert((prev) => ({ ...prev, show: false }))}
+                onConfirm={() => setAlert((prev) => ({ ...prev, show: false }))} // Update to use the new pop-up
             />
         </ImageBackground>
     );
