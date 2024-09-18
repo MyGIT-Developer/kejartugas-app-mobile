@@ -1,43 +1,74 @@
-// icons.jsx
 import React from 'react';
-import { View, Text } from 'react-native';
+import { View, Text, StyleSheet } from 'react-native';
 import { AntDesign, Feather, MaterialCommunityIcons } from '@expo/vector-icons';
 
-// Define icons with text labels based on screen names
-export const HomeIcon = ({ focused }) => (
-    <View style={{ alignItems: 'center' }}>
-        <AntDesign name="home" size={24} color={focused ? '#16247d' : '#111'} />
-        <Text style={{ fontSize: 12, color: focused ? '#16247d' : '#111' }}>Home</Text>
+const ICON_SIZE = 26;
+const LABEL_SIZE = 12;
+const ACTIVE_COLOR = '#16247d';
+const INACTIVE_COLOR = '#111';
+const KEHADIRAN_COLOR = '#fff';
+
+const IconWithLabel = ({ IconComponent, name, label, focused, color }) => (
+    <View style={styles.iconContainer}>
+        <IconComponent name={name} size={ICON_SIZE} color={focused ? color.active : color.inactive} />
+        {label && <Text style={[styles.label, { color: focused ? color.active : color.inactive }]}>{label}</Text>}
     </View>
+);
+
+export const HomeIcon = ({ focused }) => (
+    <IconWithLabel
+        IconComponent={AntDesign}
+        name="home"
+        label="Home"
+        focused={focused}
+        color={{ active: ACTIVE_COLOR, inactive: INACTIVE_COLOR }}
+    />
 );
 
 export const KehadiranIcon = ({ focused }) => (
-    <View style={{ alignItems: 'center' }}>
-        <MaterialCommunityIcons
-            name="calendar-check" // Choose an appropriate icon name for attendance
-            size={24}
-            color={focused ? '#fff' : '#fff'}
-        />
-    </View>
+    <IconWithLabel
+        IconComponent={MaterialCommunityIcons}
+        name="calendar-check"
+        focused={focused}
+        color={{ active: KEHADIRAN_COLOR, inactive: KEHADIRAN_COLOR }}
+    />
 );
 
 export const ProfileIcon = ({ focused }) => (
-    <View style={{ alignItems: 'center' }}>
-        <Feather name="user" size={24} color={focused ? '#16247d' : '#111'} />
-        <Text style={{ fontSize: 12, color: focused ? '#16247d' : '#111' }}>Profile</Text>
-    </View>
+    <IconWithLabel
+        IconComponent={Feather}
+        name="user"
+        label="Profile"
+        focused={focused}
+        color={{ active: ACTIVE_COLOR, inactive: INACTIVE_COLOR }}
+    />
 );
 
 export const ProjectIcon = ({ focused }) => (
-    <View style={{ alignItems: 'center' }}>
-        <AntDesign name="folderopen" size={24} color={focused ? '#16247d' : '#111'} />
-        <Text style={{ fontSize: 12, color: focused ? '#16247d' : '#111' }}>Project</Text>
-    </View>
+    <IconWithLabel
+        IconComponent={AntDesign}
+        name="folderopen"
+        label="Project"
+        focused={focused}
+        color={{ active: ACTIVE_COLOR, inactive: INACTIVE_COLOR }}
+    />
 );
 
 export const TugasIcon = ({ focused }) => (
-    <View style={{ alignItems: 'center' }}>
-        <Feather name="clipboard" size={24} color={focused ? '#16247d' : '#111'} />
-        <Text style={{ fontSize: 12, color: focused ? '#16247d' : '#111' }}>Tugas</Text>
-    </View>
+    <IconWithLabel
+        IconComponent={Feather}
+        name="clipboard"
+        label="Tugas"
+        focused={focused}
+        color={{ active: ACTIVE_COLOR, inactive: INACTIVE_COLOR }}
+    />
 );
+
+const styles = StyleSheet.create({
+    iconContainer: {
+        alignItems: 'center',
+    },
+    label: {
+        fontSize: LABEL_SIZE,
+    },
+});

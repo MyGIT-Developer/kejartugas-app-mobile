@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from 'react';
+import React from 'react';
 import { Animated, StyleSheet, View, Dimensions, Text, TouchableOpacity, Keyboard } from 'react-native';
 import LottieView from 'lottie-react-native';
 
@@ -8,62 +8,82 @@ import errorAnimation from '../../assets/animations/error.json';
 
 const { width, height } = Dimensions.get('window');
 
-const ReusableAlert = ({ show, alertType, message, onConfirm }) => {
-    const isSuccess = alertType === 'success';
-    const slideAnim = useRef(new Animated.Value(height)).current; // Start off-screen
+const ALERT_TYPES = {
+    SUCCESS: 'success',
+    ERROR: 'error',
+};
 
-    useEffect(() => {
+const DEFAULT_MESSAGES = {
+    [ALERT_TYPES.SUCCESS]: 'Action completed successfully.',
+    [ALERT_TYPES.ERROR]: 'An error occurred.',
+};
+
+const useSlideAnimation = (show) => {
+    const slideAnim = React.useRef(new Animated.Value(height)).current;
+
+    React.useEffect(() => {
         if (show) {
-            Keyboard.dismiss(); // Dismiss the keyboard when the alert shows
+            Keyboard.dismiss();
             Animated.spring(slideAnim, {
-                toValue: 0, // Slide up to visible position
+                toValue: 0,
                 useNativeDriver: true,
             }).start();
         } else {
             Animated.timing(slideAnim, {
-                toValue: height, // Slide down to hide
+                toValue: height,
                 duration: 300,
                 useNativeDriver: true,
             }).start();
         }
-    }, [show]);
+    }, [show, slideAnim]);
+
+    return slideAnim;
+};
+
+const ReusableAlert = React.memo(({ show, alertType, message, onConfirm }) => {
+    const isSuccess = alertType === ALERT_TYPES.SUCCESS;
+    const slideAnim = useSlideAnimation(show);
+
+    if (!show) return null;
 
     return (
-        show && (
-            <View style={styles.overlay}>
-                <Animated.View style={[styles.alertWrapper, { transform: [{ translateY: slideAnim }] }]}>
-                    <View style={styles.alertContent}>
-                        <View style={styles.iconContainer}>
-                            <LottieView
-                                source={isSuccess ? successAnimation : errorAnimation}
-                                autoPlay
-                                loop={false}
-                                style={styles.icon}
-                            />
-                        </View>
-                        <Text style={styles.title}>{isSuccess ? 'Success' : 'Error'}</Text>
-                        <Text style={styles.message}>
-                            {message || (isSuccess ? 'Action completed successfully.' : 'An error occurred.')}
-                        </Text>
+        <View style={styles.overlay}>
+            <Animated.View style={[styles.alertWrapper, { transform: [{ translateY: slideAnim }] }]}>
+                <View style={styles.alertContent}>
+                    <View style={styles.iconContainer}>
+                        <LottieView
+                            source={isSuccess ? successAnimation : errorAnimation}
+                            autoPlay
+                            loop={false}
+                            style={styles.icon}
+                        />
+                    </View>
+                    <Text style={styles.title}>{isSuccess ? 'Success' : 'Error'}</Text>
+                    <Text style={styles.message}>{message || DEFAULT_MESSAGES[alertType]}</Text>
+                    {!isSuccess && (
                         <TouchableOpacity style={styles.button} onPress={onConfirm}>
                             <Text style={styles.buttonText}>Okay</Text>
                         </TouchableOpacity>
-                    </View>
-                </Animated.View>
-            </View>
-        )
+                    )}
+                </View>
+            </Animated.View>
+        </View>
     );
+});
+
+ReusableAlert.defaultProps = {
+    show: false,
+    alertType: ALERT_TYPES.SUCCESS,
+    message: '',
+    onConfirm: () => {},
 };
 
 const styles = StyleSheet.create({
     overlay: {
-        flex: 1,
+        ...StyleSheet.absoluteFillObject,
         justifyContent: 'center',
         alignItems: 'center',
-        position: 'absolute',
-        width: width,
-        height: height,
-        backgroundColor: 'rgba(0, 0, 0, 0.5)', // Semi-transparent overlay
+        backgroundColor: 'rgba(0, 0, 0, 0.5)',
     },
     alertWrapper: {
         width: width * 0.85,

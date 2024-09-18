@@ -16,16 +16,14 @@ import { login } from './../api/auth';
 import LogoKTApp from '../../assets/images/kt_app.png';
 import BackgroundImage from '../../assets/images/kt_city_scapes.png';
 import { useNavigation } from '@react-navigation/native';
-import ReusableAlertBottomPopUp from '../components/ReusableBottomPopUp'; // Import the new component
+import ReusableAlert from '../components/ReusableAlert'; // Import the ReusableAlert component
 import { useFonts } from '../utils/UseFonts';
-import { Ionicons } from '@expo/vector-icons';
 import { jwtDecode } from 'jwt-decode';
 
 const Login = () => {
     const [credentials, setCredentials] = useState({ username: '', password: '' });
     const [passwordVisible, setPasswordVisible] = useState(false);
     const [alert, setAlert] = useState({ show: false, message: '', type: 'success' });
-    const [focusedInput, setFocusedInput] = useState(null);
     const [keyboardVisible, setKeyboardVisible] = useState(false);
     const fontsLoaded = useFonts();
     const navigation = useNavigation();
@@ -85,13 +83,16 @@ const Login = () => {
                 navigation.navigate('App', { screen: 'Home' });
             }, 1500);
         } catch (err) {
-            // console.error('Login failed:', err);
             showAlert(err.message);
         }
     }, [credentials, navigation, showAlert]);
 
     const togglePasswordVisibility = () => {
         setPasswordVisible(!passwordVisible);
+    };
+
+    const handleAlertConfirm = () => {
+        setAlert((prev) => ({ ...prev, show: false }));
     };
 
     if (!fontsLoaded) {
@@ -153,11 +154,11 @@ const Login = () => {
                     © 2024 KejarTugas.com by PT Global Innovation Technology. All rights reserved.
                 </Text>
             )}
-            <ReusableAlertBottomPopUp
+            <ReusableAlert
                 show={alert.show}
                 alertType={alert.type}
                 message={alert.message}
-                onConfirm={() => setAlert((prev) => ({ ...prev, show: false }))} // Update to use the new pop-up
+                onConfirm={handleAlertConfirm}
             />
         </ImageBackground>
     );
