@@ -6,25 +6,52 @@ import DetailProyekModal from '../components/ReusableBottomModal';
 
 const GRADIENT_COLORS = ['#0E509E', '#5FA0DC', '#9FD2FF'];
 
-const TaskCard = React.memo(({ title, subtitle, status, onProjectDetailPress }) => (
-    <View style={styles.taskCard}>
-        <View style={styles.taskContent}>
-            <Text style={styles.taskTitle}>{title}</Text>
-            <Text style={styles.taskSubtitle}>{subtitle}</Text>
+const TaskCard = React.memo(({ title, subtitle, status, onProjectDetailPress }) => {
+    const isShortContent = title.length <= 30 && subtitle.length <= 20;
+
+    return (
+        <View style={[styles.taskCard, isShortContent && styles.taskCardShort]}>
+            <View style={styles.taskContent}>
+                <Text
+                    style={[styles.taskTitle, isShortContent && styles.taskTitleShort]}
+                    numberOfLines={isShortContent ? 1 : 2}
+                    ellipsizeMode="tail"
+                >
+                    {title}
+                </Text>
+                <Text
+                    style={[styles.taskSubtitle, isShortContent && styles.taskSubtitleShort]}
+                    numberOfLines={1}
+                    ellipsizeMode="tail"
+                >
+                    {subtitle}
+                </Text>
+            </View>
+            <View style={[styles.statusBadge, isShortContent ? styles.statusBadgeShort : styles.statusBadgeLong]}>
+                <Text
+                    style={[styles.statusText, isShortContent && styles.statusTextShort]}
+                    numberOfLines={1}
+                    ellipsizeMode="tail"
+                >
+                    {status}
+                </Text>
+            </View>
+            <View style={styles.buttonContainer}>
+                <TouchableOpacity style={styles.detailButton}>
+                    <Text style={styles.detailButtonText}>Lihat detail {'>'}</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                    style={[styles.projectButton, isShortContent && styles.projectButtonShort]}
+                    onPress={onProjectDetailPress}
+                >
+                    <Text style={[styles.projectButtonText, isShortContent && styles.projectButtonTextShort]}>
+                        Detail Proyek
+                    </Text>
+                </TouchableOpacity>
+            </View>
         </View>
-        <View style={styles.statusBadge}>
-            <Text style={styles.statusText}>{status}</Text>
-        </View>
-        <View style={styles.buttonContainer}>
-            <TouchableOpacity style={styles.detailButton}>
-                <Text style={styles.detailButtonText}>Lihat detail {'>'}</Text>
-            </TouchableOpacity>
-            <TouchableOpacity style={styles.projectButton} onPress={onProjectDetailPress}>
-                <Text style={styles.projectButtonText}>Detail Proyek</Text>
-            </TouchableOpacity>
-        </View>
-    </View>
-));
+    );
+});
 
 const ShimmerTaskCard = () => (
     <View style={styles.taskCard}>
@@ -87,8 +114,8 @@ const Tugas = () => {
                         description: 'Project description here',
                     },
                     {
-                        title: 'Task 2',
-                        subtitle: 'KejarTugas',
+                        title: 'Pengembangan Platform E-learning Interaktif dengan Fitur Kecerdasan Buatan',
+                        subtitle: 'KejarTugas - Revolusi Pendidikan Digital melalui Teknologi Adaptif',
                         status: 'Tersisa 5 Hari',
                         assignedBy: 'Jane Smith',
                         duration: '1 week',
@@ -97,16 +124,17 @@ const Tugas = () => {
                 ],
                 inReview: [
                     {
-                        title: 'Review 1',
-                        subtitle: 'KejarTugas',
+                        title: 'Analisis dan Optimalisasi Performa Aplikasi Mobile untuk Peningkatan Pengalaman Pengguna',
+                        subtitle:
+                            'KejarTugas - Meningkatkan Kecepatan dan Efisiensi Aplikasi Melalui Teknik Optimasi Lanjutan',
                         status: 'Menunggu',
                         assignedBy: 'John Doe',
                         duration: '2 weeks',
                         description: 'Project description here',
                     },
                     {
-                        title: 'Review 2',
-                        subtitle: 'KejarTugas',
+                        title: 'Implementasi Sistem Keamanan Cyber Terpadu untuk Infrastruktur Perusahaan',
+                        subtitle: 'KejarTugas - Memperkuat Pertahanan Digital dengan Solusi Keamanan Multi-Lapisan',
                         status: 'Dalam Proses',
                         assignedBy: 'Jane Smith',
                         duration: '1 week',
@@ -115,8 +143,8 @@ const Tugas = () => {
                 ],
                 rejected: [
                     {
-                        title: 'Ditolak 1',
-                        subtitle: 'KejarTugas',
+                        title: 'Pengembangan Aplikasi IoT untuk Manajemen Energi Pintar di Gedung Komersial',
+                        subtitle: 'KejarTugas - Mengoptimalkan Konsumsi Energi melalui Teknologi Internet of Things',
                         status: 'Menunggu',
                         assignedBy: 'John Doe',
                         duration: '2 weeks',
@@ -125,8 +153,9 @@ const Tugas = () => {
                 ],
                 postponed: [
                     {
-                        title: 'Ditunda 1',
-                        subtitle: 'KejarTugas',
+                        title: 'Implementasi Sistem Analitik Big Data untuk Prediksi Tren Pasar dan Perilaku Konsumen',
+                        subtitle:
+                            'KejarTugas - Memanfaatkan Data Besar untuk Pengambilan Keputusan Bisnis yang Lebih Baik',
                         status: 'Menunggu',
                         assignedBy: 'John Doe',
                         duration: '2 weeks',
@@ -135,8 +164,8 @@ const Tugas = () => {
                 ],
                 completed: [
                     {
-                        title: 'Selesai 1',
-                        subtitle: 'KejarTugas',
+                        title: 'Pengembangan Platform Blockchain untuk Manajemen Rantai Pasokan Transparan',
+                        subtitle: 'KejarTugas - Meningkatkan Efisiensi dan Kepercayaan dalam Rantai Pasokan Global',
                         status: 'Selesai',
                         assignedBy: 'John Doe',
                         duration: '2 weeks',
@@ -259,45 +288,76 @@ const styles = StyleSheet.create({
     taskCard: {
         backgroundColor: 'white',
         borderRadius: 19,
-        padding: 20,
+        padding: 15,
         marginRight: 15,
         width: 312,
-        height: 140, // Increased height to accommodate new button
+        height: 180,
         elevation: 2,
         shadowColor: '#000',
         shadowOffset: { width: 0, height: 2 },
         shadowOpacity: 0.1,
         shadowRadius: 4,
     },
+    taskCardShort: {
+        height: 100,
+    },
     taskContent: {
-        marginBottom: 15,
+        flex: 1,
     },
     taskTitle: {
-        fontSize: 18,
+        fontSize: 16,
         fontWeight: 'bold',
         color: '#000',
         marginBottom: 5,
+        lineHeight: 22,
+    },
+    taskTitleShort: {
+        fontSize: 18,
+        marginBottom: 2,
     },
     taskSubtitle: {
         fontSize: 14,
         color: '#666',
+        marginBottom: 5,
+    },
+    taskSubtitleShort: {
+        fontSize: 12,
     },
     statusBadge: {
-        position: 'absolute',
-        top: 20,
-        right: 20,
         backgroundColor: '#E0E0E0',
-        paddingHorizontal: 12,
-        paddingVertical: 6,
-        borderRadius: 20,
+        paddingHorizontal: 8,
+        paddingVertical: 4,
+        borderRadius: 12,
+    },
+    statusBadgeShort: {
+        position: 'absolute',
+        top: 15,
+        right: 15,
+    },
+    statusBadgeLong: {
+        position: 'absolute',
+        bottom: 50,
+        left: 10,
     },
     statusText: {
         color: '#333',
         fontWeight: '500',
         fontSize: 12,
     },
+    statusTextShort: {
+        fontSize: 10,
+    },
+    buttonContainer: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        position: 'absolute',
+        bottom: 15,
+        left: 15,
+        right: 15,
+    },
     detailButton: {
-        // Remove position: 'absolute' and adjust as needed
+        // Styles remain the same
     },
     detailButtonText: {
         color: '#0E509E',
@@ -310,18 +370,18 @@ const styles = StyleSheet.create({
         paddingHorizontal: 12,
         borderRadius: 15,
     },
+    projectButtonShort: {
+        paddingVertical: 4,
+        paddingHorizontal: 8,
+        borderRadius: 12,
+    },
     projectButtonText: {
         color: 'white',
         fontWeight: '500',
         fontSize: 14,
     },
-    buttonContainer: {
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        position: 'absolute',
-        bottom: 20,
-        left: 20,
-        right: 20,
+    projectButtonTextShort: {
+        fontSize: 12,
     },
     shimmerTitle: {
         marginBottom: 10,
@@ -341,7 +401,7 @@ const styles = StyleSheet.create({
         left: 20,
     },
     bottomSpacer: {
-        height: 100, // Adjust this value as needed
+        height: 100,
     },
 });
 
