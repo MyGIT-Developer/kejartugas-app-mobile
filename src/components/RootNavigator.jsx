@@ -11,6 +11,10 @@ import BoardingScreen from '../screens/BoardingScreen';
 import Step1 from '../screens/Step1'; // Add this import
 import Step2 from '../screens/Step2'; // Add this import
 import success from '../components/SuccessRegist'; // Add this import
+import DetailProjek from '../screens/DetailProjek'; // Add this import
+import ProjectList from '../screens/ProjectList'; // Add this import
+import TaskOnReview from '../screens/TaskOnReview'; // Add this import
+import ProjectOnWorking from '../screens/ProjectOnWorking'; // Add this import
 
 const Stack = createStackNavigator();
 
@@ -31,6 +35,10 @@ const RootNavigator = () => (
         <Stack.Screen name="BoardingScreen" component={BoardingScreen} />
         <Stack.Screen name="Step1" component={Step1} />
         <Stack.Screen name="Step2" component={Step2} />
+        <Stack.Screen name="DetailProjek" component={DetailProjek} />
+        <Stack.Screen name="ProjectList" component={ProjectList} />
+        <Stack.Screen name="TaskOnReview" component={TaskOnReview} />
+        <Stack.Screen name="ProjectOnWorking" component={ProjectOnWorking} />
     </Stack.Navigator>
 );
 

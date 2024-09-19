@@ -10,10 +10,8 @@ import { LinearGradient } from 'expo-linear-gradient';
 import * as Progress from 'react-native-progress';
 import { TouchableOpacity } from 'react-native';
 import { Feather } from '@expo/vector-icons';
-import { useNavigation } from '@react-navigation/native';
 
 const Project = () => {
-    const navigation = useNavigation();
     const [project, setProject] = useState(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
@@ -79,26 +77,6 @@ const Project = () => {
         );
     }
 
-    const handleGoTo = (projectType) => {
-        switch (projectType) {
-            case 'all':
-                navigation.navigate('ProjectList');
-                break;
-            case 'onProgress':
-                navigation.navigate('ProjectOnWorking');
-                break;
-            case 'onReview':
-                navigation.navigate('TaskOnReview');
-                break;
-            default:
-                console.log('Unknown project type');
-        }
-    };
-
-    const handleGoToDetail = (projectId) => {
-        navigation.navigate('DetailProjek', { projectId });
-    }
-
     return (
         <ScrollView
             refreshControl={
@@ -126,7 +104,7 @@ const Project = () => {
                     <View style={styles.sectionContainer}>
                         <View style={styles.subHeader}>
                             <Text style={styles.subHeaderTextLeft}>Semua Proyek</Text>
-                            <Text style={styles.subHeaderTextRight} onPress={() => handleGoTo("all")}>Lihat Semua</Text>
+                            <Text style={styles.subHeaderTextRight}>Lihat Semua</Text>
                         </View>
                         <ScrollView
                             horizontal
@@ -179,7 +157,6 @@ const Project = () => {
                                                 alignItems: 'center',
                                                 alignSelf: 'flex-start',
                                             }}
-                                            onPress={() => handleGoToDetail(item.id)}
                                         >
                                             <Text>Lihat Detail</Text>
                                             <Feather name="chevron-right" size={24} color="black" />
@@ -195,7 +172,7 @@ const Project = () => {
                     <View style={styles.sectionContainer}>
                         <View style={styles.subHeader}>
                             <Text style={styles.subHeaderTextLeft}>Dalam Pengerjaan</Text>
-                            <Text style={styles.subHeaderTextRight} onPress={() => handleGoTo("onProgress")}>Lihat Semua</Text>
+                            <Text style={styles.subHeaderTextRight}>Lihat Semua</Text>
                         </View>
                         <ScrollView
                             horizontal
@@ -251,7 +228,7 @@ const Project = () => {
                     <View style={styles.sectionContainer}>
                         <View style={styles.subHeader}>
                             <Text style={styles.subHeaderTextLeft}>Dalam Peninjauan</Text>
-                            <Text style={styles.subHeaderTextRight} onPress={() => handleGoTo("onReview")}>Lihat Semua</Text>
+                            <Text style={styles.subHeaderTextRight}>Lihat Semua</Text>
                         </View>
                         <ScrollView
                             horizontal

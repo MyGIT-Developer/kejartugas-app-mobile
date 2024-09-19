@@ -3,7 +3,7 @@ import { View, StyleSheet, Animated, PanResponder, Dimensions } from 'react-nati
 
 const { height } = Dimensions.get('window');
 const MIN_HEIGHT = height * 0.3;
-const MAX_HEIGHT = height;
+const MAX_HEIGHT = height * 0.9;
 const INITIAL_HEIGHT = height * 0.3;
 const MAX_BORDER_RADIUS = 30;
 
