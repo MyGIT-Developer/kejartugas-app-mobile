@@ -10,7 +10,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import * as Progress from 'react-native-progress';
 import { TouchableOpacity } from 'react-native';
 import { Feather } from '@expo/vector-icons';
-import { useNavigation } from '@react-navigation/native';
+import{ useNavigation } from '@react-navigation/native';
 
 const Project = () => {
     const navigation = useNavigation();
@@ -79,22 +79,6 @@ const Project = () => {
         );
     }
 
-    const handleGoTo = (projectType) => {
-        switch (projectType) {
-            case 'all':
-                navigation.navigate('ProjectList');
-                break;
-            case 'onProgress':
-                navigation.navigate('ProjectOnWorking');
-                break;
-            case 'onReview':
-                navigation.navigate('TaskOnReview');
-                break;
-            default:
-                console.log('Unknown project type');
-        }
-    };
-
     const handleGoToDetail = (projectId) => {
         navigation.navigate('DetailProjek', { projectId });
     }
@@ -119,27 +103,22 @@ const Project = () => {
                     end={{ x: 1, y: 1 }}
                 />
             </View>
-            <Text style={styles.header}>Projek</Text>
+            <Text style={styles.header}>Projeks</Text>
             <View style={[styles.header, { backgroundColor: 'black' }]}></View>
             <View style={{ flex: 1, padding: 20 }}>
                 <View style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
                     <View style={styles.sectionContainer}>
-                        <View style={styles.subHeader}>
-                            <Text style={styles.subHeaderTextLeft}>Semua Proyek</Text>
-                            <Text style={styles.subHeaderTextRight} onPress={() => handleGoTo("all")}>Lihat Semua</Text>
-                        </View>
                         <ScrollView
-                            horizontal
                             pagingEnabled
                             showsHorizontalScrollIndicator={false}
-                            style={{ flex: 1, flexDirection: 'row' }}
+                            style={{ display: 'flex', flexDirection: 'column', gap: 10 }}
                         >
                             {project && Array.isArray(project) ? (
                                 project.map((item, index) => (
                                     <View
                                         key={index}
                                         style={{
-                                            width: 250,
+                                            width: '100%',
                                             padding: 10,
                                             backgroundColor: '#fff',
                                             marginHorizontal: 5,
@@ -184,118 +163,6 @@ const Project = () => {
                                             <Text>Lihat Detail</Text>
                                             <Feather name="chevron-right" size={24} color="black" />
                                         </TouchableOpacity>
-                                    </View>
-                                ))
-                            ) : (
-                                <Text>No projects found</Text>
-                            )}
-                        </ScrollView>
-                    </View>
-
-                    <View style={styles.sectionContainer}>
-                        <View style={styles.subHeader}>
-                            <Text style={styles.subHeaderTextLeft}>Dalam Pengerjaan</Text>
-                            <Text style={styles.subHeaderTextRight} onPress={() => handleGoTo("onProgress")}>Lihat Semua</Text>
-                        </View>
-                        <ScrollView
-                            horizontal
-                            pagingEnabled
-                            showsHorizontalScrollIndicator={false}
-                            style={{ flex: 1, flexDirection: 'row' }}
-                        >
-                            {project && Array.isArray(project) ? (
-                                project.map((item, index) => (
-                                    <View
-                                        key={index}
-                                        style={{
-                                            width: 250,
-                                            padding: 10,
-                                            backgroundColor: '#fff',
-                                            marginHorizontal: 5,
-                                            height: 100,
-                                            borderRadius: 10,
-                                            shadowColor: '#000',
-                                            shadowOpacity: 0.25,
-                                            shadowOffset: { width: 0, height: 5 },
-                                            shadowRadius: 10,
-                                            elevation: 5,
-                                            display: 'flex',
-                                            flexDirection: 'column',
-                                            justifyContent: 'space-between',
-                                            padding: 10,
-                                        }}
-                                    >
-                                        <Text style={{ alignSelf: 'flex-start', fontWeight: 600, fontSize: 16 }}>
-                                            {item.project_name}
-                                        </Text>
-
-                                        <View
-                                            style={{
-                                                padding: 5,
-                                                backgroundColor: 'orange',
-                                                borderRadius: 50,
-                                                justifyContent: 'center',
-                                                display: 'flex',
-                                            }}
-                                        >
-                                            <Text style={{ color: 'white' }}>9 Dalam Pengerjaan</Text>
-                                        </View>
-                                    </View>
-                                ))
-                            ) : (
-                                <Text>No projects found</Text>
-                            )}
-                        </ScrollView>
-                    </View>
-
-                    <View style={styles.sectionContainer}>
-                        <View style={styles.subHeader}>
-                            <Text style={styles.subHeaderTextLeft}>Dalam Peninjauan</Text>
-                            <Text style={styles.subHeaderTextRight} onPress={() => handleGoTo("onReview")}>Lihat Semua</Text>
-                        </View>
-                        <ScrollView
-                            horizontal
-                            pagingEnabled
-                            showsHorizontalScrollIndicator={false}
-                            style={{ flex: 1, flexDirection: 'row' }}
-                        >
-                            {project && Array.isArray(project) ? (
-                                project.map((item, index) => (
-                                    <View
-                                        key={index}
-                                        style={{
-                                            width: 315,
-                                            padding: 10,
-                                            backgroundColor: '#fff',
-                                            marginHorizontal: 5,
-                                            height: 100,
-                                            borderRadius: 10,
-                                            shadowColor: '#000',
-                                            shadowOpacity: 0.25,
-                                            shadowOffset: { width: 0, height: 5 },
-                                            shadowRadius: 10,
-                                            elevation: 5,
-                                            display: 'flex',
-                                            flexDirection: 'column',
-                                            justifyContent: 'space-between',
-                                            padding: 10,
-                                        }}
-                                    >
-                                        <Text style={{ alignSelf: 'flex-start', fontWeight: 600, fontSize: 16 }}>
-                                            {item.project_name}
-                                        </Text>
-
-                                        <View
-                                            style={{
-                                                padding: 5,
-                                                backgroundColor: 'red',
-                                                borderRadius: 50,
-                                                justifyContent: 'center',
-                                                display: 'flex',
-                                            }}
-                                        >
-                                            <Text style={{ color: 'white' }}>9 Dalam Peninjauan</Text>
-                                        </View>
                                     </View>
                                 ))
                             ) : (

@@ -26,6 +26,7 @@ import ReusableBottomPopUp from '../components/ReusableBottomPopUp';
 import { Feather } from '@expo/vector-icons';
 import CheckBox from '../components/Checkbox';
 import DraggableOverlayBottom from '../components/DraggableOverlayBottom'; // Adjust the import path as needed
+import ClickableBottomOverlay from '../components/ClickableBottomOverlay';
 
 const DetailKehadiran = () => {
     const [currentTime, setCurrentTime] = useState('');
@@ -329,11 +330,9 @@ const DetailKehadiran = () => {
                             {isUserLate ? (
                                 <TouchableOpacity
                                     style={[
-                                        styles.checkInButton,
-                                        !reasonInput ? styles.disabledButton : styles.enabledButton,
+                                        styles.checkInButton, styles.enabledButton,
                                     ]}
                                     onPress={handleClockIn}
-                                    disabled={!reasonInput}
                                 >
                                     <Text style={styles.buttonText}>Clock In</Text>
                                 </TouchableOpacity>

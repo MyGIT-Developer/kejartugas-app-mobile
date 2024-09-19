@@ -396,6 +396,7 @@ const Kehadiran = () => {
                         )}
                     </View>
                 </View>
+
                 {/* <View style={styles.midContainer}>
                     <Text style={styles.label}>Mulai</Text>
                     {show && (
@@ -545,15 +546,21 @@ const styles = StyleSheet.create({
     },
     midContainer: {
         backgroundColor: 'white',
-        flex: 1,
         borderRadius: 15,
-        marginTop: 20,
         maxHeight: 75,
         display: 'flex',
         flexDirection: 'row',
         justifyContent: 'center',
         alignItems: 'center',
         gap: 10,
+
+        shadowColor: '#000',
+        shadowOffset: {
+            width: 0,
+            height: 2,
+        },
+        shadowOpacity: 0.25,
+        elevation: 5,
     },
     label: {
         fontSize: 16,
