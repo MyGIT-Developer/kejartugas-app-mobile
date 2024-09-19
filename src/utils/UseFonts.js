@@ -7,6 +7,7 @@ export const useFonts = () => {
         'Poppins-Bold': require('../../assets/fonts/Poppins-Bold.ttf'),
         'Poppins-Italic': require('../../assets/fonts/Poppins-Italic.ttf'),
         'Poppins-Medium': require('../../assets/fonts/Poppins-Medium.ttf'),
+        'Poppins-Semi-Bold': require('../../assets/fonts/Poppins-SemiBold.ttf'),
         // Add more font weights or styles as needed
     });
 

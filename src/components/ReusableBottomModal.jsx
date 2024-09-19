@@ -1,9 +1,16 @@
 import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Modal, Dimensions, ScrollView } from 'react-native';
+import { useFonts } from '../utils/UseFonts'; // Import the useFonts hook
 
 const { width, height } = Dimensions.get('window');
 
 const ReusableBottomModal = ({ visible, onClose, projectDetails }) => {
+    const fontsLoaded = useFonts(); // Call the useFonts hook
+
+    if (!fontsLoaded) {
+        return null; // Optionally, you can return a loading indicator here
+    }
+
     return (
         <Modal visible={visible} transparent={true} animationType="slide" onRequestClose={onClose}>
             <View style={styles.modalOverlay}>
@@ -24,11 +31,9 @@ const ReusableBottomModal = ({ visible, onClose, projectDetails }) => {
 
                         <View style={styles.descriptionContainer}>
                             <Text style={styles.detailLabel}>Keterangan Proyek</Text>
-                            <ScrollView style={styles.descriptionScrollView}>
-                                <Text style={styles.detailValue}>
-                                    {projectDetails.description || 'Tidak ada keterangan'}
-                                </Text>
-                            </ScrollView>
+                            <Text style={styles.detailValue}>
+                                {projectDetails.description || 'Tidak ada keterangan'}
+                            </Text>
                         </View>
                     </ScrollView>
 
@@ -53,7 +58,7 @@ const styles = StyleSheet.create({
         borderTopRightRadius: 20,
         padding: 20,
         width: '100%',
-        maxHeight: height * 0.8, // Limit the height to 80% of screen height
+        maxHeight: '80%', // Limit the height to 80% of screen height
     },
     scrollViewContent: {
         flexGrow: 1,
@@ -63,6 +68,7 @@ const styles = StyleSheet.create({
         fontWeight: 'bold',
         marginBottom: 20,
         textAlign: 'center',
+        fontFamily: 'Poppins-Bold', // Use the custom font
     },
     detailContainer: {
         flexDirection: 'row',
@@ -71,22 +77,21 @@ const styles = StyleSheet.create({
     },
     detailColumn: {
         flex: 1,
+        marginRight: 10, // Add some space between columns
     },
     descriptionContainer: {
         marginBottom: 20,
-        maxHeight: height * 0.3, // Limit description height to 30% of screen height
-    },
-    descriptionScrollView: {
-        maxHeight: height * 0.25, // Adjust this value as needed
     },
     detailLabel: {
         fontSize: 14,
-        color: '#666',
+        color: '#000',
         marginBottom: 5,
+        fontFamily: 'Poppins-Bold', // Use the custom font and make it bold
     },
     detailValue: {
         fontSize: 16,
-        fontWeight: '500',
+        color: '#666', // Set the value color to #666
+        fontFamily: 'Poppins-Regular', // Use the custom font
     },
     button: {
         backgroundColor: '#3498db',
@@ -99,6 +104,7 @@ const styles = StyleSheet.create({
         color: 'white',
         fontSize: 16,
         fontWeight: 'bold',
+        fontFamily: 'Poppins-Bold', // Use the custom font
     },
 });
 
