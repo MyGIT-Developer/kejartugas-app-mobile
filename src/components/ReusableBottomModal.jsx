@@ -5,10 +5,15 @@ import { useFonts } from '../utils/UseFonts'; // Import the useFonts hook
 const { width, height } = Dimensions.get('window');
 
 const ReusableBottomModal = ({ visible, onClose, projectDetails }) => {
-    const fontsLoaded = useFonts(); // Call the useFonts hook
+    const fontsLoaded = useFonts();
 
     if (!fontsLoaded) {
-        return null; // Optionally, you can return a loading indicator here
+        return null;
+    }
+
+    // Check if projectDetails is defined
+    if (!projectDetails) {
+        return null; // Optionally, return null or render a loading indicator here
     }
 
     return (

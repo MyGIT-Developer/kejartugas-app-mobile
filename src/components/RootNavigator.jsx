@@ -15,6 +15,8 @@ import DetailProjek from '../screens/DetailProjek'; // Add this import
 import ProjectList from '../screens/ProjectList'; // Add this import
 import TaskOnReview from '../screens/TaskOnReview'; // Add this import
 import ProjectOnWorking from '../screens/ProjectOnWorking'; // Add this import
+import SubmitTugas from '../screens/SubmitTugas'; // Add this import
+import DetailTaskSection from '../screens/DetailTaskSection'; // Add this import
 
 const Stack = createStackNavigator();
 
@@ -39,6 +41,8 @@ const RootNavigator = () => (
         <Stack.Screen name="ProjectList" component={ProjectList} />
         <Stack.Screen name="TaskOnReview" component={TaskOnReview} />
         <Stack.Screen name="ProjectOnWorking" component={ProjectOnWorking} />
+        <Stack.Screen name="SubmitTugas" component={SubmitTugas} />
+        <Stack.Screen name="DetailTaskSection" component={DetailTaskSection} />
     </Stack.Navigator>
 );
 

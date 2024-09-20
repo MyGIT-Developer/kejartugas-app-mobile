@@ -3,13 +3,14 @@ import { View, Text, StyleSheet, ScrollView, TouchableOpacity, SafeAreaView, Ref
 import { LinearGradient } from 'expo-linear-gradient';
 import Shimmer from '../components/Shimmer';
 import DetailProyekModal from '../components/ReusableBottomModal';
-import { useFonts } from '../utils/UseFonts'; // Import the useFonts hook
-import TaskDetailModal from '../components/TaskDetailModal'; // Import the standard modal
+import DraggableModalTask from '../components/DraggableModalTask';
+import { useNavigation } from '@react-navigation/native';
 
+import { useFonts } from '../utils/UseFonts';
 const GRADIENT_COLORS = ['#0E509E', '#5FA0DC', '#9FD2FF'];
 
-const TaskCard = React.memo(({ title = '', subtitle = '', status = '', onProjectDetailPress, onTaskDetailPress }) => {
-    const isShortContent = title.length <= 30 && subtitle.length <= 20;
+const TaskCard = React.memo(({ task = {}, onProjectDetailPress, onTaskDetailPress }) => {
+    const isShortContent = task.title.length <= 30 && task.subtitle.length <= 20;
 
     return (
         <View style={[styles.taskCard, isShortContent && styles.taskCardShort]}>
@@ -19,14 +20,14 @@ const TaskCard = React.memo(({ title = '', subtitle = '', status = '', onProject
                     numberOfLines={isShortContent ? 1 : 2}
                     ellipsizeMode="tail"
                 >
-                    {title}
+                    {task.title}
                 </Text>
                 <Text
                     style={[styles.taskSubtitle, isShortContent && styles.taskSubtitleShort]}
                     numberOfLines={1}
                     ellipsizeMode="tail"
                 >
-                    {subtitle}
+                    {task.subtitle}
                 </Text>
             </View>
             <View style={[styles.statusBadge, isShortContent ? styles.statusBadgeShort : styles.statusBadgeLong]}>
@@ -35,16 +36,16 @@ const TaskCard = React.memo(({ title = '', subtitle = '', status = '', onProject
                     numberOfLines={1}
                     ellipsizeMode="tail"
                 >
-                    {status}
+                    {task.status}
                 </Text>
             </View>
             <View style={styles.buttonContainer}>
-                <TouchableOpacity style={styles.detailButton} onPress={onTaskDetailPress}>
+                <TouchableOpacity style={styles.detailButton} onPress={() => onTaskDetailPress(task)}>
                     <Text style={styles.detailButtonText}>Lihat detail {'>'}</Text>
                 </TouchableOpacity>
                 <TouchableOpacity
                     style={[styles.projectButton, isShortContent && styles.projectButtonShort]}
-                    onPress={onProjectDetailPress}
+                    onPress={() => onProjectDetailPress(task)}
                 >
                     <Text style={[styles.projectButtonText, isShortContent && styles.projectButtonTextShort]}>
                         Detail Proyek
@@ -64,12 +65,19 @@ const ShimmerTaskCard = ({ isShortContent = false }) => (
     </View>
 );
 
-const TaskSection = ({ title, tasks = [], isLoading = false, onProjectDetailPress, onTaskDetailPress }) => (
+const TaskSection = ({
+    title,
+    tasks = [],
+    isLoading = false,
+    onProjectDetailPress,
+    onTaskDetailPress,
+    onSeeAllPress,
+}) => (
     <View style={styles.section}>
         <View style={styles.sectionHeader}>
             <Text style={styles.sectionTitle}>{title}</Text>
             {tasks.length > 1 && !isLoading && (
-                <TouchableOpacity>
+                <TouchableOpacity onPress={onSeeAllPress}>
                     <Text style={styles.seeAllText}>Lihat semua</Text>
                 </TouchableOpacity>
             )}
@@ -82,17 +90,14 @@ const TaskSection = ({ title, tasks = [], isLoading = false, onProjectDetailPres
                 : tasks.map((task, index) => (
                       <TaskCard
                           key={index}
-                          title={task.title}
-                          subtitle={task.subtitle}
-                          status={task.status}
-                          onProjectDetailPress={() => onProjectDetailPress(task)}
-                          onTaskDetailPress={() => onTaskDetailPress(task)}
+                          task={task}
+                          onProjectDetailPress={onProjectDetailPress}
+                          onTaskDetailPress={onTaskDetailPress}
                       />
                   ))}
         </ScrollView>
     </View>
 );
-
 const Tugas = () => {
     const [isLoading, setIsLoading] = useState(true);
     const [refreshing, setRefreshing] = useState(false);
@@ -105,11 +110,15 @@ const Tugas = () => {
     });
     const [modalVisible, setModalVisible] = useState(false);
     const [selectedProject, setSelectedProject] = useState(null);
+    const [draggableModalVisible, setDraggableModalVisible] = useState(false);
     const [selectedTask, setSelectedTask] = useState(null);
-    const [taskDetailModalVisible, setTaskDetailModalVisible] = useState(false);
 
-    const fontsLoaded = useFonts(); // Call the useFonts hook
+    const navigation = useNavigation();
 
+    const fontsLoaded = useFonts();
+    const handleSeeAllPress = (sectionTitle, tasks) => {
+        navigation.navigate('DetailTaskSection', { sectionTitle, tasks });
+    };
     useEffect(() => {
         fetchTasks();
     }, []);
@@ -122,70 +131,92 @@ const Tugas = () => {
             setTasks({
                 inProgress: [
                     {
-                        title: 'Task 1',
-                        subtitle: 'KejarTugas',
-                        status: 'Tersisa 10 Hari',
-                        assignedBy: 'John Doe',
-                        duration: '2 weeks',
-                        description: 'Project description here',
+                        id: 1,
+                        title: 'Pengembangan Fitur Baru',
+                        subtitle: 'Aplikasi Mobile KejarTugas',
+                        status: 'Dalam Proses',
+                        assignedBy: 'Aa Dhanu',
+                        startDate: 'Sep 15, 2024',
+                        endDate: 'Oct 15, 2024',
+                        duration: '15 hari',
+                        description: 'Mengembangkan fitur notifikasi real-time untuk meningkatkan engagement pengguna.',
+                        progress: 60,
                     },
                     {
-                        title: 'Pengembangan Platform E-learning Interaktif dengan Fitur Kecerdasan Buatan',
-                        subtitle: 'KejarTugas - Revolusi Pendidikan Digital melalui Teknologi Adaptif',
-                        status: 'Tersisa 5 Hari',
-                        assignedBy: 'Jane Smith',
-                        duration: '1 week',
-                        description: 'Another project description',
+                        id: 2,
+                        title: 'Optimalisasi Database',
+                        subtitle: 'Proyek Backend KejarTugas',
+                        status: 'Urgent',
+                        assignedBy: 'Budi Prakoso',
+                        startDate: 'Sep 10, 2024',
+                        endDate: 'Sep 25, 2024',
+                        duration: '60 hari menjelang project selesai',
+                        description: 'Meningkatkan performa query dan mengurangi waktu respons server.',
+                        progress: 40,
                     },
                 ],
                 inReview: [
                     {
-                        title: 'Analisis dan Optimalisasi Performa Aplikasi Mobile untuk Peningkatan Pengalaman Pengguna',
-                        subtitle:
-                            'KejarTugas - Meningkatkan Kecepatan dan Efisiensi Aplikasi Melalui Teknik Optimasi Lanjutan',
-                        status: 'Menunggu',
-                        assignedBy: 'John Doe',
-                        duration: '2 weeks',
-                        description: 'Project description here',
-                    },
-                    {
-                        title: 'Implementasi Sistem Keamanan Cyber Terpadu untuk Infrastruktur Perusahaan',
-                        subtitle: 'KejarTugas - Memperkuat Pertahanan Digital dengan Solusi Keamanan Multi-Lapisan',
-                        status: 'Dalam Proses',
-                        assignedBy: 'Jane Smith',
-                        duration: '1 week',
-                        description: 'Another project description',
+                        id: 3,
+                        title: 'Desain UI Dashboard',
+                        subtitle: 'Redesign Antarmuka KejarTugas',
+                        status: 'Menunggu Review',
+                        assignedBy: 'Citra Dewi',
+                        startDate: 'Sep 05, 2024',
+                        endDate: 'Sep 20, 2024',
+                        description: 'Membuat desain baru untuk dashboard admin dengan fokus pada UX yang lebih baik.',
+                        progress: 100,
                     },
                 ],
                 rejected: [
                     {
-                        title: 'Pengembangan Aplikasi IoT untuk Manajemen Energi Pintar di Gedung Komersial',
-                        subtitle: 'KejarTugas - Mengoptimalkan Konsumsi Energi melalui Teknologi Internet of Things',
-                        status: 'Menunggu',
-                        assignedBy: 'John Doe',
-                        duration: '2 weeks',
-                        description: 'Project description here',
+                        id: 4,
+                        title: 'Integrasi Payment Gateway',
+                        subtitle: 'Sistem Pembayaran KejarTugas',
+                        status: 'Ditolak',
+                        assignedBy: 'Dian Sastro',
+                        startDate: 'Aug 20, 2024',
+                        endDate: 'Sep 10, 2024',
+                        description: 'Proposal integrasi ditolak karena masalah keamanan. Perlu revisi.',
+                        progress: 0,
                     },
                 ],
                 postponed: [
                     {
-                        title: 'Implementasi Sistem Analitik Big Data untuk Prediksi Tren Pasar dan Perilaku Konsumen',
-                        subtitle:
-                            'KejarTugas - Memanfaatkan Data Besar untuk Pengambilan Keputusan Bisnis yang Lebih Baik',
-                        status: 'Menunggu',
-                        assignedBy: 'John Doe',
-                        duration: '2 weeks',
-                        description: 'Project description here',
+                        id: 5,
+                        title: 'Implementasi AI Chatbot',
+                        subtitle: 'Fitur Bantuan KejarTugas',
+                        status: 'Ditunda',
+                        assignedBy: 'Eko Patrio',
+                        startDate: 'Oct 01, 2024',
+                        endDate: 'Nov 15, 2024',
+                        description:
+                            'Proyek ditunda karena perlu penelitian lebih lanjut tentang teknologi AI yang sesuai.',
+                        progress: 0,
                     },
                 ],
                 completed: [
                     {
-                        title: 'Pengembangan Platform Blockchain untuk Manajemen Rantai Pasokan Transparan',
-                        subtitle: 'KejarTugas - Meningkatkan Efisiensi dan Kepercayaan dalam Rantai Pasokan Global',
+                        id: 6,
+                        title: 'Migrasi Server',
+                        subtitle: 'Infrastruktur KejarTugas',
                         status: 'Selesai',
-                        assignedBy: 'John Doe',
-                        duration: '2 weeks',
-                        description: 'Project description here',
+                        assignedBy: 'Fajar Sadboy',
+                        startDate: 'Aug 01, 2024',
+                        endDate: 'Aug 15, 2024',
+                        description: 'Migrasi server ke cloud berhasil dilakukan tanpa downtime.',
+                        progress: 100,
+                    },
+                    {
+                        id: 7,
+                        title: 'Migrasi Server',
+                        subtitle: 'Infrastruktur KejarTugas',
+                        status: 'Selesai',
+                        assignedBy: 'Fajar Sadboy',
+                        startDate: 'Aug 01, 2024',
+                        endDate: 'Aug 15, 2024',
+                        description: 'Migrasi server ke cloud berhasil dilakukan tanpa downtime.',
+                        progress: 100,
                     },
                 ],
             });
@@ -196,16 +227,16 @@ const Tugas = () => {
 
     const handleProjectDetailPress = (project) => {
         setSelectedProject(project);
-        setModalVisible(true); // Open the reusable modal for project details
+        setModalVisible(true);
     };
 
     const handleTaskDetailPress = (task) => {
         setSelectedTask(task);
-        setTaskDetailModalVisible(true); // Open the standard modal for task details
+        setDraggableModalVisible(true);
     };
 
     if (!fontsLoaded) {
-        return null; // Optionally, you can return a loading indicator here
+        return null;
     }
 
     return (
@@ -231,6 +262,7 @@ const Tugas = () => {
                         isLoading={isLoading}
                         onProjectDetailPress={handleProjectDetailPress}
                         onTaskDetailPress={handleTaskDetailPress}
+                        onSeeAllPress={() => handleSeeAllPress('Dalam Pengerjaan', tasks.inProgress)}
                     />
                     <TaskSection
                         title="Dalam Peninjauan"
@@ -238,6 +270,7 @@ const Tugas = () => {
                         isLoading={isLoading}
                         onProjectDetailPress={handleProjectDetailPress}
                         onTaskDetailPress={handleTaskDetailPress}
+                        onSeeAllPress={() => handleSeeAllPress('Dalam Peninjauan', tasks.inReview)}
                     />
                     <TaskSection
                         title="Ditolak"
@@ -245,6 +278,7 @@ const Tugas = () => {
                         isLoading={isLoading}
                         onProjectDetailPress={handleProjectDetailPress}
                         onTaskDetailPress={handleTaskDetailPress}
+                        onSeeAllPress={() => handleSeeAllPress('Ditolak', tasks.rejected)}
                     />
                     <TaskSection
                         title="Ditunda"
@@ -252,6 +286,7 @@ const Tugas = () => {
                         isLoading={isLoading}
                         onProjectDetailPress={handleProjectDetailPress}
                         onTaskDetailPress={handleTaskDetailPress}
+                        onSeeAllPress={() => handleSeeAllPress('Ditunda', tasks.postponed)}
                     />
                     <TaskSection
                         title="Selesai"
@@ -259,23 +294,19 @@ const Tugas = () => {
                         isLoading={isLoading}
                         onProjectDetailPress={handleProjectDetailPress}
                         onTaskDetailPress={handleTaskDetailPress}
+                        onSeeAllPress={() => handleSeeAllPress('Selesai', tasks.completed)}
                     />
                 </View>
 
-                {/* Spacer View */}
                 <View style={styles.bottomSpacer} />
             </ScrollView>
 
-            {/* Standard Modal for Task Details */}
-            {selectedTask && (
-                <TaskDetailModal
-                    visible={taskDetailModalVisible}
-                    onClose={() => setTaskDetailModalVisible(false)}
-                    taskDetails={selectedTask}
-                />
-            )}
+            <DraggableModalTask
+                visible={draggableModalVisible}
+                onClose={() => setDraggableModalVisible(false)}
+                taskDetails={selectedTask || {}}
+            />
 
-            {/* Reusable Bottom Modal for Project Details */}
             <DetailProyekModal
                 visible={modalVisible}
                 onClose={() => setModalVisible(false)}
