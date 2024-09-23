@@ -93,23 +93,32 @@ const TaskSection = ({
                 </TouchableOpacity>
             )}
         </View>
-        <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-            {isLoading
-                ? Array(3)
-                      .fill()
-                      .map((_, index) => <ShimmerTaskCard key={index} isShortContent={index % 2 === 0} />)
-                : tasks.map((task, index) => (
-                      <TaskCard
-                          key={index}
-                          task={task}
-                          onProjectDetailPress={onProjectDetailPress}
-                          onTaskDetailPress={onTaskDetailPress}
-                      />
-                  ))}
-        </ScrollView>
+        {isLoading ? (
+            <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+                {Array(3)
+                    .fill()
+                    .map((_, index) => (
+                        <ShimmerTaskCard key={index} isShortContent={index % 2 === 0} />
+                    ))}
+            </ScrollView>
+        ) : tasks.length > 0 ? (
+            <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+                {tasks.map((task, index) => (
+                    <TaskCard
+                        key={index}
+                        task={task}
+                        onProjectDetailPress={onProjectDetailPress}
+                        onTaskDetailPress={onTaskDetailPress}
+                    />
+                ))}
+            </ScrollView>
+        ) : (
+            <View style={styles.noTasksContainer}>
+                <Text style={styles.noTasksText}>Tidak ada tugas</Text>
+            </View>
+        )}
     </View>
 );
-
 const Tugas = () => {
     const [isLoading, setIsLoading] = useState(true);
     const [refreshing, setRefreshing] = useState(false);
@@ -144,36 +153,77 @@ const Tugas = () => {
         setError(null);
         try {
             const employeeId = await AsyncStorage.getItem('employeeId');
+            console.log('Employee ID:', employeeId); // Log the employeeId
             if (!employeeId) {
                 throw new Error('Employee ID not found');
             }
 
             const data = await fetchTotalTasksForEmployee(employeeId);
 
-            setTasks({
+            const tasksByStatus = {
                 inProgress: data.employeeTasks.filter((task) => task.task_status === 'workingOnIt'),
                 inReview: data.employeeTasks.filter((task) => task.task_status === 'onReview'),
                 rejected: data.employeeTasks.filter((task) => task.task_status === 'rejected'),
                 postponed: data.employeeTasks.filter((task) => task.task_status === 'onHold'),
                 completed: data.employeeTasks.filter((task) => task.task_status === 'Completed'),
-            });
+            };
+
+            setTasks(tasksByStatus);
+
+            // Store TaskIds to AsyncStorage and add console log
+            for (const status in tasksByStatus) {
+                tasksByStatus[status].forEach(async (task) => {
+                    console.log(`Task object for status ${status}:`, task); // Log the entire task object
+
+                    // Use the correct field (id) to store Task IDs
+                    if (task.id) {
+                        // console.log(`Storing Task ID: ${task.id} for status: ${status}`);
+                        await AsyncStorage.setItem(`task_${task.id}`, JSON.stringify(task.id));
+                        // console.log(`Task ID ${task.id} stored in AsyncStorage`);
+                    } else {
+                        // console.log(`Task ID not found for task:`, task);
+                    }
+                });
+            }
         } catch (error) {
             console.error('Error fetching tasks:', error);
-            setError('Failed to fetch tasks. Please try again later.');
-            Alert.alert('Error', 'Failed to fetch tasks. Please try again later.');
+            if (error.response && error.response.status === 404) {
+                setError('Tasks not found. Please check the employee ID or the API endpoint.');
+            } else {
+                setError('Failed to fetch tasks. Please try again later.');
+            }
+            Alert.alert('Error', error.message);
         } finally {
             setIsLoading(false);
             setRefreshing(false);
         }
     };
 
-    const handleProjectDetailPress = (project) => {
-        setSelectedProject(project);
+    const handleProjectDetailPress = (task) => {
+        const projectDetails = {
+            assign_by_name: task.assign_by_name, // Make sure the property names match your task structure
+            start_date: task.project_start_date,
+            end_date: task.project_end_date,
+            description: task.project_desc, // Add description if needed
+        };
+
+        setSelectedProject(projectDetails);
         setModalVisible(true);
     };
 
     const handleTaskDetailPress = (task) => {
-        setSelectedTask(task);
+        // Assuming `task` is from `employeeTasks`
+        const taskDetails = {
+            title: task.task_name,
+            startDate: task.start_date,
+            endDate: task.end_date,
+            assignedBy: task.assign_by_name, // Assuming this field exists
+            description: task.task_desc,
+            progress: task.percentage_task || 0, // Accessing percentage_task directly
+            status: task.task_status,
+        };
+
+        setSelectedTask(taskDetails);
         setDraggableModalVisible(true);
     };
 
@@ -297,9 +347,7 @@ const styles = StyleSheet.create({
     content: {
         padding: 20,
     },
-    section: {
-        marginBottom: 20,
-    },
+
     sectionHeader: {
         flexDirection: 'row',
         justifyContent: 'space-between',
@@ -395,6 +443,22 @@ const styles = StyleSheet.create({
     detailButton: {
         // Styles remain the same
     },
+
+    section: {
+        marginBottom: 20,
+    },
+    noTasksContainer: {
+        height: 100, // Adjust this value to match the height of your task cards
+        justifyContent: 'center',
+        alignItems: 'center',
+    },
+    noTasksText: {
+        fontSize: 16,
+        color: '#666',
+        fontFamily: 'Poppins-Regular',
+        textAlign: 'center',
+    },
+
     detailButtonText: {
         color: '#0E509E',
         fontWeight: '500',

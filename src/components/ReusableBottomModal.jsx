@@ -1,8 +1,17 @@
 import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Modal, Dimensions, ScrollView } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Modal, Dimensions, ScrollView, Alert } from 'react-native';
 import { useFonts } from '../utils/UseFonts'; // Import the useFonts hook
 
 const { width, height } = Dimensions.get('window');
+
+// Helper function to calculate the duration between two dates
+const calculateProjectDuration = (startDate, endDate) => {
+    const start = new Date(startDate);
+    const end = new Date(endDate);
+    const durationInMs = end - start;
+    const durationInDays = Math.ceil(durationInMs / (1000 * 60 * 60 * 24));
+    return durationInDays > 0 ? `${durationInDays} hari` : 'Durasi tidak valid';
+};
 
 const ReusableBottomModal = ({ visible, onClose, projectDetails }) => {
     const fontsLoaded = useFonts();
@@ -11,10 +20,12 @@ const ReusableBottomModal = ({ visible, onClose, projectDetails }) => {
         return null;
     }
 
-    // Check if projectDetails is defined
     if (!projectDetails) {
-        return null; // Optionally, return null or render a loading indicator here
+        return null; // Optionally, render a loading indicator here
     }
+
+    const { assign_by_name, start_date, end_date, description } = projectDetails;
+    const projectDuration = calculateProjectDuration(start_date, end_date);
 
     return (
         <Modal visible={visible} transparent={true} animationType="slide" onRequestClose={onClose}>
@@ -26,19 +37,17 @@ const ReusableBottomModal = ({ visible, onClose, projectDetails }) => {
                         <View style={styles.detailContainer}>
                             <View style={styles.detailColumn}>
                                 <Text style={styles.detailLabel}>Ditugaskan Oleh</Text>
-                                <Text style={styles.detailValue}>{projectDetails.assignedBy}</Text>
+                                <Text style={styles.detailValue}>{assign_by_name || 'Tidak tersedia'}</Text>
                             </View>
                             <View style={styles.detailColumn}>
                                 <Text style={styles.detailLabel}>Durasi Proyek</Text>
-                                <Text style={styles.detailValue}>{projectDetails.duration}</Text>
+                                <Text style={styles.detailValue}>{projectDuration}</Text>
                             </View>
                         </View>
 
                         <View style={styles.descriptionContainer}>
                             <Text style={styles.detailLabel}>Keterangan Proyek</Text>
-                            <Text style={styles.detailValue}>
-                                {projectDetails.description || 'Tidak ada keterangan'}
-                            </Text>
+                            <Text style={styles.detailValue}>{description || 'Tidak ada keterangan'}</Text>
                         </View>
                     </ScrollView>
 

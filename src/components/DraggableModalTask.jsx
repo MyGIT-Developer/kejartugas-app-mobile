@@ -106,13 +106,13 @@ const DraggableModalTask = ({ visible, onClose, taskDetails }) => {
                             </View>
                             <Progress.Circle
                                 size={60}
-                                progress={taskDetails.progress / 100}
+                                progress={taskDetails.progress / 100} // Ensure this is a fraction (0 to 1)
                                 thickness={6}
                                 color="#4CAF50"
                                 unfilledColor="#E8F5E9"
                                 borderWidth={0}
                                 showsText
-                                formatText={() => `${taskDetails.progress}%`}
+                                formatText={() => `${taskDetails.progress}%`} // Display the percentage
                                 textStyle={styles.progressText}
                             />
                         </View>
