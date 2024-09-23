@@ -1,16 +1,27 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, SafeAreaView, RefreshControl } from 'react-native';
+import {
+    View,
+    Text,
+    StyleSheet,
+    ScrollView,
+    TouchableOpacity,
+    SafeAreaView,
+    RefreshControl,
+    Alert,
+} from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import Shimmer from '../components/Shimmer';
 import DetailProyekModal from '../components/ReusableBottomModal';
 import DraggableModalTask from '../components/DraggableModalTask';
 import { useNavigation } from '@react-navigation/native';
-
 import { useFonts } from '../utils/UseFonts';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { fetchTotalTasksForEmployee } from '../api/task';
+
 const GRADIENT_COLORS = ['#0E509E', '#5FA0DC', '#9FD2FF'];
 
 const TaskCard = React.memo(({ task = {}, onProjectDetailPress, onTaskDetailPress }) => {
-    const isShortContent = task.title.length <= 30 && task.subtitle.length <= 20;
+    const isShortContent = task.task_name.length <= 30 && task.project_name.length <= 20;
 
     return (
         <View style={[styles.taskCard, isShortContent && styles.taskCardShort]}>
@@ -20,14 +31,14 @@ const TaskCard = React.memo(({ task = {}, onProjectDetailPress, onTaskDetailPres
                     numberOfLines={isShortContent ? 1 : 2}
                     ellipsizeMode="tail"
                 >
-                    {task.title}
+                    {task.task_name}
                 </Text>
                 <Text
                     style={[styles.taskSubtitle, isShortContent && styles.taskSubtitleShort]}
                     numberOfLines={1}
                     ellipsizeMode="tail"
                 >
-                    {task.subtitle}
+                    {task.project_name}
                 </Text>
             </View>
             <View style={[styles.statusBadge, isShortContent ? styles.statusBadgeShort : styles.statusBadgeLong]}>
@@ -36,7 +47,7 @@ const TaskCard = React.memo(({ task = {}, onProjectDetailPress, onTaskDetailPres
                     numberOfLines={1}
                     ellipsizeMode="tail"
                 >
-                    {task.status}
+                    {task.task_status}
                 </Text>
             </View>
             <View style={styles.buttonContainer}>
@@ -98,6 +109,7 @@ const TaskSection = ({
         </ScrollView>
     </View>
 );
+
 const Tugas = () => {
     const [isLoading, setIsLoading] = useState(true);
     const [refreshing, setRefreshing] = useState(false);
@@ -112,117 +124,47 @@ const Tugas = () => {
     const [selectedProject, setSelectedProject] = useState(null);
     const [draggableModalVisible, setDraggableModalVisible] = useState(false);
     const [selectedTask, setSelectedTask] = useState(null);
+    const [error, setError] = useState(null);
 
     const navigation = useNavigation();
 
     const fontsLoaded = useFonts();
+
     const handleSeeAllPress = (sectionTitle, tasks) => {
         navigation.navigate('DetailTaskSection', { sectionTitle, tasks });
     };
+
     useEffect(() => {
         fetchTasks();
     }, []);
 
-    const fetchTasks = () => {
+    const fetchTasks = async () => {
         setRefreshing(true);
         setIsLoading(true);
-        // Simulate API call
-        setTimeout(() => {
+        setError(null);
+        try {
+            const employeeId = await AsyncStorage.getItem('employeeId');
+            if (!employeeId) {
+                throw new Error('Employee ID not found');
+            }
+
+            const data = await fetchTotalTasksForEmployee(employeeId);
+
             setTasks({
-                inProgress: [
-                    {
-                        id: 1,
-                        title: 'Pengembangan Fitur Baru',
-                        subtitle: 'Aplikasi Mobile KejarTugas',
-                        status: 'Dalam Proses',
-                        assignedBy: 'Aa Dhanu',
-                        startDate: 'Sep 15, 2024',
-                        endDate: 'Oct 15, 2024',
-                        duration: '15 hari',
-                        description: 'Mengembangkan fitur notifikasi real-time untuk meningkatkan engagement pengguna.',
-                        progress: 60,
-                    },
-                    {
-                        id: 2,
-                        title: 'Optimalisasi Database',
-                        subtitle: 'Proyek Backend KejarTugas',
-                        status: 'Urgent',
-                        assignedBy: 'Budi Prakoso',
-                        startDate: 'Sep 10, 2024',
-                        endDate: 'Sep 25, 2024',
-                        duration: '60 hari menjelang project selesai',
-                        description: 'Meningkatkan performa query dan mengurangi waktu respons server.',
-                        progress: 40,
-                    },
-                ],
-                inReview: [
-                    {
-                        id: 3,
-                        title: 'Desain UI Dashboard',
-                        subtitle: 'Redesign Antarmuka KejarTugas',
-                        status: 'Menunggu Review',
-                        assignedBy: 'Citra Dewi',
-                        startDate: 'Sep 05, 2024',
-                        endDate: 'Sep 20, 2024',
-                        description: 'Membuat desain baru untuk dashboard admin dengan fokus pada UX yang lebih baik.',
-                        progress: 100,
-                    },
-                ],
-                rejected: [
-                    {
-                        id: 4,
-                        title: 'Integrasi Payment Gateway',
-                        subtitle: 'Sistem Pembayaran KejarTugas',
-                        status: 'Ditolak',
-                        assignedBy: 'Dian Sastro',
-                        startDate: 'Aug 20, 2024',
-                        endDate: 'Sep 10, 2024',
-                        description: 'Proposal integrasi ditolak karena masalah keamanan. Perlu revisi.',
-                        progress: 0,
-                    },
-                ],
-                postponed: [
-                    {
-                        id: 5,
-                        title: 'Implementasi AI Chatbot',
-                        subtitle: 'Fitur Bantuan KejarTugas',
-                        status: 'Ditunda',
-                        assignedBy: 'Eko Patrio',
-                        startDate: 'Oct 01, 2024',
-                        endDate: 'Nov 15, 2024',
-                        description:
-                            'Proyek ditunda karena perlu penelitian lebih lanjut tentang teknologi AI yang sesuai.',
-                        progress: 0,
-                    },
-                ],
-                completed: [
-                    {
-                        id: 6,
-                        title: 'Migrasi Server',
-                        subtitle: 'Infrastruktur KejarTugas',
-                        status: 'Selesai',
-                        assignedBy: 'Fajar Sadboy',
-                        startDate: 'Aug 01, 2024',
-                        endDate: 'Aug 15, 2024',
-                        description: 'Migrasi server ke cloud berhasil dilakukan tanpa downtime.',
-                        progress: 100,
-                    },
-                    {
-                        id: 7,
-                        title: 'Migrasi Server',
-                        subtitle: 'Infrastruktur KejarTugas',
-                        status: 'Selesai',
-                        assignedBy: 'Fajar Sadboy',
-                        startDate: 'Aug 01, 2024',
-                        endDate: 'Aug 15, 2024',
-                        description: 'Migrasi server ke cloud berhasil dilakukan tanpa downtime.',
-                        progress: 100,
-                    },
-                ],
+                inProgress: data.employeeTasks.filter((task) => task.task_status === 'workingOnIt'),
+                inReview: data.employeeTasks.filter((task) => task.task_status === 'onReview'),
+                rejected: data.employeeTasks.filter((task) => task.task_status === 'rejected'),
+                postponed: data.employeeTasks.filter((task) => task.task_status === 'onHold'),
+                completed: data.employeeTasks.filter((task) => task.task_status === 'Completed'),
             });
+        } catch (error) {
+            console.error('Error fetching tasks:', error);
+            setError('Failed to fetch tasks. Please try again later.');
+            Alert.alert('Error', 'Failed to fetch tasks. Please try again later.');
+        } finally {
             setIsLoading(false);
             setRefreshing(false);
-        }, 2000); // Simulate 2 second loading time
+        }
     };
 
     const handleProjectDetailPress = (project) => {
@@ -255,48 +197,57 @@ const Tugas = () => {
                     <Text style={styles.headerTitle}>Tugas Saya</Text>
                 </LinearGradient>
 
-                <View style={styles.content}>
-                    <TaskSection
-                        title="Dalam Pengerjaan"
-                        tasks={tasks.inProgress}
-                        isLoading={isLoading}
-                        onProjectDetailPress={handleProjectDetailPress}
-                        onTaskDetailPress={handleTaskDetailPress}
-                        onSeeAllPress={() => handleSeeAllPress('Dalam Pengerjaan', tasks.inProgress)}
-                    />
-                    <TaskSection
-                        title="Dalam Peninjauan"
-                        tasks={tasks.inReview}
-                        isLoading={isLoading}
-                        onProjectDetailPress={handleProjectDetailPress}
-                        onTaskDetailPress={handleTaskDetailPress}
-                        onSeeAllPress={() => handleSeeAllPress('Dalam Peninjauan', tasks.inReview)}
-                    />
-                    <TaskSection
-                        title="Ditolak"
-                        tasks={tasks.rejected}
-                        isLoading={isLoading}
-                        onProjectDetailPress={handleProjectDetailPress}
-                        onTaskDetailPress={handleTaskDetailPress}
-                        onSeeAllPress={() => handleSeeAllPress('Ditolak', tasks.rejected)}
-                    />
-                    <TaskSection
-                        title="Ditunda"
-                        tasks={tasks.postponed}
-                        isLoading={isLoading}
-                        onProjectDetailPress={handleProjectDetailPress}
-                        onTaskDetailPress={handleTaskDetailPress}
-                        onSeeAllPress={() => handleSeeAllPress('Ditunda', tasks.postponed)}
-                    />
-                    <TaskSection
-                        title="Selesai"
-                        tasks={tasks.completed}
-                        isLoading={isLoading}
-                        onProjectDetailPress={handleProjectDetailPress}
-                        onTaskDetailPress={handleTaskDetailPress}
-                        onSeeAllPress={() => handleSeeAllPress('Selesai', tasks.completed)}
-                    />
-                </View>
+                {error ? (
+                    <View style={styles.errorContainer}>
+                        <Text style={styles.errorText}>{error}</Text>
+                        <TouchableOpacity style={styles.retryButton} onPress={fetchTasks}>
+                            <Text style={styles.retryButtonText}>Retry</Text>
+                        </TouchableOpacity>
+                    </View>
+                ) : (
+                    <View style={styles.content}>
+                        <TaskSection
+                            title="Dalam Pengerjaan"
+                            tasks={tasks.inProgress}
+                            isLoading={isLoading}
+                            onProjectDetailPress={handleProjectDetailPress}
+                            onTaskDetailPress={handleTaskDetailPress}
+                            onSeeAllPress={() => handleSeeAllPress('Dalam Pengerjaan', tasks.inProgress)}
+                        />
+                        <TaskSection
+                            title="Dalam Peninjauan"
+                            tasks={tasks.inReview}
+                            isLoading={isLoading}
+                            onProjectDetailPress={handleProjectDetailPress}
+                            onTaskDetailPress={handleTaskDetailPress}
+                            onSeeAllPress={() => handleSeeAllPress('Dalam Peninjauan', tasks.inReview)}
+                        />
+                        <TaskSection
+                            title="Ditolak"
+                            tasks={tasks.rejected}
+                            isLoading={isLoading}
+                            onProjectDetailPress={handleProjectDetailPress}
+                            onTaskDetailPress={handleTaskDetailPress}
+                            onSeeAllPress={() => handleSeeAllPress('Ditolak', tasks.rejected)}
+                        />
+                        <TaskSection
+                            title="Ditunda"
+                            tasks={tasks.postponed}
+                            isLoading={isLoading}
+                            onProjectDetailPress={handleProjectDetailPress}
+                            onTaskDetailPress={handleTaskDetailPress}
+                            onSeeAllPress={() => handleSeeAllPress('Ditunda', tasks.postponed)}
+                        />
+                        <TaskSection
+                            title="Selesai"
+                            tasks={tasks.completed}
+                            isLoading={isLoading}
+                            onProjectDetailPress={handleProjectDetailPress}
+                            onTaskDetailPress={handleTaskDetailPress}
+                            onSeeAllPress={() => handleSeeAllPress('Selesai', tasks.completed)}
+                        />
+                    </View>
+                )}
 
                 <View style={styles.bottomSpacer} />
             </ScrollView>
@@ -341,7 +292,7 @@ const styles = StyleSheet.create({
         color: 'white',
         marginBottom: 10,
         alignSelf: 'center',
-        fontFamily: 'Poppins-Bold', // Use the custom font
+        fontFamily: 'Poppins-Bold',
     },
     content: {
         padding: 20,
@@ -358,11 +309,11 @@ const styles = StyleSheet.create({
     sectionTitle: {
         fontSize: 18,
         fontWeight: 'bold',
-        fontFamily: 'Poppins-Bold', // Use the custom font
+        fontFamily: 'Poppins-Bold',
     },
     seeAllText: {
         color: '#0E509E',
-        fontFamily: 'Poppins-Regular', // Use the custom font
+        fontFamily: 'Poppins-Regular',
     },
     taskCard: {
         backgroundColor: 'white',
@@ -389,22 +340,22 @@ const styles = StyleSheet.create({
         color: '#000',
         marginBottom: 5,
         lineHeight: 22,
-        fontFamily: 'Poppins-Bold', // Use the custom font
+        fontFamily: 'Poppins-Bold',
     },
     taskTitleShort: {
         fontSize: 18,
         marginBottom: 2,
-        fontFamily: 'Poppins-Bold', // Use the custom font
+        fontFamily: 'Poppins-Bold',
     },
     taskSubtitle: {
         fontSize: 14,
         color: '#666',
         marginBottom: 5,
-        fontFamily: 'Poppins-Regular', // Use the custom font
+        fontFamily: 'Poppins-Regular',
     },
     taskSubtitleShort: {
         fontSize: 12,
-        fontFamily: 'Poppins-Regular', // Use the custom font
+        fontFamily: 'Poppins-Regular',
     },
     statusBadge: {
         backgroundColor: '#E0E0E0',
@@ -426,11 +377,11 @@ const styles = StyleSheet.create({
         color: '#333',
         fontWeight: '500',
         fontSize: 12,
-        fontFamily: 'Poppins-Regular', // Use the custom font
+        fontFamily: 'Poppins-Regular',
     },
     statusTextShort: {
         fontSize: 10,
-        fontFamily: 'Poppins-Regular', // Use the custom font
+        fontFamily: 'Poppins-Regular',
     },
     buttonContainer: {
         flexDirection: 'row',
@@ -448,7 +399,7 @@ const styles = StyleSheet.create({
         color: '#0E509E',
         fontWeight: '500',
         fontSize: 14,
-        fontFamily: 'Poppins-Regular', // Use the custom font
+        fontFamily: 'Poppins-Regular',
     },
     projectButton: {
         backgroundColor: '#3498db',
@@ -465,11 +416,11 @@ const styles = StyleSheet.create({
         color: 'white',
         fontWeight: '500',
         fontSize: 14,
-        fontFamily: 'Poppins-Regular', // Use the custom font
+        fontFamily: 'Poppins-Regular',
     },
     projectButtonTextShort: {
         fontSize: 12,
-        fontFamily: 'Poppins-Regular', // Use the custom font
+        fontFamily: 'Poppins-Regular',
     },
     shimmerTitle: {
         marginBottom: 10,

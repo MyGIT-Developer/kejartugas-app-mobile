@@ -4,7 +4,7 @@
         "slug": "kejar-tugas",
         "version": "1.0.0",
         "orientation": "portrait",
-        "icon": "./assets/images/Meotrik PM Logo.png",
+        "icon": "./assets/images/Meotrik_PM_Logo.png",
         "userInterfaceStyle": "light",
         "splash": {
             "image": "./assets/images/kt_splash.png"
@@ -19,7 +19,7 @@
         },
         "android": {
             "adaptiveIcon": {
-                "foregroundImage": "./assets/images/Meotrik PM Logo.png",
+                "foregroundImage": "./assets/images/Meotrik_PM_Logo.png",
                 "backgroundColor": "#FFFFFF"
             },
             "package": "com.innovation.kejartugas",

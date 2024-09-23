@@ -122,9 +122,12 @@ const Step2 = ({ route, navigation }) => {
                                 <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
                                     <Feather name="arrow-left" size={24} color="#0056b3" />
                                 </TouchableOpacity>
-                                <Image source={require('../../assets/images/k_logo.png')} style={styles.logo} />
+                                <Image
+                                    source={require('../../assets/images/Meotrik_PM_Logo.png')}
+                                    style={styles.logo}
+                                />
                                 <Text style={styles.welcomeText}>Selamat Datang di</Text>
-                                <Text style={styles.appName}>Kejar Tugas</Text>
+                                <Text style={styles.appName}>Meotrik</Text>
                                 <View style={styles.progressBar}>
                                     <View style={styles.progressIndicator} />
                                 </View>

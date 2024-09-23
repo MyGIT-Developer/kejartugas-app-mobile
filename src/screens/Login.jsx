@@ -13,7 +13,7 @@ import {
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { login } from './../api/auth';
-import LogoKTApp from '../../assets/images/kt_app.png';
+import LogoKTApp from '../../assets/images/Meotrik_PM_Logo.png';
 import BackgroundImage from '../../assets/images/kt_city_scapes.png';
 import { useNavigation } from '@react-navigation/native';
 import ReusableAlert from '../components/ReusableAlert'; // Import the ReusableAlert component

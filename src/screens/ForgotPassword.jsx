@@ -139,7 +139,7 @@ const ForgotPassword = ({ navigation }) => {
                         <Icon name="arrow-back-outline" size={24} color="#000" />
                     </TouchableOpacity>
                     <Image
-                        source={require('../../assets/images/kt_icon.png')}
+                        source={require('../../assets/images/Meotrik_PM_Logo.png')}
                         style={styles.rightIcon}
                         resizeMode="contain"
                     />

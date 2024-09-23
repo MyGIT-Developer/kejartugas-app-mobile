@@ -21,9 +21,9 @@ const BoardingScreen = () => {
         <ImageBackground source={require('../../assets/images/kt_city_scapes.png')} style={styles.backgroundImage}>
             <View style={styles.container}>
                 <View style={styles.card}>
-                    <Image source={require('../../assets/images/k_logo.png')} style={styles.logo} />
+                    <Image source={require('../../assets/images/Meotrik_PM_Logo.png')} style={styles.logo} />
                     <Text style={styles.welcomeText}>Selamat Datang di</Text>
-                    <Text style={styles.appName}>Kejar Tugas</Text>
+                    <Text style={styles.appName}>Meotrik</Text>
                     <TouchableOpacity style={styles.registerButton} onPress={handleRegisterPress}>
                         <Feather name="briefcase" size={20} color="#fff" style={styles.buttonIcon} />
                         <Text style={styles.buttonText}>Daftar Baru</Text>
