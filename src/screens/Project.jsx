@@ -3,23 +3,27 @@ import { View, Text, ActivityIndicator, Dimensions, StyleSheet, RefreshControl }
 import FloatingButton from '../components/FloatingButtonProject';
 import { getProject } from '../api/projectTask';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { ScrollView } from 'react-native-gesture-handler';
+import { ScrollView, TextInput } from 'react-native-gesture-handler';
 import { useFocusEffect } from '@react-navigation/native';
-const { height } = Dimensions.get('window');
+const { height, width: SCREEN_WIDTH } = Dimensions.get('window');
 import { LinearGradient } from 'expo-linear-gradient';
 import * as Progress from 'react-native-progress';
 import { TouchableOpacity } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
+import SlidingButton from '../components/SlidingButton';
+import ProjectList from './ProjectList';
+import ProjectOnWorking from './ProjectOnWorking';
+import TaskOnReview from './TaskOnReview';
 
 const Project = () => {
     const navigation = useNavigation();
     const [project, setProject] = useState(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
-    const screenWidth = Dimensions.get('window').width; // Get screen width to make each project take full screen width
     const [refreshing, setRefreshing] = useState(false);
     const [companyId, setCompanyId] = useState(null);
+    const [taskCount, setTaskCount] = useState([]);
 
     useEffect(() => {
         const getData = async () => {
@@ -38,6 +42,7 @@ const Project = () => {
         try {
             const response = await getProject(companyId);
             setProject(response.data); // Assuming response contains the project data
+            setTaskCount(response.data.task_status_counts);
             setLoading(false);
         } catch (err) {
             setError(err.message);
@@ -97,7 +102,7 @@ const Project = () => {
 
     const handleGoToDetail = (projectId) => {
         navigation.navigate('DetailProjek', { projectId });
-    }
+    };
 
     return (
         <ScrollView
@@ -119,14 +124,22 @@ const Project = () => {
                     end={{ x: 1, y: 1 }}
                 />
             </View>
-            <Text style={styles.header}>Projek</Text>
-            <View style={[styles.header, { backgroundColor: 'black' }]}></View>
+            <View style={styles.headerSection}>
+                <Text style={styles.header}>Projek</Text>
+                <View style={styles.searchSection}>
+                    <Feather name="search" />
+                    <TextInput style={styles.input} placeholder="Pencarian" underlineColorAndroid="transparent" />
+                </View>
+            </View>
+
             <View style={{ flex: 1, padding: 20 }}>
                 <View style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
                     <View style={styles.sectionContainer}>
                         <View style={styles.subHeader}>
                             <Text style={styles.subHeaderTextLeft}>Semua Proyek</Text>
-                            <Text style={styles.subHeaderTextRight} onPress={() => handleGoTo("all")}>Lihat Semua</Text>
+                            <Text style={styles.subHeaderTextRight} onPress={() => handleGoTo('all')}>
+                                Lihat Semua
+                            </Text>
                         </View>
                         <ScrollView
                             horizontal
@@ -135,7 +148,7 @@ const Project = () => {
                             style={{ flex: 1, flexDirection: 'row' }}
                         >
                             {project && Array.isArray(project) ? (
-                                project.map((item, index) => (
+                                project.slice(0, 5).map((item, index) => (
                                     <View
                                         key={index}
                                         style={{
@@ -168,7 +181,9 @@ const Project = () => {
                                             }}
                                         >
                                             <Progress.Bar progress={item.percentage} color="green" />
-                                            <Text>{item.percentage ? Math.round(item.percentage).toFixed(1) : "0"}%</Text>
+                                            <Text>
+                                                {item.percentage ? Math.round(item.percentage).toFixed(1) : '0'}%
+                                            </Text>
                                         </View>
 
                                         <TouchableOpacity
@@ -195,7 +210,9 @@ const Project = () => {
                     <View style={styles.sectionContainer}>
                         <View style={styles.subHeader}>
                             <Text style={styles.subHeaderTextLeft}>Dalam Pengerjaan</Text>
-                            <Text style={styles.subHeaderTextRight} onPress={() => handleGoTo("onProgress")}>Lihat Semua</Text>
+                            <Text style={styles.subHeaderTextRight} onPress={() => handleGoTo('onProgress')}>
+                                Lihat Semua
+                            </Text>
                         </View>
                         <ScrollView
                             horizontal
@@ -204,44 +221,54 @@ const Project = () => {
                             style={{ flex: 1, flexDirection: 'row' }}
                         >
                             {project && Array.isArray(project) ? (
-                                project.map((item, index) => (
-                                    <View
-                                        key={index}
-                                        style={{
-                                            width: 250,
-                                            padding: 10,
-                                            backgroundColor: '#fff',
-                                            marginHorizontal: 5,
-                                            height: 100,
-                                            borderRadius: 10,
-                                            shadowColor: '#000',
-                                            shadowOpacity: 0.25,
-                                            shadowOffset: { width: 0, height: 5 },
-                                            shadowRadius: 10,
-                                            elevation: 5,
-                                            display: 'flex',
-                                            flexDirection: 'column',
-                                            justifyContent: 'space-between',
-                                            padding: 10,
-                                        }}
-                                    >
-                                        <Text style={{ alignSelf: 'flex-start', fontWeight: 600, fontSize: 16 }}>
-                                            {item.project_name}
-                                        </Text>
+                                project.slice(0, 5).map((item, index) => {
+                                    // Find the 'onreview' task count
+                                    const onProgressTask = item.task_status_counts.find(
+                                        (task) => task.task_status === 'workingOnIt',
+                                    );
+                                    const onProgressCount = onProgressTask ? onProgressTask.count : 0;
 
+                                    return (
                                         <View
+                                            key={index}
                                             style={{
-                                                padding: 5,
-                                                backgroundColor: 'orange',
-                                                borderRadius: 50,
-                                                justifyContent: 'center',
+                                                width: 250,
+                                                padding: 10,
+                                                backgroundColor: '#fff',
+                                                marginHorizontal: 5,
+                                                height: 125,
+                                                borderRadius: 10,
+                                                shadowColor: '#000',
+                                                shadowOpacity: 0.25,
+                                                shadowOffset: { width: 0, height: 5 },
+                                                shadowRadius: 10,
+                                                elevation: 5,
                                                 display: 'flex',
+                                                flexDirection: 'column',
+                                                justifyContent: 'space-between',
+                                                padding: 10,
                                             }}
                                         >
-                                            <Text style={{ color: 'white' }}>9 Dalam Pengerjaan</Text>
+                                            <Text style={{ alignSelf: 'flex-start', fontWeight: '600', fontSize: 16 }}>
+                                                {item.project_name}
+                                            </Text>
+
+                                            <View
+                                                style={{
+                                                    padding: 5,
+                                                    backgroundColor: 'orange',
+                                                    borderRadius: 50,
+                                                    justifyContent: 'center',
+                                                    display: 'flex',
+                                                }}
+                                            >
+                                                <Text style={{ color: 'white' }}>
+                                                    {onProgressCount} Dalam Pengerjaan
+                                                </Text>
+                                            </View>
                                         </View>
-                                    </View>
-                                ))
+                                    );
+                                })
                             ) : (
                                 <Text>No projects found</Text>
                             )}
@@ -251,7 +278,9 @@ const Project = () => {
                     <View style={styles.sectionContainer}>
                         <View style={styles.subHeader}>
                             <Text style={styles.subHeaderTextLeft}>Dalam Peninjauan</Text>
-                            <Text style={styles.subHeaderTextRight} onPress={() => handleGoTo("onReview")}>Lihat Semua</Text>
+                            <Text style={styles.subHeaderTextRight} onPress={() => handleGoTo('onReview')}>
+                                Lihat Semua
+                            </Text>
                         </View>
                         <ScrollView
                             horizontal
@@ -260,44 +289,52 @@ const Project = () => {
                             style={{ flex: 1, flexDirection: 'row' }}
                         >
                             {project && Array.isArray(project) ? (
-                                project.map((item, index) => (
-                                    <View
-                                        key={index}
-                                        style={{
-                                            width: 315,
-                                            padding: 10,
-                                            backgroundColor: '#fff',
-                                            marginHorizontal: 5,
-                                            height: 100,
-                                            borderRadius: 10,
-                                            shadowColor: '#000',
-                                            shadowOpacity: 0.25,
-                                            shadowOffset: { width: 0, height: 5 },
-                                            shadowRadius: 10,
-                                            elevation: 5,
-                                            display: 'flex',
-                                            flexDirection: 'column',
-                                            justifyContent: 'space-between',
-                                            padding: 10,
-                                        }}
-                                    >
-                                        <Text style={{ alignSelf: 'flex-start', fontWeight: 600, fontSize: 16 }}>
-                                            {item.project_name}
-                                        </Text>
+                                project.map((item, index) => {
+                                    // Find the 'onreview' task count
+                                    const onReviewTask = item.task_status_counts.find(
+                                        (task) => task.task_status === 'onReview',
+                                    );
+                                    const onReviewCount = onReviewTask ? onReviewTask.count : 0;
 
+                                    return (
                                         <View
+                                            key={index}
                                             style={{
-                                                padding: 5,
-                                                backgroundColor: 'red',
-                                                borderRadius: 50,
-                                                justifyContent: 'center',
+                                                width: 250,
+                                                padding: 10,
+                                                backgroundColor: '#fff',
+                                                marginHorizontal: 5,
+                                                height: 125,
+                                                borderRadius: 10,
+                                                shadowColor: '#000',
+                                                shadowOpacity: 0.25,
+                                                shadowOffset: { width: 0, height: 5 },
+                                                shadowRadius: 10,
+                                                elevation: 5,
                                                 display: 'flex',
+                                                flexDirection: 'column',
+                                                justifyContent: 'space-between',
+                                                padding: 10,
                                             }}
                                         >
-                                            <Text style={{ color: 'white' }}>9 Dalam Peninjauan</Text>
+                                            <Text style={{ alignSelf: 'flex-start', fontWeight: '600', fontSize: 16 }}>
+                                                {item.project_name}
+                                            </Text>
+
+                                            <View
+                                                style={{
+                                                    padding: 5,
+                                                    backgroundColor: 'red',
+                                                    borderRadius: 50,
+                                                    justifyContent: 'center',
+                                                    display: 'flex',
+                                                }}
+                                            >
+                                                <Text style={{ color: 'white' }}>{onReviewCount} Dalam Peninjauan</Text>
+                                            </View>
                                         </View>
-                                    </View>
-                                ))
+                                    );
+                                })
                             ) : (
                                 <Text>No projects found</Text>
                             )}
@@ -317,7 +354,7 @@ const styles = StyleSheet.create({
         flexGrow: 1,
     },
     backgroundBox: {
-        height: 125, // Set your desired height
+        height: 155, // Set your desired height
         width: '100%', // Set your desired width
         position: 'absolute', // Position it behind other elements
         top: 0,
@@ -325,8 +362,17 @@ const styles = StyleSheet.create({
     },
     linearGradient: {
         flex: 1, // Ensure the gradient covers the entire view
-        borderBottomLeftRadius: 50,
+        borderBottomLeftRadius: 30,
         borderBottomRightRadius: 30,
+    },
+    headerSection: {
+        display: 'flex',
+        flexDirection: 'column',
+        justifyContent: 'center',
+        alignItems: 'center',
+        padding: 10,
+        width: SCREEN_WIDTH,
+        gap:10,
     },
     header: {
         fontSize: 20,
@@ -334,6 +380,26 @@ const styles = StyleSheet.create({
         color: 'white',
         textAlign: 'center',
         marginTop: 50,
+        letterSpacing: -1,
+    },
+    searchSection: {
+        flexDirection: 'row',
+        backgroundColor: 'white',
+        borderRadius: 30,
+        margin: 10,
+        alignItems: 'center',
+        paddingHorizontal: 10,
+    },
+    searchIcon: {
+        padding: 10,
+    },
+    input: {
+        flex: 1,
+        backgroundColor: 'white',
+        color: '#A7AFB1',
+        textAlign: 'center',
+        letterSpacing: -1,
+        fontWeight: 'semibold',
     },
     mainContainer: {
         height: '200vh',

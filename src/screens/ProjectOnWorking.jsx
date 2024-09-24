@@ -11,7 +11,7 @@ import * as Progress from 'react-native-progress';
 import { TouchableOpacity } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 
-const Project = () => {
+const ProjectOnWorking = () => {
     const [project, setProject] = useState(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
@@ -342,4 +342,4 @@ const styles = StyleSheet.create({
     },
 });
 
-export default Project;
+export default ProjectOnWorking;

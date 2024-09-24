@@ -1,22 +1,9 @@
 import apiService from "../utils/apiService";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
-export const getProject = async (companyId) => {
+export const getTeamsByCompany = async (companyId) => {
     try {
-        const response = await apiService.get(`/projects/company/${companyId}`, {
-            headers: {
-                Authorization: `Bearer ${await AsyncStorage.getItem('token')}`
-            }
-        });
-        return response.data;
-    } catch (error) {
-        throw new Error(error.response?.data?.message || 'Fetching parameter failed');
-    }
-}
-
-export const getProjectById = async (projectId) => {
-    try {
-        const response = await apiService.get(`/projects/${projectId}`, {
+        const response = await apiService.get(`/teams/company/${companyId}`, {
             headers: {
                 Authorization: `Bearer ${await AsyncStorage.getItem('token')}`
             }
@@ -27,14 +14,27 @@ export const getProjectById = async (projectId) => {
     }
 }
 
-export const CreateProject = async (formdata) => {
+export const getJobsByCompany = async (companyId) => {
     try {
-        const response = await apiService.get(`/projects/`, formdata, {
+        const response = await apiService.get(`/jobs/company/${companyId}`, {
             headers: {
                 Authorization: `Bearer ${await AsyncStorage.getItem('token')}`
             }
         });
-        return response.data;
+        return response.data.data;
+    } catch (error) {
+        throw new Error(error.response?.data?.message || 'Fetching parameter failed');
+    }
+}
+
+export const getEmployeeByCompany = async (companyId) => {
+    try {
+        const response = await apiService.get(`/employees/company/${companyId}`, {
+            headers: {
+                Authorization: `Bearer ${await AsyncStorage.getItem('token')}`
+            }
+        });
+        return response.data.data;
     } catch (error) {
         throw new Error(error || 'Creating project failed');
     }

@@ -45,16 +45,15 @@ const Home = () => {
     ];
 
     const ButtonList = [
-        { id: 1, src: "Feather", icon: 'users', description: 'Tugas Ad Hoc'},
-        { id: 2, src: "Feather", icon: 'credit-card', description: 'Cuti'},
-        { id: 3, src: "Feather", icon: 'check-circle', description: 'Klaim'},
+        { id: 1, src: 'Feather', icon: 'users', description: 'Tugas Ad Hoc' },
+        { id: 2, src: 'Feather', icon: 'credit-card', description: 'Cuti' },
+        { id: 3, src: 'Feather', icon: 'check-circle', description: 'Klaim' },
         // { id: 4, src: "Feather", icon: 'user-plus', description: 'Riwayat Tugas'},
         // { id: 5, src: "Feather", icon: 'users', description: 'Tugas Ad Hoc'},
         // { id: 6, src: "Feather", icon: 'credit-card', description: 'Cuti'},
         // { id: 7, src: "Feather", icon: 'check-circle', description: 'Klaim'},
         // { id: 8, src: "Feather", icon: 'user-plus', description: 'Riwayat Tugas'},
     ];
-    
 
     return (
         <View style={{ flex: 1 }}>
@@ -72,10 +71,16 @@ const Home = () => {
             <ScrollView>
                 <View style={styles.upperGridContainer}>
                     {statistics.map((stat, index) => (
-                        <View key={index} style={[styles.statisticCard, { borderWidth: 2, borderColor: stat.color, backgroundColor: 'white' }]}>
-                        <View style={styles.textContainer}>
-                        <Text style={[styles.valueText, {color:"black"}]}>{stat.value}</Text>
-                                <Text style={[styles.descriptionText, {color:"black"}]}>{stat.description}</Text>
+                        <View
+                            key={index}
+                            style={[
+                                styles.statisticCard,
+                                { borderWidth: 2, borderColor: stat.color, backgroundColor: 'white' },
+                            ]}
+                        >
+                            <View style={styles.textContainer}>
+                                <Text style={[styles.valueText, { color: 'black' }]}>{stat.value}</Text>
+                                <Text style={[styles.descriptionText, { color: 'black' }]}>{stat.description}</Text>
                             </View>
                             <Feather name="calendar" size={30} color={stat.color} style={styles.icon} />
                         </View>
@@ -94,7 +99,7 @@ const Home = () => {
                             paddingHorizontal: 20,
                         }}
                     >
-                        <Text style={{ fontSize: 14, color: '#148FFF', fontWeight:500, }}>Menu</Text>
+                        <Text style={{ fontSize: 14, color: '#148FFF', fontWeight: 500 }}>Menu</Text>
                     </View>
 
                     <View style={styles.buttonGridContainer}>
@@ -110,7 +115,7 @@ const Home = () => {
                 </View>
 
                 <View style={styles.lowerContainer}>
-                <View
+                    <View
                         style={{
                             display: 'flex',
                             flexDirection: 'row',
@@ -120,13 +125,11 @@ const Home = () => {
                             width: '100%',
                         }}
                     >
-                        <Text style={{ fontSize: 14, color: '#148FFF', fontWeight:500, }}>Tugas Saya</Text>
-                        <Text style={{ fontSize: 14, color: '#148FFF', fontWeight:500, }}>Lihat Semua</Text>
+                        <Text style={{ fontSize: 14, color: '#148FFF', fontWeight: 500 }}>Tugas Saya</Text>
+                        <Text style={{ fontSize: 14, color: '#148FFF', fontWeight: 500 }}>Lihat Semua</Text>
                     </View>
 
-                    <View style={{backgroundColor:"white", minHeight:100,}}>
-                      
-                    </View>
+                    <View style={{ backgroundColor: 'white', minHeight: 100 }}></View>
                 </View>
             </ScrollView>
         </View>
@@ -239,7 +242,6 @@ const styles = StyleSheet.create({
         gap: 10,
         flexWrap: 'wrap', // Allows buttons to wrap to the next line
     },
-    
     menuButton: {
         width: 100,
         height: 100,

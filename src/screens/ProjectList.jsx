@@ -1,71 +1,146 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import { View, Text, ActivityIndicator, Dimensions, StyleSheet, RefreshControl } from 'react-native';
-import FloatingButton from '../components/FloatingButtonProject';
-import { getProject } from '../api/projectTask';
+import { ScrollView, TouchableOpacity } from 'react-native-gesture-handler';
+import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { ScrollView } from 'react-native-gesture-handler';
-import { useFocusEffect } from '@react-navigation/native';
-const { height } = Dimensions.get('window');
 import { LinearGradient } from 'expo-linear-gradient';
 import * as Progress from 'react-native-progress';
-import { TouchableOpacity } from 'react-native';
 import { Feather } from '@expo/vector-icons';
-import{ useNavigation } from '@react-navigation/native';
 
-const Project = () => {
+import FloatingButton from '../components/FloatingButtonProject';
+import SlidingButton from '../components/SlidingButton';
+import SlidingFragment from '../components/SlidingFragment';
+import { getProject } from '../api/projectTask';
+
+const { height, width: SCREEN_WIDTH } = Dimensions.get('window');
+
+const ProjectList = () => {
     const navigation = useNavigation();
     const [project, setProject] = useState(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
-    const screenWidth = Dimensions.get('window').width; // Get screen width to make each project take full screen width
     const [refreshing, setRefreshing] = useState(false);
     const [companyId, setCompanyId] = useState(null);
+    const [activeFragment, setActiveFragment] = useState(0);
 
     useEffect(() => {
         const getData = async () => {
             try {
-                const companyId = await AsyncStorage.getItem('companyId');
-                setCompanyId(companyId);
+                const id = await AsyncStorage.getItem('companyId');
+                setCompanyId(id);
             } catch (error) {
                 console.error('Error fetching AsyncStorage data:', error);
             }
         };
-
-        getData(); // Call the async function
+        getData();
     }, []);
 
-    const fetchProject = async () => {
+    const fetchProject = useCallback(async () => {
+        if (!companyId) return;
         try {
             const response = await getProject(companyId);
-            setProject(response.data); // Assuming response contains the project data
+            setProject(response.data);
             setLoading(false);
         } catch (err) {
             setError(err.message);
             setLoading(false);
         }
-    };
+    }, [companyId]);
 
-    useEffect(() => {
-        if (companyId) {
+    useFocusEffect(
+        useCallback(() => {
             fetchProject();
-        }
-    }, [companyId, fetchProject]);
+        }, [fetchProject])
+    );
 
     const onRefresh = useCallback(async () => {
-        console.log('onRefresh called');
         setRefreshing(true);
-        try {
-            await fetchProject();
-        } catch (error) {
-            console.error('Error during refresh:', error);
-        } finally {
-            setRefreshing(false);
-        }
+        await fetchProject();
+        setRefreshing(false);
     }, [fetchProject]);
+
+    const handleGoToDetail = (projectId) => {
+        navigation.navigate('DetailProjek', { projectId });
+    };
+
+    const renderProjectItem = (item) => (
+        <View key={item.id} style={styles.projectItem}>
+            <Text style={styles.projectName}>{item.project_name}</Text>
+            <View style={styles.progressContainer}>
+                <Progress.Bar 
+                    progress={item.percentage} 
+                    color="#27B44E" 
+                    height={10} 
+                    borderRadius={25} 
+                    borderWidth={0.2}
+                    width={null}
+                    style={{flex: 1}}
+                />
+                <Text style={styles.percentageText}>
+                    {item.percentage ? Math.round(item.percentage).toFixed(1) : '0'}%
+                </Text>
+            </View>
+            <TouchableOpacity
+                style={styles.detailButton}
+                onPress={() => handleGoToDetail(item.id)}
+            >
+                <Text>Lihat Detail</Text>
+                <Feather name="chevron-right" size={24} color="black" />
+            </TouchableOpacity>
+        </View>
+    );
+
+    const ProjectListView = ({ filterType, onScrollBeginDrag, onScrollEndDrag }) => (
+        <ScrollView 
+            contentContainerStyle={styles.projectList}
+            onScrollBeginDrag={onScrollBeginDrag}
+            onScrollEndDrag={onScrollEndDrag}
+        >
+            {project && Array.isArray(project) ? (
+                project
+                    .filter(item => filterType ? item.project_type === filterType : true)
+                    .map(renderProjectItem)
+            ) : (
+                <Text>No projects found</Text>
+            )}
+        </ScrollView>
+    );
+
+    const fragments = [
+        { 
+            title: 'Semua Proyek', 
+            screen: ({ onScrollBeginDrag, onScrollEndDrag }) => (
+                <ProjectListView 
+                    onScrollBeginDrag={onScrollBeginDrag} 
+                    onScrollEndDrag={onScrollEndDrag} 
+                />
+            )
+        },
+        { 
+            title: 'General', 
+            screen: ({ onScrollBeginDrag, onScrollEndDrag }) => (
+                <ProjectListView 
+                    filterType="general" 
+                    onScrollBeginDrag={onScrollBeginDrag} 
+                    onScrollEndDrag={onScrollEndDrag} 
+                />
+            )
+        },
+        { 
+            title: 'Maintenance', 
+            screen: ({ onScrollBeginDrag, onScrollEndDrag }) => (
+                <ProjectListView 
+                    filterType="maintenance" 
+                    onScrollBeginDrag={onScrollBeginDrag} 
+                    onScrollEndDrag={onScrollEndDrag} 
+                />
+            )
+        },
+    ];
 
     if (loading) {
         return (
-            <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+            <View style={styles.centered}>
                 <ActivityIndicator size="large" color="#0000ff" />
             </View>
         );
@@ -73,14 +148,10 @@ const Project = () => {
 
     if (error) {
         return (
-            <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+            <View style={styles.centered}>
                 <Text>Error: {error}</Text>
             </View>
         );
-    }
-
-    const handleGoToDetail = (projectId) => {
-        navigation.navigate('DetailProjek', { projectId });
     }
 
     return (
@@ -98,138 +169,115 @@ const Project = () => {
             <View style={styles.backgroundBox}>
                 <LinearGradient
                     colors={['#0E509E', '#5FA0DC', '#9FD2FF']}
-                    style={styles.linearGradient} // Apply the gradient to the entire backgroundBox
+                    style={styles.linearGradient}
                     start={{ x: 0, y: 0 }}
                     end={{ x: 1, y: 1 }}
                 />
             </View>
-            <Text style={styles.header}>Projeks</Text>
-            <View style={[styles.header, { backgroundColor: 'black' }]}></View>
-            <View style={{ flex: 1, padding: 20 }}>
-                <View style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
-                    <View style={styles.sectionContainer}>
-                        <ScrollView
-                            pagingEnabled
-                            showsHorizontalScrollIndicator={false}
-                            style={{ display: 'flex', flexDirection: 'column', gap: 10 }}
-                        >
-                            {project && Array.isArray(project) ? (
-                                project.map((item, index) => (
-                                    <View
-                                        key={index}
-                                        style={{
-                                            width: '100%',
-                                            padding: 10,
-                                            backgroundColor: '#fff',
-                                            marginHorizontal: 5,
-                                            height: 125,
-                                            borderRadius: 10,
-                                            shadowColor: '#000',
-                                            shadowOpacity: 0.25,
-                                            shadowOffset: { width: 0, height: 5 },
-                                            shadowRadius: 10,
-                                            elevation: 5,
-                                            display: 'flex',
-                                            flexDirection: 'column',
-                                            justifyContent: 'space-between',
-                                            padding: 10,
-                                        }}
-                                    >
-                                        <Text style={{ alignSelf: 'flex-start', fontWeight: 600, fontSize: 16 }}>
-                                            {item.project_name}
-                                        </Text>
-                                        <View
-                                            style={{
-                                                display: 'flex',
-                                                flexDirection: 'row',
-                                                gap: 5,
-                                                alignItems: 'center',
-                                            }}
-                                        >
-                                            <Progress.Bar progress={item.percentage} color="green" />
-                                            <Text>{item.percentage ? Math.round(item.percentage).toFixed(1) : "0"}%</Text>
-                                        </View>
 
-                                        <TouchableOpacity
-                                            style={{
-                                                display: 'flex',
-                                                flexDirection: 'row',
-                                                gap: 10,
-                                                alignItems: 'center',
-                                                alignSelf: 'flex-start',
-                                            }}
-                                            onPress={() => handleGoToDetail(item.id)}
-                                        >
-                                            <Text>Lihat Detail</Text>
-                                            <Feather name="chevron-right" size={24} color="black" />
-                                        </TouchableOpacity>
-                                    </View>
-                                ))
-                            ) : (
-                                <Text>No projects found</Text>
-                            )}
-                        </ScrollView>
-                    </View>
-                </View>
-
-                <FloatingButton />
+            <View style={styles.headerSection}>
+                <Feather name="chevron-left" style={styles.backIcon} onPress={() => navigation.goBack()} />
+                <Text style={styles.header}>Projek</Text>
+                <SlidingButton 
+                    fragments={fragments} 
+                    activeFragment={activeFragment} 
+                    onPress={setActiveFragment} 
+                />
             </View>
+
+            <View style={styles.sectionContainer}>
+                <SlidingFragment 
+                    fragments={fragments} 
+                    activeFragment={activeFragment} 
+                    onSwipe={setActiveFragment}
+                    data={project}
+                />
+            </View>
+            <FloatingButton />
         </ScrollView>
     );
 };
 
 const styles = StyleSheet.create({
     container: {
-        minHeight: height, // Ensure the content is at least as tall as the screen
+        minHeight: height,
         flexGrow: 1,
     },
     backgroundBox: {
-        height: 125, // Set your desired height
-        width: '100%', // Set your desired width
-        position: 'absolute', // Position it behind other elements
+        height: 155,
+        width: '100%',
+        position: 'absolute',
         top: 0,
         left: 0,
     },
     linearGradient: {
-        flex: 1, // Ensure the gradient covers the entire view
-        borderBottomLeftRadius: 50,
+        flex: 1,
+        borderBottomLeftRadius: 30,
         borderBottomRightRadius: 30,
     },
+    headerSection: {
+        justifyContent: 'center',
+        alignItems: 'center',
+        width: SCREEN_WIDTH,
+        marginTop: 20,
+        gap: 20,
+    },
     header: {
-        fontSize: 20,
+        fontSize: 22,
         fontWeight: 'bold',
         color: 'white',
         textAlign: 'center',
-        marginTop: 50,
+        letterSpacing: -1,
+        marginTop: 35,
     },
-    mainContainer: {
-        height: '200vh',
-        borderRadius: 20,
-        margin: 20,
-        display: 'flex',
-        flexDirection: 'column',
-        gap: 20,
+    backIcon: {
+        position: 'absolute',
+        top: 35,
+        left: 20,
+        color: 'white',
+        fontSize: 24,
     },
     sectionContainer: {
-        flex: 1,
-        display: 'flex',
-        flexDirection: 'column',
-        gap: 20,
+        flexGrow: 1,
     },
-    subHeader: {
-        display: 'flex',
-        flexDirection: 'row',
-        justifyContent: 'space-between',
+    centered: {
+        flex: 1,
+        justifyContent: 'center',
         alignItems: 'center',
     },
-    subHeaderTextLeft: {
-        fontSize: 14,
-        fontWeight: 'bold',
+    projectList: {
+        padding: 20,
+        width: SCREEN_WIDTH,
     },
-    subHeaderTextRight: {
-        fontSize: 14,
-        color: 'gray',
+    projectItem: {
+        backgroundColor: '#fff',
+        borderRadius: 10,
+        padding: 15,
+        marginBottom: 15,
+        shadowColor: '#000',
+        shadowOpacity: 0.1,
+        shadowOffset: { width: 0, height: 2 },
+        shadowRadius: 8,
+        elevation: 5,
+    },
+    projectName: {
+        fontWeight: '600',
+        fontSize: 16,
+        marginBottom: 10,
+    },
+    progressContainer: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        marginBottom: 10,
+    },
+    percentageText: {
+        marginLeft: 10,
+    },
+    detailButton: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        alignSelf: 'flex-start',
     },
 });
 
-export default Project;
+export default ProjectList;

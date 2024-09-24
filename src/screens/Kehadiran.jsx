@@ -1,4 +1,14 @@
-import { View, Text, StyleSheet, Button, Alert, TextInput, TouchableOpacity, RefreshControl, Dimensions  } from 'react-native';
+import {
+    View,
+    Text,
+    StyleSheet,
+    Button,
+    Alert,
+    TextInput,
+    TouchableOpacity,
+    RefreshControl,
+    Dimensions,
+} from 'react-native';
 import React, { useState, useEffect, useCallback } from 'react';
 import ColorList from '../components/ColorList';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -84,20 +94,20 @@ const Kehadiran = () => {
     useFocusEffect(
         useCallback(() => {
             fetchAttendanceData();
-        }, [fetchAttendanceData])
+        }, [fetchAttendanceData]),
     );
 
     const onRefresh = useCallback(async () => {
         console.log('onRefresh called');
         setRefreshing(true);
         try {
-          await fetchAttendanceData();
+            await fetchAttendanceData();
         } catch (error) {
-          console.error('Error during refresh:', error);
+            console.error('Error during refresh:', error);
         } finally {
-          setRefreshing(false);
+            setRefreshing(false);
         }
-      }, [fetchAttendanceData]);
+    }, [fetchAttendanceData]);
 
     const getBackgroundColor = (absenStatus) => {
         switch (absenStatus) {
@@ -349,123 +359,91 @@ const Kehadiran = () => {
     };
 
     return (
-        <ScrollView
-            refreshControl={
-                <RefreshControl
-                  refreshing={refreshing}
-                  onRefresh={onRefresh}
-                  colors={['#0E509E']}
-                  tintColor="#0E509E"
-                />
-              }
-              contentContainerStyle={styles.container}
-        >
-            {/* Ensure the parent View takes the full available space */}
+        <View style={styles.container}>
             <View style={styles.backgroundBox}>
                 <LinearGradient
                     colors={['#0E509E', '#5FA0DC', '#9FD2FF']}
-                    style={styles.linearGradient} // Apply the gradient to the entire backgroundBox
+                    style={styles.linearGradient}
                     start={{ x: 0, y: 0 }}
                     end={{ x: 1, y: 1 }}
                 />
             </View>
 
-            <View>
-            <Text style={styles.header}>Kehadiran</Text>
-            <View
-                style={styles.mainContainer}
+            <ScrollView
+                contentContainerStyle={styles.scrollViewContent}
+                refreshControl={
+                    <RefreshControl
+                        refreshing={refreshing}
+                        onRefresh={onRefresh}
+                        colors={['#0E509E']}
+                        tintColor="#0E509E"
+                    />
+                }
             >
-                <View style={styles.upperContainer}>
-                    <Text style={styles.timeText}>{currentTime}</Text>
-                    <Text style={styles.locationText}>{errorMsg || locationName}</Text>
+                <Text style={styles.header}>Kehadiran</Text>
+                <View style={styles.mainContainer}>
+                    <View style={styles.upperContainer}>
+                        <Text style={styles.timeText}>{currentTime}</Text>
+                        <Text style={styles.locationText}>{errorMsg || locationName}</Text>
 
-                    <View style={styles.buttonContainer}>
-                        {isCheckedIn ? (
-                            <CircularButton
-                                title="Clock Out"
-                                onPress={handleClockOut}
-                                colors={['#E11414', '#EA4545', '#EA8F8F']}
-                                disabled={attendanceData.checkOut}
-                            />
-                        ) : (
-                            <CircularButton
-                                title="Clock In"
-                                onPress={handleClockIn}
-                                colors={['#0E509E', '#5FA0DC', '#9FD2FF']}
-                            />
-                        )}
+                        <View style={styles.buttonContainer}>
+                            {isCheckedIn ? (
+                                <CircularButton
+                                    title="Clock Out"
+                                    onPress={handleClockOut}
+                                    colors={['#E11414', '#EA4545', '#EA8F8F']}
+                                    disabled={attendanceData.checkOut}
+                                />
+                            ) : (
+                                <CircularButton
+                                    title="Clock In"
+                                    onPress={handleClockIn}
+                                    colors={['#0E509E', '#5FA0DC', '#9FD2FF']}
+                                />
+                            )}
+                        </View>
                     </View>
+
+                    <View style={styles.lowerContainer}>{paginatedDateViews}</View>
+                    <View>
+                        <View style={styles.paginationControls}>
+                            <TouchableOpacity onPress={handlePreviousPage} disabled={currentPage === 0}>
+                                <Feather
+                                    name="chevron-left"
+                                    size={24}
+                                    color="#148FFF"
+                                    style={[styles.paginationButton, currentPage === 0 && styles.disabledButton]}
+                                />
+                            </TouchableOpacity>
+
+                            <Text>
+                                Page {currentPage + 1} of {totalPages}
+                            </Text>
+
+                            <TouchableOpacity onPress={handleNextPage} disabled={currentPage === totalPages - 1}>
+                                <Feather
+                                    name="chevron-right"
+                                    size={24}
+                                    color="#148FFF"
+                                    style={[
+                                        styles.paginationButton,
+                                        currentPage === totalPages - 1 && styles.disabledButton,
+                                    ]}
+                                />
+                            </TouchableOpacity>
+                        </View>
+                    </View>
+
+                    {/* <ScrollView style={styles.lowerContainer}>{dateViews}</ScrollView> */}
                 </View>
-
-                {/* <View style={styles.midContainer}>
-                    <Text style={styles.label}>Mulai</Text>
-                    {show && (
-                        <DateTimePicker
-                            testID="dateTimePicker"
-                            value={date}
-                            mode="date"
-                            display="default"
-                            onChange={onChange}
-                            style={styles.datePicker}
-                        />
-                    )}
-                    <View style={styles.datepickerBox}>
-                        <Text style={styles.dateText} onPress={showDatePicker}>
-                            {date.toDateString()}
-                        </Text>
-                    </View>
-
-                    <TouchableOpacity onPress={showDatePicker} style={styles.searchButton}>
-                            <Feather
-                                name="search"
-                                size={12}
-                                color="#fff"
-                            />
-                            <Text style={{color:"#fff"}}>Cari</Text>
-                        </TouchableOpacity>
-                </View> */}
-
-                <View style={styles.lowerContainer}>{paginatedDateViews}</View>
-                <View>
-                    <View style={styles.paginationControls}>
-                        <TouchableOpacity onPress={handlePreviousPage} disabled={currentPage === 0}>
-                            <Feather
-                                name="chevron-left"
-                                size={24}
-                                color="#148FFF"
-                                style={[styles.paginationButton, currentPage === 0 && styles.disabledButton]}
-                            />
-                        </TouchableOpacity>
-
-                        <Text>
-                            Page {currentPage + 1} of {totalPages}
-                        </Text>
-
-                        <TouchableOpacity onPress={handleNextPage} disabled={currentPage === totalPages - 1}>
-                            <Feather
-                                name="chevron-right"
-                                size={24}
-                                color="#148FFF"
-                                style={[
-                                    styles.paginationButton,
-                                    currentPage === totalPages - 1 && styles.disabledButton,
-                                ]}
-                            />
-                        </TouchableOpacity>
-                    </View>
-                </View>
-
-                {/* <ScrollView style={styles.lowerContainer}>{dateViews}</ScrollView> */}
-            </View>
+            </ScrollView>
             <ReusableBottomPopUp
                 show={alert.show}
                 alertType={alert.type}
                 message={alert.message}
                 onConfirm={() => setAlert((prev) => ({ ...prev, show: false }))}
             />
-            </View>
-            
-        </ScrollView>
+        </View>
     );
 };
 
@@ -473,7 +451,7 @@ const styles = StyleSheet.create({
     container: {
         minHeight: height, // Ensure the content is at least as tall as the screen
         flexGrow: 1,
-      },
+    },
     locationContainer: {
         flexDirection: 'row', // Align items horizontally
         alignItems: 'center', // Center items vertically

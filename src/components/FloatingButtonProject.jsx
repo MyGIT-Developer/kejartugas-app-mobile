@@ -2,12 +2,18 @@ import React, { useState } from 'react';
 import { View, TouchableOpacity, StyleSheet } from 'react-native';
 import Icon from 'react-native-vector-icons/Feather';
 import * as Animatable from 'react-native-animatable';
+import { useNavigation } from '@react-navigation/native';
 
 const FloatingButtonProject = () => {
+    const navigator = useNavigation();
     const [isOpen, setIsOpen] = useState(false);
 
     const toggleMenu = () => {
         setIsOpen(!isOpen);
+    };
+
+    const handleGoToCreate = () => {
+        navigator.navigate('AddProjectForm');
     };
 
     return (
@@ -16,18 +22,18 @@ const FloatingButtonProject = () => {
                 <View style={styles.menu}>
                     <Animatable.View animation="bounceIn" style={styles.button}>
                         <TouchableOpacity onPress={() => alert('Create')}>
-                            <Icon name="plus" size={24} color="#fff" />
+                            <Icon name="plus" size={26} color="#148FFF" onPress={handleGoToCreate}/>
                         </TouchableOpacity>
                     </Animatable.View>
                     <Animatable.View animation="bounceIn" style={styles.button}>
                         <TouchableOpacity onPress={() => alert('Update')}>
-                            <Icon name="refresh-cw" size={24} color="#fff" />
+                            <Icon name="refresh-cw" size={26} color="#148FFF" />
                         </TouchableOpacity>
                     </Animatable.View>
                 </View>
             )}
             <TouchableOpacity onPress={toggleMenu} style={styles.floatingButton}>
-                <Icon name={isOpen ? 'x' : 'plus'} size={24} color="#fff" />
+                <Icon name={isOpen ? 'x' : 'plus'} size={26} color="#148FFF" />
             </TouchableOpacity>
         </View>
     );
@@ -41,7 +47,7 @@ const styles = StyleSheet.create({
         alignItems: 'center',
     },
     floatingButton: {
-        backgroundColor: '#0891b2',
+        backgroundColor: '#fff',
         width: 60,
         height: 60,
         borderRadius: 30,
@@ -55,7 +61,7 @@ const styles = StyleSheet.create({
         alignItems: 'center',
     },
     button: {
-        backgroundColor: '#0891b2',
+        backgroundColor: '#fff',
         width: 50,
         height: 50,
         borderRadius: 25,

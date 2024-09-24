@@ -1,4 +1,5 @@
 import apiService from '../utils/apiService';
+import AsyncStorage from "@react-native-async-storage/async-storage";
 
 // Function to mark an employee as absent
 export const markAbsent = async (companyId, employeeId, note, attendance_image, location) => {
@@ -19,7 +20,11 @@ export const markAbsent = async (companyId, employeeId, note, attendance_image, 
 // Function to get attendance details for an employee
 export const getAttendance = async (employeeId) => {
     try {
-        const response = await apiService.get(`/attendance/${employeeId}`);
+        const response = await apiService.get(`/attendance/${employeeId}`, {
+            headers: {
+                Authorization: `Bearer ${await AsyncStorage.getItem('token')}`
+            }
+        });
         return response.data;
     } catch (error) {
         throw new Error(error.response?.data?.message || 'Fetching attendance failed');
