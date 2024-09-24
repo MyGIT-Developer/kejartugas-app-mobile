@@ -73,7 +73,7 @@ const ShimmerTaskCard = () => (
     <View style={styles.taskCard}>
         <Shimmer width={200} height={20} style={styles.shimmerTitle} />
         <Shimmer width={150} height={15} style={styles.shimmerSubtitle} />
-        <Shimmer width={100} height={25} style={styles.shimmerStatus} />
+        {/* <Shimmer width={100} height={25} style={styles.shimmerStatus} /> */}
         <Shimmer width={100} height={15} style={styles.shimmerButton} />
     </View>
 );

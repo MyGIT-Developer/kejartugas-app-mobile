@@ -17,6 +17,26 @@ import { useNavigation } from '@react-navigation/native'; // Import the useNavig
 const SCREEN_HEIGHT = Dimensions.get('window').height;
 const SCREEN_WIDTH = Dimensions.get('window').width;
 
+// Tambahkan fungsi getStatusBadgeColor di atas komponen DraggableModalTask
+const getStatusBadgeColor = (status) => {
+    switch (status) {
+        case 'workingOnIt':
+            return { color: '#CCC8C8', label: 'Dalam Pengerjaan' };
+        case 'onReview':
+            return { color: '#9AE1EA', label: 'Dalam Peninjauan' };
+        case 'rejected':
+            return { color: '#F69292', label: 'Ditolak' };
+        case 'onHold':
+            return { color: '#F69292', label: 'Ditunda' };
+        case 'Completed':
+            return { color: '#C9F8C1', label: 'Selesai' };
+        case 'onPending':
+            return { color: '#F0E08A', label: 'Tersedia' };
+        default:
+            return { color: '#E0E0E0', label: status }; // Warna default
+    }
+};
+
 const DraggableModalTask = ({ visible, onClose, taskDetails }) => {
     const navigation = useNavigation(); // Get the navigation object
     const [isFullScreen, setIsFullScreen] = useState(false);
@@ -85,6 +105,9 @@ const DraggableModalTask = ({ visible, onClose, taskDetails }) => {
         onClose(); // Optionally close the modal after navigation
     };
 
+    // Get status badge color and label
+    const { color: badgeColor, label: displayStatus } = getStatusBadgeColor(taskDetails.status);
+
     return (
         <Modal visible={visible} transparent={true} animationType="slide" onRequestClose={onClose}>
             <View style={styles.overlay}>
@@ -101,8 +124,8 @@ const DraggableModalTask = ({ visible, onClose, taskDetails }) => {
                     <ScrollView style={styles.content}>
                         <Text style={styles.taskTitle}>{taskDetails.title}</Text>
                         <View style={styles.statusContainer}>
-                            <View style={styles.statusBadge}>
-                                <Text style={styles.statusText}>{taskDetails.status}</Text>
+                            <View style={[styles.statusBadge, { backgroundColor: badgeColor }]}>
+                                <Text style={styles.statusText}>{displayStatus}</Text>
                             </View>
                             <Progress.Circle
                                 size={60}
@@ -224,7 +247,7 @@ const styles = StyleSheet.create({
     },
     statusText: {
         fontFamily: 'Poppins-SemiBold',
-        color: '#4CAF50',
+        color: '#1f1f1f',
     },
     progressText: {
         fontFamily: 'Poppins-SemiBold',
