@@ -50,7 +50,7 @@ const ProjectList = () => {
     useFocusEffect(
         useCallback(() => {
             fetchProject();
-        }, [fetchProject])
+        }, [fetchProject]),
     );
 
     const onRefresh = useCallback(async () => {
@@ -67,39 +67,39 @@ const ProjectList = () => {
         <View key={item.id} style={styles.projectItem}>
             <Text style={styles.projectName}>{item.project_name}</Text>
             <View style={styles.progressContainer}>
-                <Progress.Bar 
-                    progress={item.percentage} 
-                    color="#27B44E" 
-                    height={10} 
-                    borderRadius={25} 
+                <Progress.Bar
+                    progress={Math.round(item.percentage).toFixed(1)}
+                    color="#27B44E"
+                    height={10}
+                    borderRadius={25}
                     borderWidth={0.2}
-                    width={null}
-                    style={{flex: 1}}
+                    style={{ flex: 1 }}
                 />
                 <Text style={styles.percentageText}>
                     {item.percentage ? Math.round(item.percentage).toFixed(1) : '0'}%
                 </Text>
             </View>
-            <TouchableOpacity
-                style={styles.detailButton}
-                onPress={() => handleGoToDetail(item.id)}
-            >
+            <TouchableOpacity style={styles.detailButton} onPress={() => handleGoToDetail(item.id)}>
                 <Text>Lihat Detail</Text>
                 <Feather name="chevron-right" size={24} color="black" />
             </TouchableOpacity>
         </View>
     );
 
-    const ProjectListView = ({ filterType, onScrollBeginDrag, onScrollEndDrag }) => (
-        <ScrollView 
+    const ProjectListView = ({ filterType, }) => (
+        <ScrollView
+            refreshControl={
+                <RefreshControl
+                    refreshing={refreshing}
+                    onRefresh={onRefresh}
+                    colors={['#0E509E']}
+                    tintColor="#0E509E"
+                />
+            }
             contentContainerStyle={styles.projectList}
-            onScrollBeginDrag={onScrollBeginDrag}
-            onScrollEndDrag={onScrollEndDrag}
         >
             {project && Array.isArray(project) ? (
-                project
-                    .filter(item => filterType ? item.project_type === filterType : true)
-                    .map(renderProjectItem)
+                project.filter((item) => (filterType ? item.project_type === filterType : true)).map(renderProjectItem)
             ) : (
                 <Text>No projects found</Text>
             )}
@@ -107,34 +107,31 @@ const ProjectList = () => {
     );
 
     const fragments = [
-        { 
-            title: 'Semua Proyek', 
+        {
+            title: 'Semua Proyek',
             screen: ({ onScrollBeginDrag, onScrollEndDrag }) => (
-                <ProjectListView 
-                    onScrollBeginDrag={onScrollBeginDrag} 
-                    onScrollEndDrag={onScrollEndDrag} 
-                />
-            )
+                <ProjectListView onScrollBeginDrag={onScrollBeginDrag} onScrollEndDrag={onScrollEndDrag} />
+            ),
         },
-        { 
-            title: 'General', 
+        {
+            title: 'General',
             screen: ({ onScrollBeginDrag, onScrollEndDrag }) => (
-                <ProjectListView 
-                    filterType="general" 
-                    onScrollBeginDrag={onScrollBeginDrag} 
-                    onScrollEndDrag={onScrollEndDrag} 
+                <ProjectListView
+                    filterType="general"
+                    onScrollBeginDrag={onScrollBeginDrag}
+                    onScrollEndDrag={onScrollEndDrag}
                 />
-            )
+            ),
         },
-        { 
-            title: 'Maintenance', 
+        {
+            title: 'Maintenance',
             screen: ({ onScrollBeginDrag, onScrollEndDrag }) => (
-                <ProjectListView 
-                    filterType="maintenance" 
-                    onScrollBeginDrag={onScrollBeginDrag} 
-                    onScrollEndDrag={onScrollEndDrag} 
+                <ProjectListView
+                    filterType="maintenance"
+                    onScrollBeginDrag={onScrollBeginDrag}
+                    onScrollEndDrag={onScrollEndDrag}
                 />
-            )
+            ),
         },
     ];
 
@@ -155,46 +152,34 @@ const ProjectList = () => {
     }
 
     return (
-        <ScrollView
-            refreshControl={
-                <RefreshControl
-                    refreshing={refreshing}
-                    onRefresh={onRefresh}
-                    colors={['#0E509E']}
-                    tintColor="#0E509E"
-                />
-            }
-            contentContainerStyle={styles.container}
-        >
-            <View style={styles.backgroundBox}>
-                <LinearGradient
-                    colors={['#0E509E', '#5FA0DC', '#9FD2FF']}
-                    style={styles.linearGradient}
-                    start={{ x: 0, y: 0 }}
-                    end={{ x: 1, y: 1 }}
-                />
-            </View>
+        <>
+            <View style={styles.container}>
+                <View style={styles.backgroundBox}>
+                    <LinearGradient
+                        colors={['#0E509E', '#5FA0DC', '#9FD2FF']}
+                        style={styles.linearGradient}
+                        start={{ x: 0, y: 0 }}
+                        end={{ x: 1, y: 1 }}
+                    />
+                </View>
 
-            <View style={styles.headerSection}>
-                <Feather name="chevron-left" style={styles.backIcon} onPress={() => navigation.goBack()} />
-                <Text style={styles.header}>Projek</Text>
-                <SlidingButton 
-                    fragments={fragments} 
-                    activeFragment={activeFragment} 
-                    onPress={setActiveFragment} 
-                />
-            </View>
+                <View style={styles.headerSection}>
+                    <Feather name="chevron-left" style={styles.backIcon} onPress={() => navigation.goBack()} />
+                    <Text style={styles.header}>Projek</Text>
+                    <SlidingButton fragments={fragments} activeFragment={activeFragment} onPress={setActiveFragment} />
+                </View>
 
-            <View style={styles.sectionContainer}>
-                <SlidingFragment 
-                    fragments={fragments} 
-                    activeFragment={activeFragment} 
-                    onSwipe={setActiveFragment}
-                    data={project}
-                />
+                <ScrollView style={styles.sectionContainer}>
+                    <SlidingFragment
+                        fragments={fragments}
+                        activeFragment={activeFragment}
+                        onSwipe={setActiveFragment}
+                        data={project}
+                    />
+                </ScrollView>
             </View>
             <FloatingButton />
-        </ScrollView>
+        </>
     );
 };
 

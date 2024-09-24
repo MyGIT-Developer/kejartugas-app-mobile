@@ -18,15 +18,16 @@ import { LinearGradient } from 'expo-linear-gradient';
 import * as Progress from 'react-native-progress';
 import { Feather } from '@expo/vector-icons';
 import { CreateProject } from '../api/projectTask';
-import { getEmployeeByCompany } from '../api/general';
+import { getEmployeeByCompany, getTeamsByCompany } from '../api/general';
 import ReusableBottomPopUp from '../components/ReusableBottomPopUp';
 const { height, width: SCREEN_WIDTH } = Dimensions.get('window');
 
 const AddProjectForm = ({ route }) => {
     const [companyId, setCompanyId] = useState('');
+    const [employeeId, setEmployeeId] = useState('');
     const navigation = useNavigation();
     const [formState, setFormState] = useState({
-        company_id: companyId,
+        company_id: "",
         project_name: "",
         role_id: "",
         jobs_id: "",
@@ -39,6 +40,7 @@ const AddProjectForm = ({ route }) => {
         project_type: "",
     });
     const [employees, setEmployees] = useState([]);
+    const [teams, setTeams] = useState([]);
 
     const [showStartPicker, setShowStartPicker] = useState(false);
     const [showEndPicker, setShowEndPicker] = useState(false);
@@ -52,8 +54,12 @@ const AddProjectForm = ({ route }) => {
         const getData = async () => {
             try {
                 const companyId = await AsyncStorage.getItem('companyId');
+                const employeeId = await AsyncStorage.getItem('employeeId');
+                const jobsId = await AsyncStorage.getItem('userJob');
+                const roleId = await AsyncStorage.getItem('userRole');
                 setCompanyId(companyId);
-                setFormState(prev => ({ ...prev, company_id: companyId }));
+                setEmployeeId(employeeId);
+                setFormState(prev => ({ ...prev, company_id: companyId, role_id: roleId, jobs_id: jobsId, assign_by: employeeId }));
             } catch (error) {
                 console.error('Error fetching AsyncStorage data:', error);
             }
@@ -70,7 +76,20 @@ const AddProjectForm = ({ route }) => {
                 console.error('Failed to fetch employees:', error);
             }
         };
-        if (companyId) fetchEmployees();
+
+        const fetchTeams = async () => {
+            try {
+                const teams = await getTeamsByCompany(companyId);
+                setTeams(teams);
+            } catch (error) {
+                console.error('Failed to fetch teams:', error);
+            }
+        };
+
+        if (companyId) {
+            fetchEmployees();
+            fetchTeams();
+        }
     }, [companyId]);
 
     const handleDateChange = useCallback(
@@ -196,13 +215,15 @@ const AddProjectForm = ({ route }) => {
                     />
                 </View>
 
+                {renderPicker('team_id', 'Divisi', teams.map(team => ({ label: team.team_name, value: team.id })))}
+
                 <View style={styles.dateContainer}>
                     {renderDatePicker('start_date', showStartPicker, setShowStartPicker)}
                     {renderDatePicker('end_date', showEndPicker, setShowEndPicker)}
                 </View>
 
-                {renderPicker('assign_by', 'Ditugaskan oleh', employees.map(emp => ({ label: emp.employee_name, value: emp.id })))}
-                {renderPicker('assign_to', 'Ditugaskan Kepada', employees.map(emp => ({ label: emp.employee_name, value: emp.id })), true)}
+                {/* {renderPicker('assign_by', 'Ditugaskan oleh', employees.map(emp => ({ label: emp.employee_name, value: emp.id })))} */}
+                {renderPicker('assign_to', 'Ditugaskan Kepada', employees.filter(emp => (emp.id != employeeId)).map(emp => ({ label: emp.employee_name, value: emp.id })), true)}
                 {renderPicker('project_type', 'Tipe Proyek', [
                     { label: 'General', value: 'general' },
                     { label: 'Maintenance', value: 'maintenance' },
