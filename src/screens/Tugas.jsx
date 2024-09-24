@@ -20,59 +20,61 @@ import { fetchTotalTasksForEmployee } from '../api/task';
 
 const GRADIENT_COLORS = ['#0E509E', '#5FA0DC', '#9FD2FF'];
 
+const getStatusBadgeColor = (status) => {
+    switch (status) {
+        case 'workingOnIt':
+            return { color: '#CCC8C8', label: 'Dalam Pengerjaan' };
+        case 'onReview':
+            return { color: '#9AE1EA', label: 'Dalam Peninjauan' };
+        case 'rejected':
+            return { color: '#F69292', label: 'Ditolak' };
+        case 'onHold':
+            return { color: '#F69292', label: 'Ditunda' };
+        case 'Completed':
+            return { color: '#C9F8C1', label: 'Selesai' };
+        case 'onPending':
+            return { color: '#F0E08A', label: 'Tersedia' };
+        default:
+            return { color: '#E0E0E0', label: status }; // Warna default
+    }
+};
+
 const TaskCard = React.memo(({ task = {}, onProjectDetailPress, onTaskDetailPress }) => {
-    const isShortContent = task.task_name.length <= 30 && task.project_name.length <= 20;
+    const { color: badgeColor, label: displayStatus } = getStatusBadgeColor(task.task_status);
 
     return (
-        <View style={[styles.taskCard, isShortContent && styles.taskCardShort]}>
+        <View style={styles.taskCard}>
             <View style={styles.taskContent}>
-                <Text
-                    style={[styles.taskTitle, isShortContent && styles.taskTitleShort]}
-                    numberOfLines={isShortContent ? 1 : 2}
-                    ellipsizeMode="tail"
-                >
+                <Text style={styles.taskTitle} numberOfLines={2} ellipsizeMode="tail">
                     {task.task_name}
                 </Text>
-                <Text
-                    style={[styles.taskSubtitle, isShortContent && styles.taskSubtitleShort]}
-                    numberOfLines={1}
-                    ellipsizeMode="tail"
-                >
+                <Text style={styles.taskSubtitle} numberOfLines={1} ellipsizeMode="tail">
                     {task.project_name}
                 </Text>
             </View>
-            <View style={[styles.statusBadge, isShortContent ? styles.statusBadgeShort : styles.statusBadgeLong]}>
-                <Text
-                    style={[styles.statusText, isShortContent && styles.statusTextShort]}
-                    numberOfLines={1}
-                    ellipsizeMode="tail"
-                >
-                    {task.task_status}
+            <View style={[styles.statusBadge, { backgroundColor: badgeColor }]}>
+                <Text style={styles.statusText} numberOfLines={1} ellipsizeMode="tail">
+                    {displayStatus}
                 </Text>
             </View>
             <View style={styles.buttonContainer}>
                 <TouchableOpacity style={styles.detailButton} onPress={() => onTaskDetailPress(task)}>
                     <Text style={styles.detailButtonText}>Lihat detail {'>'}</Text>
                 </TouchableOpacity>
-                <TouchableOpacity
-                    style={[styles.projectButton, isShortContent && styles.projectButtonShort]}
-                    onPress={() => onProjectDetailPress(task)}
-                >
-                    <Text style={[styles.projectButtonText, isShortContent && styles.projectButtonTextShort]}>
-                        Detail Proyek
-                    </Text>
+                <TouchableOpacity style={styles.projectButton} onPress={() => onProjectDetailPress(task)}>
+                    <Text style={styles.projectButtonText}>Detail Proyek</Text>
                 </TouchableOpacity>
             </View>
         </View>
     );
 });
 
-const ShimmerTaskCard = ({ isShortContent = false }) => (
+const ShimmerTaskCard = () => (
     <View style={styles.taskCard}>
-        <Shimmer width={isShortContent ? 150 : 200} height={20} style={styles.shimmerTitle} />
-        <Shimmer width={isShortContent ? 100 : 150} height={15} style={styles.shimmerSubtitle} />
-        <Shimmer width={isShortContent ? 80 : 100} height={25} style={styles.shimmerStatus} />
-        <Shimmer width={isShortContent ? 80 : 100} height={15} style={styles.shimmerButton} />
+        <Shimmer width={200} height={20} style={styles.shimmerTitle} />
+        <Shimmer width={150} height={15} style={styles.shimmerSubtitle} />
+        <Shimmer width={100} height={25} style={styles.shimmerStatus} />
+        <Shimmer width={100} height={15} style={styles.shimmerButton} />
     </View>
 );
 
@@ -98,7 +100,7 @@ const TaskSection = ({
                 {Array(3)
                     .fill()
                     .map((_, index) => (
-                        <ShimmerTaskCard key={index} isShortContent={index % 2 === 0} />
+                        <ShimmerTaskCard key={index} />
                     ))}
             </ScrollView>
         ) : tasks.length > 0 ? (
@@ -140,7 +142,21 @@ const Tugas = () => {
     const fontsLoaded = useFonts();
 
     const handleSeeAllPress = (sectionTitle, tasks) => {
-        navigation.navigate('DetailTaskSection', { sectionTitle, tasks });
+        navigation.navigate('DetailTaskSection', {
+            sectionTitle,
+            tasks: tasks.map((task) => ({
+                title: task.task_name,
+                subtitle: task.project_name,
+                status: task.task_status,
+                // Add any other relevant task details here
+                id: task.id,
+                description: task.task_desc,
+                startDate: task.start_date,
+                endDate: task.end_date,
+                assignedBy: task.assign_by_name,
+                progress: task.percentage_task || 0,
+            })),
+        });
     };
 
     useEffect(() => {
@@ -376,9 +392,6 @@ const styles = StyleSheet.create({
         shadowOpacity: 0.1,
         shadowRadius: 4,
     },
-    taskCardShort: {
-        height: 100,
-    },
     taskContent: {
         flex: 1,
     },
@@ -390,19 +403,10 @@ const styles = StyleSheet.create({
         lineHeight: 22,
         fontFamily: 'Poppins-Bold',
     },
-    taskTitleShort: {
-        fontSize: 18,
-        marginBottom: 2,
-        fontFamily: 'Poppins-Bold',
-    },
     taskSubtitle: {
         fontSize: 14,
         color: '#666',
         marginBottom: 5,
-        fontFamily: 'Poppins-Regular',
-    },
-    taskSubtitleShort: {
-        fontSize: 12,
         fontFamily: 'Poppins-Regular',
     },
     statusBadge: {
@@ -410,13 +414,6 @@ const styles = StyleSheet.create({
         paddingHorizontal: 8,
         paddingVertical: 4,
         borderRadius: 12,
-    },
-    statusBadgeShort: {
-        position: 'absolute',
-        top: 15,
-        right: 15,
-    },
-    statusBadgeLong: {
         position: 'absolute',
         bottom: 50,
         left: 10,
@@ -425,10 +422,6 @@ const styles = StyleSheet.create({
         color: '#333',
         fontWeight: '500',
         fontSize: 12,
-        fontFamily: 'Poppins-Regular',
-    },
-    statusTextShort: {
-        fontSize: 10,
         fontFamily: 'Poppins-Regular',
     },
     buttonContainer: {
@@ -471,19 +464,10 @@ const styles = StyleSheet.create({
         paddingHorizontal: 12,
         borderRadius: 15,
     },
-    projectButtonShort: {
-        paddingVertical: 4,
-        paddingHorizontal: 8,
-        borderRadius: 12,
-    },
     projectButtonText: {
         color: 'white',
         fontWeight: '500',
         fontSize: 14,
-        fontFamily: 'Poppins-Regular',
-    },
-    projectButtonTextShort: {
-        fontSize: 12,
         fontFamily: 'Poppins-Regular',
     },
     shimmerTitle: {

@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, SafeAreaView, StatusBar, Platform, ScrollView } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, SafeAreaView, StatusBar, ScrollView } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
@@ -22,6 +22,18 @@ const TaskCard = ({ task, onTaskPress }) => (
         <TouchableOpacity style={styles.detailButton} onPress={() => onTaskPress(task)}>
             <Text style={styles.detailButtonText}>Lihat detail</Text>
         </TouchableOpacity>
+    </View>
+);
+
+const ShimmerCard = () => (
+    <View style={styles.taskCard}>
+        <View style={styles.taskContent}>
+            <Text style={styles.taskTitle}>{/* Shimmer effect for title */}</Text>
+            <Text style={styles.taskSubtitle}>{/* Shimmer effect for subtitle */}</Text>
+            <View style={styles.statusContainer}>
+                <Text style={styles.statusText}>{/* Shimmer effect for status */}</Text>
+            </View>
+        </View>
     </View>
 );
 
@@ -49,9 +61,11 @@ const DetailTaskSection = () => {
             </LinearGradient>
             <ScrollView contentContainerStyle={styles.scrollContent}>
                 {tasks && tasks.length > 0 ? (
-                    tasks.map((task, index) => <TaskCard key={index} task={task} onTaskPress={handleTaskPress} />)
+                    tasks.map((task, index) => (
+                        <TaskCard key={task.id || index} task={task} onTaskPress={handleTaskPress} />
+                    ))
                 ) : (
-                    <Text style={styles.noTasksText}>No tasks available</Text>
+                    <ShimmerCard /> // Use ShimmerCard when no tasks are available
                 )}
             </ScrollView>
         </SafeAreaView>
@@ -64,33 +78,39 @@ const styles = StyleSheet.create({
         backgroundColor: '#F2F2F7',
     },
     header: {
-        height: 125,
-        paddingTop: Platform.OS === 'ios' ? 50 : StatusBar.currentHeight + 20,
+        height: 80,
+        paddingTop: 10,
+        paddingHorizontal: 20,
         borderBottomLeftRadius: 30,
         borderBottomRightRadius: 30,
-    },
-    headerContent: {
-        flex: 1,
-        flexDirection: 'row',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        paddingHorizontal: 20,
-    },
-    backButton: {
-        padding: 5,
+        justifyContent: 'center',
     },
     headerTitle: {
         fontSize: 24,
         fontWeight: 'bold',
         color: 'white',
+        marginBottom: 10,
+        alignSelf: 'center',
         fontFamily: 'Poppins-Bold',
-        textAlign: 'center',
+    },
+    headerContent: {
+        flex: 1,
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center', // Center horizontally
+        paddingHorizontal: 20,
+    },
+    backButton: {
+        position: 'absolute', // Absolute positioning for back button
+        left: 0, // Move the back button further left
+        top: 20, // Keep top positioning the same
     },
     placeholder: {
-        width: 24,
+        width: 24, // Placeholder to ensure title is centered
     },
     scrollContent: {
         padding: 16,
+        flexGrow: 1,
     },
     taskCard: {
         backgroundColor: 'white',
