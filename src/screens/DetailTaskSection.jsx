@@ -16,33 +16,49 @@ const groupTasksByProject = (tasks) => {
     return groupedTasks;
 };
 
-const TaskCard = ({ projectName, tasks, onTaskPress }) => (
-    <View style={styles.taskCard}>
-        <Text style={styles.projectTitle}>{projectName}</Text>
-        {tasks.map((task, index) => (
-            <View key={task.id || index} style={styles.taskItem}>
-                <View style={styles.taskInfo}>
-                    <Text style={styles.taskName}>{task.title}</Text>
-                    {task.status === 'Completed' ? (
-                        <View style={styles.remainingDaysContainer}>
-                            <Text style={styles.remainingDays}>Completed</Text>
-                        </View>
-                    ) : (
-                        <View style={styles.remainingDaysContainer}>
-                            <Text style={styles.remainingDays}>Tersisa {task.remainingDays} Hari</Text>
-                        </View>
-                    )}
+const TaskCard = ({ projectName, tasks, onTaskPress }) => {
+    const [isExpanded, setIsExpanded] = useState(false); // State for toggling project details
+
+    return (
+        <View style={styles.taskCard}>
+            <Text style={styles.projectTitle}>{projectName}</Text>
+            {tasks.map((task, index) => (
+                <View key={task.id || index} style={styles.taskItem}>
+                    <View style={styles.taskInfo}>
+                        <Text style={styles.taskName}>{task.title}</Text>
+                        {task.status === 'Completed' ? (
+                            <View style={styles.remainingDaysContainer}>
+                                <Text style={styles.remainingDays}>Completed</Text>
+                            </View>
+                        ) : (
+                            <View style={styles.remainingDaysContainer}>
+                                <Text style={styles.remainingDays}>Tersisa {task.remainingDays} Hari</Text>
+                            </View>
+                        )}
+                    </View>
+                    <TouchableOpacity style={styles.detailButton} onPress={() => onTaskPress(task)}>
+                        <Text style={styles.detailButtonText}>Detail</Text>
+                    </TouchableOpacity>
                 </View>
-                <TouchableOpacity style={styles.detailButton} onPress={() => onTaskPress(task)}>
-                    <Text style={styles.detailButtonText}>Detail</Text>
-                </TouchableOpacity>
-            </View>
-        ))}
-        <TouchableOpacity style={styles.projectDetailButton}>
-            <Text style={styles.projectDetailButtonText}>Lihat detail proyek</Text>
-        </TouchableOpacity>
-    </View>
-);
+            ))}
+            <TouchableOpacity
+                style={styles.projectDetailButton}
+                onPress={() => setIsExpanded(!isExpanded)} // Toggle the visibility
+            >
+                <Text style={styles.projectDetailButtonText}>
+                    {isExpanded ? 'Sembunyikan detail proyek' : 'Lihat detail proyek'}
+                </Text>
+            </TouchableOpacity>
+            {isExpanded && (
+                <View style={styles.projectDetails}>
+                    <Text style={styles.detailText}>Ditugaskan Oleh: Aa Dhanu</Text>
+                    <Text style={styles.detailText}>Keterangan Proyek: Tidak ada Keterangan</Text>
+                    <Text style={styles.detailText}>Durasi Proyek: 17 Tahun</Text>
+                </View>
+            )}
+        </View>
+    );
+};
 
 const DetailTaskSection = () => {
     const navigation = useNavigation();
@@ -188,6 +204,17 @@ const styles = StyleSheet.create({
     projectDetailButtonText: {
         fontSize: 14,
         color: '#007AFF',
+    },
+    projectDetails: {
+        marginTop: 10,
+        padding: 10,
+        backgroundColor: '#f0f0f0',
+        borderRadius: 5,
+    },
+    detailText: {
+        fontSize: 14,
+        color: '#333',
+        marginBottom: 5,
     },
 });
 
