@@ -86,7 +86,7 @@ const ProjectList = () => {
         </View>
     );
 
-    const ProjectListView = ({ filterType, }) => (
+    const ProjectListView = ({ filterType }) => (
         <ScrollView
             refreshControl={
                 <RefreshControl
@@ -99,7 +99,7 @@ const ProjectList = () => {
             contentContainerStyle={styles.projectList}
         >
             {project && Array.isArray(project) ? (
-                project.filter((item) => (filterType ? item.project_type === filterType : true)).map(renderProjectItem)
+                project && project.filter((item) => (filterType ? item.project_type === filterType : "general")).map(renderProjectItem)
             ) : (
                 <Text>No projects found</Text>
             )}
@@ -224,6 +224,7 @@ const styles = StyleSheet.create({
     },
     sectionContainer: {
         flexGrow: 1,
+       
     },
     centered: {
         flex: 1,

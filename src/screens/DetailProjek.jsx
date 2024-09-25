@@ -145,7 +145,7 @@ const DetailProjek = ({ route }) => {
             </View>
             <View style={styles.headerSection}>
                 <Feather name="chevron-left" style={styles.backIcon} onPress={() => navigation.goBack()} />
-                <Text style={styles.header}>Projek</Text>
+                <Text style={styles.header}>Detail Projek</Text>
                 <SlidingButton fragments={fragments} activeFragment={activeFragment} onPress={setActiveFragment} />
             </View>
             <ScrollView
@@ -193,7 +193,7 @@ const DetailProjek = ({ route }) => {
                                     style={styles.menuItem}
                                 >
                                     <View style={[styles.optionIcon, { backgroundColor: '#27CF56' }]}>
-                                        <Feather name="share-2" size={20} color="white" />
+                                        <Feather name="check-circle" size={20} color="white" />
                                     </View>
 
                                     <Text style={[styles.optionText, { color: 'black' }]}>Selesai</Text>
@@ -282,6 +282,7 @@ const styles = StyleSheet.create({
         display: 'flex',
         flexDirection: 'column',
         gap: 20,
+        height: height,
     },
     headerSection: {
         justifyContent: 'center',
@@ -362,7 +363,8 @@ const styles = StyleSheet.create({
     },
     menuContainer: {
         width: '100%',
-        padding: 10,
+        padding: 20,
+        top: 0,
     },
     menuItem: {
         flexDirection: 'row',

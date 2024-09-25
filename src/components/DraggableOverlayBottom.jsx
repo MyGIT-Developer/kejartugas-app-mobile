@@ -1,19 +1,51 @@
 import React, { useRef, useState, useEffect } from 'react';
-import { View, StyleSheet, Animated, PanResponder, Dimensions, TouchableWithoutFeedback } from 'react-native';
+import { View, StyleSheet, Animated, PanResponder, Dimensions, Keyboard, Button } from 'react-native';
 
-const { height, width } = Dimensions.get('window');
-const MIN_HEIGHT = height * 0.3;
-const MAX_HEIGHT = height * 0.9;
-const INITIAL_HEIGHT = height * 0.3;
+const { height: screenHeight } = Dimensions.get('window');
+const MIN_HEIGHT = screenHeight * 0.3;
+const INITIAL_HEIGHT = screenHeight * 0.3;
 const MAX_BORDER_RADIUS = 30;
 
 const BottomDraggableOverlay = ({ children }) => {
     const pan = useRef(new Animated.ValueXY()).current;
     const [overlayHeight, setOverlayHeight] = useState(INITIAL_HEIGHT);
     const [borderRadius, setBorderRadius] = useState(MAX_BORDER_RADIUS);
+    const [isVisible, setIsVisible] = useState(true);
+    const [maxHeight, setMaxHeight] = useState(screenHeight * 0.9); // Set initial max height
+    const overlayTranslateY = useRef(new Animated.Value(screenHeight)).current;
 
-    const overlayTranslateY = useRef(new Animated.Value(height)).current;
+    const onClose = () => {
+        setIsVisible(false);
+    };
 
+    const onOpen = () => {
+        setIsVisible(true);
+    };
+
+    // Listen for keyboard events to adjust overlay height
+    useEffect(() => {
+        const keyboardDidShowListener = Keyboard.addListener('keyboardDidShow', (e) => {
+            const keyboardHeight = e.endCoordinates.height;
+            const maxAllowedHeight = screenHeight - keyboardHeight;
+
+            // Only adjust if the overlay height exceeds the new maxHeight when the keyboard is up
+            if (overlayHeight > maxAllowedHeight) {
+                setOverlayHeight(maxAllowedHeight);
+            }
+            setMaxHeight(maxAllowedHeight); // Adjust max height when keyboard is visible
+        });
+
+        const keyboardDidHideListener = Keyboard.addListener('keyboardDidHide', () => {
+            setMaxHeight(screenHeight * 0.9); // Reset max height when keyboard is hidden
+        });
+
+        return () => {
+            keyboardDidShowListener.remove();
+            keyboardDidHideListener.remove();
+        };
+    }, [overlayHeight]);
+
+    // Handle the visibility of the overlay
     useEffect(() => {
         if (isVisible) {
             Animated.spring(overlayTranslateY, {
@@ -22,51 +54,58 @@ const BottomDraggableOverlay = ({ children }) => {
             }).start();
         } else {
             Animated.spring(overlayTranslateY, {
-                toValue: height,
+                toValue: screenHeight,
                 useNativeDriver: true,
             }).start();
         }
     }, [isVisible]);
 
+    // Adjust border radius based on height
     useEffect(() => {
         const newBorderRadius = Math.max(
             0,
-            MAX_BORDER_RADIUS * (1 - (overlayHeight - MIN_HEIGHT) / (MAX_HEIGHT - MIN_HEIGHT)),
+            MAX_BORDER_RADIUS * (1 - (overlayHeight - MIN_HEIGHT) / (maxHeight - MIN_HEIGHT)),
         );
         setBorderRadius(newBorderRadius);
-    }, [overlayHeight]);
+    }, [overlayHeight, maxHeight]);
 
+    // Pan responder to handle drag gestures
     const panResponder = PanResponder.create({
         onMoveShouldSetPanResponder: () => true,
         onPanResponderMove: (_, gesture) => {
-            const newHeight = Math.max(MIN_HEIGHT, Math.min(MAX_HEIGHT, overlayHeight - gesture.dy));
+            const newHeight = Math.max(MIN_HEIGHT, Math.min(maxHeight, overlayHeight - gesture.dy));
             setOverlayHeight(newHeight);
         },
         onPanResponderRelease: (_, gesture) => {
-            if (gesture.dy > 50 && overlayHeight <= MIN_HEIGHT + 50) {
-                onClose();
-            }
+            // Disable overlay closure by commenting this out
+            // if (gesture.dy > 50 && overlayHeight <= MIN_HEIGHT + 50) {
+            //     onClose();
+            // }
         },
     });
 
-    if (!isVisible) return null;
+    if (!isVisible) {
+        return (
+            <View style={styles.reopenButtonContainer}>
+                <Button title="Open Overlay" onPress={onOpen} />
+            </View>
+        );
+    }
 
     return (
         <View style={styles.container}>
-            <TouchableWithoutFeedback onPress={onClose}>
-                <View style={styles.backdrop} />
-            </TouchableWithoutFeedback>
+            {/* Draggable Overlay */}
             <Animated.View
+                {...panResponder.panHandlers}
                 style={[
                     styles.overlayBottom,
                     {
                         height: overlayHeight,
+                        transform: [{ translateY: overlayTranslateY }],
                         borderTopLeftRadius: borderRadius,
                         borderTopRightRadius: borderRadius,
-                        transform: [{ translateY: overlayTranslateY }],
                     },
                 ]}
-                {...panResponder.panHandlers}
             >
                 <View style={styles.dragHandle} />
                 <View style={styles.content}>{children}</View>
@@ -78,11 +117,14 @@ const BottomDraggableOverlay = ({ children }) => {
 const styles = StyleSheet.create({
     container: {
         ...StyleSheet.absoluteFillObject,
-        zIndex: 1000,
+        zIndex: 10,
     },
-    backdrop: {
-        ...StyleSheet.absoluteFillObject,
-        backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    reopenButtonContainer: {
+        position: 'absolute',
+        bottom: 20,
+        left: 0,
+        right: 0,
+        alignItems: 'center',
     },
     overlayBottom: {
         position: 'absolute',

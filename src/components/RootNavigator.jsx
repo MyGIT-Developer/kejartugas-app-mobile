@@ -38,7 +38,9 @@ const RootNavigator = () => (
         <Stack.Screen name="BoardingScreen" component={BoardingScreen} />
         <Stack.Screen name="Step1" component={Step1} />
         <Stack.Screen name="Step2" component={Step2} />
-        <Stack.Screen name="DetailProjek" component={DetailProjek} />
+        <Stack.Screen name="DetailProjek" component={DetailProjek} options={{
+          gestureEnabled: false, // Disable swipe back gesture
+        }}/>
         <Stack.Screen name="ProjectList" component={ProjectList} />
         <Stack.Screen name="TaskOnReview" component={TaskOnReview} />
         <Stack.Screen name="ProjectOnWorking" component={ProjectOnWorking} />

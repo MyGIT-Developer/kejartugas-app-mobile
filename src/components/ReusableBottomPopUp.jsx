@@ -1,5 +1,5 @@
 import React, { useEffect, useRef } from 'react';
-import { Animated, StyleSheet, View, Dimensions, Text, TouchableOpacity, Keyboard } from 'react-native';
+import { Animated, StyleSheet, View, Dimensions, Text, TouchableOpacity, Keyboard, Modal } from 'react-native';
 import LottieView from 'lottie-react-native';
 
 // Adjust these paths based on your project structure
@@ -29,7 +29,12 @@ const ReusableAlertBottomPopUp = ({ show, alertType, message, onConfirm }) => {
     }, [show]);
 
     return (
-        show && (
+        <Modal
+            visible={show}
+            transparent={true}
+            animationType="fade"
+            onRequestClose={() => {}}
+        >
             <View style={styles.overlay}>
                 <Animated.View style={[styles.alertWrapper, { transform: [{ translateY: slideAnim }] }]}>
                     <View style={styles.alertContent}>
@@ -45,13 +50,13 @@ const ReusableAlertBottomPopUp = ({ show, alertType, message, onConfirm }) => {
                         <Text style={styles.message}>
                             {message || (isSuccess ? 'Action completed successfully.' : 'An error occurred.')}
                         </Text>
-                        <TouchableOpacity style={styles.button} onPress={onConfirm}>
+                        {/* <TouchableOpacity style={styles.button} onPress={onConfirm}>
                             <Text style={styles.buttonText}>Okay</Text>
-                        </TouchableOpacity>
+                        </TouchableOpacity> */}
                     </View>
                 </Animated.View>
             </View>
-        )
+        </Modal>
     );
 };
 
@@ -60,11 +65,7 @@ const styles = StyleSheet.create({
         flex: 1,
         justifyContent: 'center',
         alignItems: 'center',
-        position: 'absolute',
-        width: width,
-        height: height,
-        zIndex: 1000,
-        bottom: 0,
+        backgroundColor: 'rgba(0, 0, 0, 0.5)', // Darken the background when modal is active
     },
     alertWrapper: {
         width: width,
