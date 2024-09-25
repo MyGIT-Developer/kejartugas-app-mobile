@@ -1,6 +1,18 @@
 import React, { useState, useCallback, useMemo } from 'react';
-import { View, Text, ActivityIndicator, Dimensions, ScrollView, RefreshControl, StyleSheet } from 'react-native';
+import {
+    View,
+    Text,
+    ActivityIndicator,
+    Dimensions,
+    ScrollView,
+    RefreshControl,
+    StyleSheet,
+    Modal,
+    Pressable,
+    TouchableOpacity,
+} from 'react-native';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
+import Popover from 'react-native-popover-view';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { LinearGradient } from 'expo-linear-gradient';
 import * as Progress from 'react-native-progress';
@@ -12,6 +24,7 @@ import SlidingFragment from '../components/SlidingFragment';
 import DetailProjekSatu from './DetailProjekSatu';
 import DetailProjekDua from './DetailProjekDua';
 const { height, width: SCREEN_WIDTH } = Dimensions.get('window');
+
 const DetailProjek = ({ route }) => {
     const { projectId } = route.params;
     const navigation = useNavigation();
@@ -20,8 +33,10 @@ const DetailProjek = ({ route }) => {
     const [error, setError] = useState(null);
     const [refreshing, setRefreshing] = useState(false);
     const [activeFragment, setActiveFragment] = useState(0);
-    const [menuVisible, setMenuVisible] = useState(false);
-    
+    const [visible, setVisible] = useState(false);
+
+    const togglePopover = () => setVisible(!visible);
+
     const fragments = useMemo(
         () => [
             { title: 'Detail', screen: DetailProjekSatu },
@@ -119,17 +134,7 @@ const DetailProjek = ({ route }) => {
     }
 
     return (
-        <ScrollView
-            refreshControl={
-                <RefreshControl
-                    refreshing={refreshing}
-                    onRefresh={onRefresh}
-                    colors={['#0E509E']}
-                    tintColor="#0E509E"
-                />
-            }
-            contentContainerStyle={styles.container}
-        >
+        <View style={styles.container}>
             <View style={styles.backgroundBox}>
                 <LinearGradient
                     colors={['#0E509E', '#5FA0DC', '#9FD2FF']}
@@ -143,11 +148,81 @@ const DetailProjek = ({ route }) => {
                 <Text style={styles.header}>Projek</Text>
                 <SlidingButton fragments={fragments} activeFragment={activeFragment} onPress={setActiveFragment} />
             </View>
-            <View style={styles.contentContainer}>
+            <ScrollView
+                refreshControl={
+                    <RefreshControl
+                        refreshing={refreshing}
+                        onRefresh={onRefresh}
+                        colors={['#0E509E']}
+                        tintColor="#0E509E"
+                    />
+                }
+                contentContainerStyle={styles.contentContainer}
+            >
                 <View style={styles.upperContainer}>
                     <View style={styles.projectHeaderContainer}>
                         <Text>Nama Proyek</Text>
-                        <Feather name="more-horizontal" size={24} color="black" />
+
+                        <Popover
+                            isVisible={visible}
+                            onRequestClose={togglePopover}
+                            from={
+                                <Pressable onPress={togglePopover} style={styles.iconButton}>
+                                    <Feather name="more-horizontal" size={24} color="black" />
+                                </Pressable>
+                            }
+                            placement="bottom"
+                        >
+                            <View style={styles.menuContainer}>
+                                <Pressable
+                                    onPress={() => {
+                                        /* Handle action 1 */ togglePopover();
+                                    }}
+                                    style={styles.menuItem}
+                                >
+                                    <View style={[styles.optionIcon, { backgroundColor: '#277594' }]}>
+                                        <Feather name="edit" size={20} color="white" />
+                                    </View>
+
+                                    <Text style={[styles.optionText, { color: 'black' }]}>Edit Proyek</Text>
+                                </Pressable>
+                                <Pressable
+                                    onPress={() => {
+                                        /* Handle action 2 */ togglePopover();
+                                    }}
+                                    style={styles.menuItem}
+                                >
+                                    <View style={[styles.optionIcon, { backgroundColor: '#27CF56' }]}>
+                                        <Feather name="share-2" size={20} color="white" />
+                                    </View>
+
+                                    <Text style={[styles.optionText, { color: 'black' }]}>Selesai</Text>
+                                </Pressable>
+                                <Pressable
+                                    onPress={() => {
+                                        /* Handle action 3 */ togglePopover();
+                                    }}
+                                    style={styles.menuItem}
+                                >
+                                    <View style={[styles.optionIcon, { backgroundColor: '#4078BB' }]}>
+                                        <Feather name="share-2" size={20} color="white" />
+                                    </View>
+
+                                    <Text style={[styles.optionText, { color: 'black' }]}>Bagikan</Text>
+                                </Pressable>
+                                <Pressable
+                                    onPress={() => {
+                                        /* Handle action 4 */ togglePopover();
+                                    }}
+                                    style={styles.menuItem}
+                                >
+                                    <View style={[styles.optionIcon, { backgroundColor: '#DF4E6E' }]}>
+                                        <Feather name="trash-2" size={20} color="#fff" />
+                                    </View>
+                                    <Text style={[styles.optionText, { color: 'black' }]}>Hapus</Text>
+                                </Pressable>
+                            </View>
+                        </Popover>
                     </View>
                     <View style={styles.projectInfoContainer}>
                         <View style={styles.projectTextContainer}>
@@ -165,7 +240,7 @@ const DetailProjek = ({ route }) => {
                         </View>
                         <Progress.Circle
                             size={80}
-                            progress={projectData.percentage / 100 || 0}
+                            progress={projectData.percentage}
                             thickness={8}
                             showsText={true}
                             color="#4CAF50"
@@ -175,16 +250,15 @@ const DetailProjek = ({ route }) => {
                     </View>
                 </View>
                 <View>
-                       <SlidingFragment
-                    fragments={fragments}
-                    activeFragment={activeFragment}
-                    onSwipe={handleSwipe}
-                    data={projectData}
-                />
+                    <SlidingFragment
+                        fragments={fragments}
+                        activeFragment={activeFragment}
+                        onSwipe={handleSwipe}
+                        data={projectData}
+                    />
                 </View>
-             
-            </View>
-        </ScrollView>
+            </ScrollView>
+        </View>
     );
 };
 
@@ -208,7 +282,6 @@ const styles = StyleSheet.create({
         display: 'flex',
         flexDirection: 'column',
         gap: 20,
-        marginHorizontal: 20,
     },
     headerSection: {
         justifyContent: 'center',
@@ -244,6 +317,7 @@ const styles = StyleSheet.create({
         shadowOpacity: 0.3,
         elevation: 5,
         marginTop: 10,
+        marginHorizontal: 20,
     },
     projectHeaderContainer: {
         flexDirection: 'row',
@@ -254,6 +328,7 @@ const styles = StyleSheet.create({
     projectTextContainer: {
         flexDirection: 'column',
         gap: 5,
+        maxWidth: '70%',
     },
     projectInfoContainer: {
         flexDirection: 'row',
@@ -279,6 +354,35 @@ const styles = StyleSheet.create({
         flex: 1,
         justifyContent: 'center',
         alignItems: 'center',
+    },
+    popover: {
+        width: 220,
+        borderRadius: 30,
+        padding: 10,
+    },
+    menuContainer: {
+        width: '100%',
+        padding: 10,
+    },
+    menuItem: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        paddingVertical: 10,
+        gap: 10,
+    },
+    menuText: {
+        marginLeft: 10,
+        fontSize: 16,
+    },
+    iconButton: {
+        padding: 10,
+    },
+    optionIcon: {
+        padding: 5,
+        borderRadius: 5,
+    },
+    optionText: {
+        fontWeight: 'bold',
     },
 });
 

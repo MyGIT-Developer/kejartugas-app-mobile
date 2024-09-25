@@ -34,7 +34,11 @@ export const getAttendance = async (employeeId) => {
 // Function to get the attendance report for all employees
 export const getAttendanceReport = async () => {
     try {
-        const response = await apiService.get('/attendance/report');
+        const response = await apiService.get('/attendance/report' , {
+            headers: {
+                Authorization: `Bearer ${await AsyncStorage.getItem('token')}`
+            }
+        });
         return response.data;
     } catch (error) {
         throw new Error(error.response?.data?.message || 'Fetching report failed');

@@ -66,11 +66,12 @@ const Login = () => {
             if (data.token) {
                 await AsyncStorage.setItem('token', data.token);
                 const decodedToken = jwtDecode(data.token);
-                const { jobs_id, company_id, id } = decodedToken.data;
+                const { jobs_id, company_id, id, role_id } = decodedToken.data;
 
                 await Promise.all([
                     AsyncStorage.setItem('expiredToken', data.expires_token),
                     AsyncStorage.setItem('userJob', jobs_id.toString()),
+                    AsyncStorage.setItem('userRole', role_id.toString()),
                     AsyncStorage.setItem('employeeId', id.toString()),
                     AsyncStorage.setItem('companyId', company_id.toString()),
                     AsyncStorage.setItem('employee_name', username),

@@ -1,9 +1,10 @@
-import React, { useEffect, useState } from 'react';
+import React, { useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Dimensions, ScrollView } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import * as Progress from 'react-native-progress';
+import FloatingButtonProject from '../components/FloatingButtonProject';
 
-const { height, width } = Dimensions.get('window');
+const { height } = Dimensions.get('window');
 
 const TableRow = ({ item, index }) => {
     const [expanded, setExpanded] = useState(false);
@@ -11,16 +12,16 @@ const TableRow = ({ item, index }) => {
     return (
         <View style={styles.rowContainer}>
             <TouchableOpacity onPress={() => setExpanded(!expanded)} style={styles.row}>
+                <Text style={styles.cell}>{index + 1}</Text>
                 <Text style={styles.cell}>{item.name}</Text>
                 <Text style={styles.cell}>{item.status}</Text>
                 <Progress.Bar progress={item.progress} width={80} color="#0E509E" />
-                <Feather name={expanded ? "chevron-up" : "chevron-down"} size={24} color="#0E509E" />
+                <Feather name={expanded ? 'chevron-up' : 'chevron-down'} size={24} color="#0E509E" />
             </TouchableOpacity>
             {expanded && (
                 <View style={styles.expandedContent}>
                     <Text style={styles.expandedText}>Description: {item.description}</Text>
                     <Text style={styles.expandedText}>Due Date: {item.dueDate}</Text>
-                    {/* Add more details here as needed */}
                 </View>
             )}
         </View>
@@ -28,32 +29,23 @@ const TableRow = ({ item, index }) => {
 };
 
 const DetailProjekDua = ({ data }) => {
-    const [taskData, setTaskData] = useState([]);
-
-    useEffect(() => {
-        setTaskData(data.tasks);
-    }, [data]);
-
-    const tableData = [
-        { name: "Task 1", status: "In Progress", progress: 0.3, description: "This is task 1", dueDate: "2023-12-31" },
-        { name: "Task 2", status: "Completed", progress: 1, description: "This is task 2", dueDate: "2023-11-30" },
-        { name: "Task 3", status: "Not Started", progress: 0, description: "This is task 3", dueDate: "2024-01-15" },
-    ];
-
     return (
-        <ScrollView contentContainerStyle={styles.container}>
-            <View style={styles.table}>
-                <View style={styles.tableHeader}>
-                    <Text style={styles.headerCell}>No</Text>
-                    <Text style={styles.headerCell}>Nama Tugas</Text>
-                    <Text style={styles.headerCell}>PIC</Text>
-                    <Text style={styles.headerCell}>Status Pengerjaan</Text>
+        <>
+            <ScrollView contentContainerStyle={styles.container}>
+                <View style={styles.table}>
+                    <View style={styles.tableHeader}>
+                        <Text style={styles.headerCell}>No</Text>
+                        <Text style={styles.headerCell}>Nama Tugas</Text>
+                        <Text style={styles.headerCell}>Status</Text>
+                        <Text style={styles.headerCell}>Status Pengerjaan</Text>
+                    </View>
+                    {data.tasks.map((item, index) => (
+                        <TableRow key={index} item={item} index={index} />
+                    ))}
                 </View>
-                {tableData.map((item, index) => (
-                    <TableRow key={index} item={item} index={index} />
-                ))}
-            </View>
-        </ScrollView>
+            </ScrollView>
+            <FloatingButtonProject />
+        </>
     );
 };
 
@@ -66,9 +58,13 @@ const styles = StyleSheet.create({
     table: {
         borderWidth: 1,
         borderColor: '#ddd',
-        borderRadius: 5,
-        overflow: 'hidden',
-        width: '100%',
+        borderRadius: 15,
+        width: '100%', // Ensure responsiveness across screens
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.1,
+        shadowRadius: 3.84,
+        elevation: 5,
     },
     tableHeader: {
         flexDirection: 'row',
@@ -85,6 +81,7 @@ const styles = StyleSheet.create({
     rowContainer: {
         borderTopWidth: 1,
         borderTopColor: '#ddd',
+        backgroundColor: 'white',
     },
     row: {
         flexDirection: 'row',

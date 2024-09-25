@@ -54,7 +54,7 @@ const Project = () => {
         if (companyId) {
             fetchProject();
         }
-    }, [companyId, fetchProject]);
+    }, [companyId]);
 
     const onRefresh = useCallback(async () => {
         console.log('onRefresh called');
