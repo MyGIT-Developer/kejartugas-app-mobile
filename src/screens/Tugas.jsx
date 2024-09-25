@@ -39,7 +39,7 @@ const getStatusBadgeColor = (status) => {
     }
 };
 
-const TaskCard = React.memo(({ task = {}, onProjectDetailPress, onTaskDetailPress }) => {
+const TaskCard = React.memo(({ task = {}, onProjectDetailPress = () => {}, onTaskDetailPress = () => {} }) => {
     const { color: badgeColor, label: displayStatus } = getStatusBadgeColor(task.task_status);
 
     return (
@@ -136,28 +136,11 @@ const Tugas = () => {
     const [draggableModalVisible, setDraggableModalVisible] = useState(false);
     const [selectedTask, setSelectedTask] = useState(null);
     const [error, setError] = useState(null);
+    const [projects, setProjects] = useState([]);
 
     const navigation = useNavigation();
 
     const fontsLoaded = useFonts();
-
-    const handleSeeAllPress = (sectionTitle, tasks) => {
-        navigation.navigate('DetailTaskSection', {
-            sectionTitle,
-            tasks: tasks.map((task) => ({
-                title: task.task_name,
-                subtitle: task.project_name,
-                status: task.task_status,
-                // Add any other relevant task details here
-                id: task.id,
-                description: task.task_desc,
-                startDate: task.start_date,
-                endDate: task.end_date,
-                assignedBy: task.assign_by_name,
-                progress: task.percentage_task || 0,
-            })),
-        });
-    };
 
     useEffect(() => {
         fetchTasks();
@@ -169,22 +152,43 @@ const Tugas = () => {
         setError(null);
         try {
             const employeeId = await AsyncStorage.getItem('employeeId');
-            console.log('Employee ID:', employeeId); // Log the employeeId
+            console.log('Employee ID:', employeeId);
             if (!employeeId) {
                 throw new Error('Employee ID not found');
             }
 
             const data = await fetchTotalTasksForEmployee(employeeId);
 
-            const tasksByStatus = {
-                inProgress: data.employeeTasks.filter((task) => task.task_status === 'workingOnIt'),
-                inReview: data.employeeTasks.filter((task) => task.task_status === 'onReview'),
-                rejected: data.employeeTasks.filter((task) => task.task_status === 'rejected'),
-                postponed: data.employeeTasks.filter((task) => task.task_status === 'onHold'),
-                completed: data.employeeTasks.filter((task) => task.task_status === 'Completed'),
-            };
+            // Sort tasks by start_date (or end_date) in descending order (most recent first)
+            const sortedTasks = data.employeeTasks.sort((a, b) => {
+                return new Date(b.start_date) - new Date(a.start_date); // Sort by start_date
+                // Use this line instead to sort by end_date
+                // return new Date(b.end_date) - new Date(a.end_date);
+            });
 
+            // Categorize tasks by status
+            const tasksByStatus = {
+                inProgress: sortedTasks.filter((task) => task.task_status === 'workingOnIt'),
+                inReview: sortedTasks.filter((task) => task.task_status === 'onReview'),
+                rejected: sortedTasks.filter((task) => task.task_status === 'rejected'),
+                postponed: sortedTasks.filter((task) => task.task_status === 'onHold'),
+                completed: sortedTasks.filter((task) => task.task_status === 'Completed'),
+            };
             setTasks(tasksByStatus);
+
+            // Group tasks by project
+            const projectsMap = new Map();
+            sortedTasks.forEach((task) => {
+                if (!projectsMap.has(task.project_id)) {
+                    projectsMap.set(task.project_id, {
+                        project_id: task.project_id,
+                        project_name: task.project_name,
+                        tasks: [],
+                    });
+                }
+                projectsMap.get(task.project_id).tasks.push(task);
+            });
+            setProjects(Array.from(projectsMap.values()));
 
             // Store TaskIds to AsyncStorage and add console log
             for (const status in tasksByStatus) {
@@ -193,11 +197,9 @@ const Tugas = () => {
 
                     // Use the correct field (id) to store Task IDs
                     if (task.id) {
-                        // console.log(`Storing Task ID: ${task.id} for status: ${status}`);
                         await AsyncStorage.setItem(`task_${task.id}`, JSON.stringify(task.id));
-                        // console.log(`Task ID ${task.id} stored in AsyncStorage`);
                     } else {
-                        // console.log(`Task ID not found for task:`, task);
+                        console.log(`Task ID not found for task:`, task);
                     }
                 });
             }
@@ -213,6 +215,23 @@ const Tugas = () => {
             setIsLoading(false);
             setRefreshing(false);
         }
+    };
+
+    const handleSeeAllPress = (sectionTitle, tasks) => {
+        navigation.navigate('DetailTaskSection', {
+            sectionTitle, // Pass the section title directly
+            tasks: tasks.map((task) => ({
+                title: task.task_name,
+                subtitle: task.project_name,
+                status: task.task_status,
+                id: task.id,
+                description: task.task_desc,
+                startDate: task.start_date,
+                endDate: task.end_date,
+                assignedBy: task.assign_by_name,
+                progress: task.percentage_task || 0,
+            })),
+        });
     };
 
     const handleProjectDetailPress = (task) => {

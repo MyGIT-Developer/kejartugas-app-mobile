@@ -1,73 +1,93 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, SafeAreaView, StatusBar, ScrollView } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useNavigation, useRoute } from '@react-navigation/native';
+import DraggableModalTask from '../components/DraggableModalTask'; // Update the path accordingly
 import { Ionicons } from '@expo/vector-icons';
 
-const GRADIENT_COLORS = ['#0E509E', '#5FA0DC', '#9FD2FF'];
+// Group tasks by project name
+const groupTasksByProject = (tasks) => {
+    const groupedTasks = {};
+    tasks.forEach((task) => {
+        // Overwrite the array for the subtitle key
+        groupedTasks[task.subtitle] = groupedTasks[task.subtitle] || [];
+        groupedTasks[task.subtitle].push(task);
+    });
+    return groupedTasks;
+};
 
-const TaskCard = ({ task, onTaskPress }) => (
+const TaskCard = ({ projectName, tasks, onTaskPress }) => (
     <View style={styles.taskCard}>
-        <View style={styles.taskContent}>
-            <Text style={styles.taskTitle} numberOfLines={2} ellipsizeMode="tail">
-                {task.title}
-            </Text>
-            <Text style={styles.taskSubtitle} numberOfLines={1} ellipsizeMode="tail">
-                {task.subtitle}
-            </Text>
-            <View style={styles.statusContainer}>
-                <Text style={styles.statusText}>{task.status}</Text>
+        <Text style={styles.projectTitle}>{projectName}</Text>
+        {tasks.map((task, index) => (
+            <View key={task.id || index} style={styles.taskItem}>
+                <View style={styles.taskInfo}>
+                    <Text style={styles.taskName}>{task.title}</Text>
+                    {task.status === 'Completed' ? (
+                        <View style={styles.remainingDaysContainer}>
+                            <Text style={styles.remainingDays}>Completed</Text>
+                        </View>
+                    ) : (
+                        <View style={styles.remainingDaysContainer}>
+                            <Text style={styles.remainingDays}>Tersisa {task.remainingDays} Hari</Text>
+                        </View>
+                    )}
+                </View>
+                <TouchableOpacity style={styles.detailButton} onPress={() => onTaskPress(task)}>
+                    <Text style={styles.detailButtonText}>Detail</Text>
+                </TouchableOpacity>
             </View>
-        </View>
-        <TouchableOpacity style={styles.detailButton} onPress={() => onTaskPress(task)}>
-            <Text style={styles.detailButtonText}>Lihat detail</Text>
+        ))}
+        <TouchableOpacity style={styles.projectDetailButton}>
+            <Text style={styles.projectDetailButtonText}>Lihat detail proyek</Text>
         </TouchableOpacity>
-    </View>
-);
-
-const ShimmerCard = () => (
-    <View style={styles.taskCard}>
-        <View style={styles.taskContent}>
-            <Text style={styles.taskTitle}>{/* Shimmer effect for title */}</Text>
-            <Text style={styles.taskSubtitle}>{/* Shimmer effect for subtitle */}</Text>
-            <View style={styles.statusContainer}>
-                <Text style={styles.statusText}>{/* Shimmer effect for status */}</Text>
-            </View>
-        </View>
     </View>
 );
 
 const DetailTaskSection = () => {
     const navigation = useNavigation();
     const route = useRoute();
-    const { sectionTitle, tasks } = route.params || {};
+    const { sectionTitle, tasks = [] } = route.params || {};
+
+    const [isModalVisible, setIsModalVisible] = useState(false);
+    const [selectedTask, setSelectedTask] = useState(null);
+
+    const groupedTasks = groupTasksByProject(tasks);
 
     const handleTaskPress = (task) => {
-        // Handle task press (e.g., navigate to task details or show modal)
-        console.log('Task pressed:', task);
+        setSelectedTask(task);
+        setIsModalVisible(true);
     };
 
     return (
         <SafeAreaView style={styles.safeArea}>
             <StatusBar barStyle="light-content" />
-            <LinearGradient colors={GRADIENT_COLORS} style={styles.header} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}>
+            <LinearGradient colors={['#0E509E', '#5FA0DC', '#9FD2FF']} style={styles.header}>
                 <View style={styles.headerContent}>
                     <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
                         <Ionicons name="arrow-back" size={24} color="white" />
                     </TouchableOpacity>
                     <Text style={styles.headerTitle}>{sectionTitle || 'Tasks'}</Text>
-                    <View style={styles.placeholder} />
                 </View>
             </LinearGradient>
             <ScrollView contentContainerStyle={styles.scrollContent}>
-                {tasks && tasks.length > 0 ? (
-                    tasks.map((task, index) => (
-                        <TaskCard key={task.id || index} task={task} onTaskPress={handleTaskPress} />
-                    ))
-                ) : (
-                    <ShimmerCard /> // Use ShimmerCard when no tasks are available
-                )}
+                {Object.keys(groupedTasks).map((projectName, index) => (
+                    <TaskCard
+                        key={index}
+                        projectName={projectName}
+                        tasks={groupedTasks[projectName]}
+                        onTaskPress={handleTaskPress}
+                    />
+                ))}
             </ScrollView>
+
+            {selectedTask && (
+                <DraggableModalTask
+                    visible={isModalVisible}
+                    onClose={() => setIsModalVisible(false)}
+                    taskDetails={selectedTask}
+                />
+            )}
         </SafeAreaView>
     );
 };
@@ -89,24 +109,17 @@ const styles = StyleSheet.create({
         fontSize: 24,
         fontWeight: 'bold',
         color: 'white',
-        marginBottom: 10,
         alignSelf: 'center',
-        fontFamily: 'Poppins-Bold',
     },
     headerContent: {
-        flex: 1,
         flexDirection: 'row',
         alignItems: 'center',
-        justifyContent: 'center', // Center horizontally
-        paddingHorizontal: 20,
+        justifyContent: 'center',
     },
     backButton: {
-        position: 'absolute', // Absolute positioning for back button
-        left: 0, // Move the back button further left
-        top: 20, // Keep top positioning the same
-    },
-    placeholder: {
-        width: 24, // Placeholder to ensure title is centered
+        position: 'absolute',
+        left: 0,
+        top: 5,
     },
     scrollContent: {
         padding: 16,
@@ -123,49 +136,58 @@ const styles = StyleSheet.create({
         shadowOpacity: 0.1,
         shadowRadius: 4,
     },
-    taskContent: {
-        flex: 1,
-    },
-    taskTitle: {
+    projectTitle: {
         fontSize: 18,
         fontWeight: 'bold',
         marginBottom: 8,
         color: '#1C1C1E',
-        fontFamily: 'Poppins-Bold',
     },
-    taskSubtitle: {
-        fontSize: 14,
-        marginBottom: 8,
-        color: '#8E8E93',
-        fontFamily: 'Poppins-Regular',
+    taskItem: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        marginBottom: 12,
     },
-    statusContainer: {
-        backgroundColor: '#E9E9EB',
+    taskInfo: {
+        flexDirection: 'column',
+    },
+    taskName: {
+        fontSize: 16,
+        color: '#1C1C1E',
+    },
+    remainingDaysContainer: {
+        backgroundColor: '#C9F8C1',
         paddingHorizontal: 8,
-        paddingVertical: 4,
-        borderRadius: 12,
+        height: 22,
+        borderRadius: 19,
+        justifyContent: 'center',
+        marginTop: 14,
+        maxWidth: 150,
         alignSelf: 'flex-start',
     },
-    statusText: {
+    remainingDays: {
         fontSize: 12,
-        color: '#8E8E93',
+        color: '#0A642E',
         fontFamily: 'Poppins-Medium',
+        textAlign: 'center',
     },
     detailButton: {
-        marginTop: 12,
-        alignSelf: 'flex-end',
+        paddingHorizontal: 12,
+        paddingVertical: 6,
+        backgroundColor: '#E9E9EB',
+        borderRadius: 6,
     },
     detailButtonText: {
         fontSize: 14,
         color: '#007AFF',
-        fontFamily: 'Poppins-Medium',
     },
-    noTasksText: {
-        fontSize: 16,
-        textAlign: 'center',
-        marginTop: 20,
-        color: '#8E8E93',
-        fontFamily: 'Poppins-Regular',
+    projectDetailButton: {
+        alignSelf: 'flex-end',
+        marginTop: 10,
+    },
+    projectDetailButtonText: {
+        fontSize: 14,
+        color: '#007AFF',
     },
 });
 
