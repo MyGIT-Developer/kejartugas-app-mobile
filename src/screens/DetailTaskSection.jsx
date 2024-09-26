@@ -38,25 +38,53 @@ const TaskCard = ({ projectName, tasks, onTaskPress }) => {
     // Assuming all tasks in a project have the same project details
     const projectDetails = tasks.length > 0 ? tasks[0] : null;
 
+    const truncateText = (text, maxLength) => {
+        return text.length > maxLength ? text.substring(0, maxLength - 3) + '...' : text;
+    };
+
+    const getStatusText = (task) => {
+        if (task.status === 'Completed') {
+            return 'Completed';
+        }
+
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        const endDate = new Date(task.end_date);
+        endDate.setHours(0, 0, 0, 0);
+
+        if (endDate.getTime() === today.getTime()) {
+            return 'Deadline Hari Ini';
+        } else {
+            return `Tersisa ${task.remainingDays || 0} Hari`;
+        }
+    };
+
     return (
         <View style={styles.taskCard}>
             <Text style={styles.projectTitle}>{projectName}</Text>
             {tasks.map((task, index) => (
                 <View key={task.id || index} style={styles.taskItem}>
                     <View style={styles.taskInfo}>
-                        <Text style={styles.taskName}>{task.title}</Text>
+                        <Text style={styles.taskName} numberOfLines={2}>
+                            {truncateText(task.title, 50)}
+                        </Text>
                         <View
                             style={[
                                 styles.statusContainer,
-                                task.status === 'Completed' ? styles.completedStatus : styles.ongoingStatus,
+                                task.status === 'Completed'
+                                    ? styles.completedStatus
+                                    : getStatusText(task) === 'Deadline Hari Ini'
+                                    ? styles.deadlineStatus
+                                    : styles.ongoingStatus,
                             ]}
                         >
-                            <Text style={styles.statusText}>
-                                {task.status === 'Completed' ? 'Completed' : `Tersisa ${task.remainingDays} Hari`}
-                            </Text>
+                            <Text style={styles.statusText}>{getStatusText(task)}</Text>
                         </View>
                     </View>
-                    <TouchableOpacity style={styles.detailButton} onPress={() => onTaskPress(task)}>
+                    <TouchableOpacity
+                        style={[styles.detailButton, { alignSelf: 'flex-start', marginTop: 5 }]}
+                        onPress={() => onTaskPress(task)}
+                    >
                         <Text style={styles.detailButtonText}>Detail</Text>
                     </TouchableOpacity>
                 </View>
@@ -161,7 +189,7 @@ const styles = StyleSheet.create({
         fontSize: 24,
         fontWeight: 'bold',
         color: 'white',
-        fontFamily: 'Poppins-Bold', // Updated to use Poppins-Bold
+        fontFamily: 'Poppins-Bold',
         alignSelf: 'center',
     },
     headerContent: {
@@ -194,21 +222,24 @@ const styles = StyleSheet.create({
         fontWeight: 'bold',
         marginBottom: 8,
         color: '#1C1C1E',
-        fontFamily: 'Poppins-SemiBold', // Updated to use Poppins-SemiBold
+        fontFamily: 'Poppins-SemiBold',
     },
     taskItem: {
         flexDirection: 'row',
         justifyContent: 'space-between',
-        alignItems: 'center',
+        alignItems: 'flex-start',
         marginBottom: 12,
     },
     taskInfo: {
         flexDirection: 'column',
+        flex: 1,
+        marginRight: 10,
     },
     taskName: {
         fontSize: 16,
         color: '#1C1C1E',
-        fontFamily: 'Poppins-Medium', // Updated to use Poppins-Medium
+        fontFamily: 'Poppins-Medium',
+        marginBottom: 4,
     },
     statusContainer: {
         paddingHorizontal: 8,
@@ -225,9 +256,12 @@ const styles = StyleSheet.create({
     ongoingStatus: {
         backgroundColor: '#FFE4E1',
     },
+    deadlineStatus: {
+        backgroundColor: '#FFD700', // Yellow color for deadline day
+    },
     statusText: {
         fontSize: 12,
-        fontFamily: 'Poppins-Medium', // Updated to use Poppins-Medium
+        fontFamily: 'Poppins-Medium',
         textAlign: 'center',
     },
     detailButton: {
@@ -235,11 +269,12 @@ const styles = StyleSheet.create({
         paddingVertical: 6,
         backgroundColor: '#E9E9EB',
         borderRadius: 6,
+        alignSelf: 'flex-start',
     },
     detailButtonText: {
         fontSize: 14,
         color: '#1f1f1f',
-        fontFamily: 'Poppins-Regular', // Updated to use Poppins-Regular
+        fontFamily: 'Poppins-Regular',
     },
     projectDetailButton: {
         flexDirection: 'row',
@@ -251,7 +286,7 @@ const styles = StyleSheet.create({
         fontSize: 14,
         color: '#1f1f1f',
         marginRight: 5,
-        fontFamily: 'Poppins-Regular', // Updated to use Poppins-Regular
+        fontFamily: 'Poppins-Regular',
     },
     chevronIcon: {
         marginTop: 2,
@@ -277,14 +312,14 @@ const styles = StyleSheet.create({
         fontSize: 14,
         color: '#333',
         marginBottom: 2,
-        fontFamily: 'Poppins-Medium', // Updated to use Poppins-Medium
-        fontWeight: 'bold', // Optionally retain bold
+        fontFamily: 'Poppins-Medium',
+        fontWeight: 'bold',
     },
     detailValue: {
         fontSize: 14,
         color: '#333',
         marginBottom: 8,
-        fontFamily: 'Poppins-Regular', // Updated to use Poppins-Regular
+        fontFamily: 'Poppins-Regular',
     },
 });
 

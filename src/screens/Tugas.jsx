@@ -29,28 +29,39 @@ const calculateRemainingDays = (endDate) => {
     return daysDiff > 0 ? daysDiff : 0;
 };
 
-const getStatusBadgeColor = (status, remainingDays) => {
-    // Handle overdue case
-    if (remainingDays < 0) {
-        return { color: '#F63434', label: `Terlambat selama ${Math.abs(remainingDays)} hari` };
+const getStatusBadgeColor = (status, endDate) => {
+    const today = new Date();
+    const end = new Date(endDate);
+    const timeDiff = end.getTime() - today.getTime();
+    const daysDiff = Math.ceil(timeDiff / (1000 * 3600 * 24));
+
+    // Check if the end date is today
+    if (daysDiff === 0) {
+        return { color: '#F69292', textColor: '#811616', label: 'Deadline Tugas Hari Ini' };
+    }
+
+    // Check if the task is overdue
+    if (daysDiff < 0) {
+        const overdueDays = Math.abs(daysDiff);
+        return { color: '#F69292', textColor: '#811616', label: `Terlambat selama ${overdueDays} hari` };
     }
 
     // Existing status handling logic
     switch (status) {
         case 'workingOnIt':
-            return { color: '#CCC8C8', label: 'Dalam Pengerjaan' };
+            return { color: '#CCC8C8', textColor: '#333333', label: 'Dalam Pengerjaan' };
         case 'onReview':
-            return { color: '#9AE1EA', label: 'Dalam Peninjauan' };
+            return { color: '#9AE1EA', textColor: '#333333', label: 'Dalam Peninjauan' };
         case 'rejected':
-            return { color: '#F69292', label: 'Ditolak' };
+            return { color: '#F69292', textColor: '#333333', label: 'Ditolak' };
         case 'onHold':
-            return { color: '#F69292', label: 'Ditunda' };
+            return { color: '#F69292', textColor: '#333333', label: 'Ditunda' };
         case 'Completed':
-            return { color: '#C9F8C1', label: 'Selesai' };
+            return { color: '#C9F8C1', textColor: '#333333', label: 'Selesai' };
         case 'onPending':
-            return { color: '#F0E08A', label: 'Tersedia' };
+            return { color: '#F0E08A', textColor: '#333333', label: 'Tersedia' };
         default:
-            return { color: '#E0E0E0', label: status }; // Default color
+            return { color: '#E0E0E0', textColor: '#333333', label: status }; // Default color
     }
 };
 const getCollectionStatusBadgeColor = (status) => {
