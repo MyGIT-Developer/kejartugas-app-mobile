@@ -51,8 +51,6 @@ const DetailProjekDua = ({ data }) => {
 
 const styles = StyleSheet.create({
     container: {
-        minHeight: height,
-        flexGrow: 1,
         padding: 10,
     },
     table: {

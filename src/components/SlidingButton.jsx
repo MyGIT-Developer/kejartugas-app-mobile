@@ -44,7 +44,8 @@ const styles = StyleSheet.create({
         backgroundColor: 'rgba(255, 255, 255, 0.4)',
     },
     button: {
-        padding: 10,
+        paddingVertical: 5,
+        paddingHorizontal: 10,
     },
     activeButton: {
         backgroundColor: 'white',
@@ -52,6 +53,7 @@ const styles = StyleSheet.create({
     },
     buttonText: {
         color: '#fff',
+        fontFamily: 'Poppins-Medium',
     },
     activeButtonText: {
         color: '#238FBA',

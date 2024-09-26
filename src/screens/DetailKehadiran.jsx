@@ -26,6 +26,7 @@ import ReusableBottomPopUp from '../components/ReusableBottomPopUp';
 import { Feather } from '@expo/vector-icons';
 import CheckBox from '../components/Checkbox';
 import DraggableOverlayBottom from '../components/DraggableOverlayBottom'; // Adjust the import path as needed
+import DraggableModalTask from '../components/DraggableModalTask'; // Adjust the import path as needed
 import ClickableBottomOverlay from '../components/ClickableBottomOverlay';
 
 const DetailKehadiran = () => {
@@ -102,8 +103,6 @@ const DetailKehadiran = () => {
 
             // const latitude = -6.1974472;
             // const longitude = 106.7610134;
-            console.log('Latitude:', latitude);
-            console.log('Longitude:', longitude);
             // Format latitude and longitude
             const formattedCoordinates = `${latitude.toFixed(6)}, ${longitude.toFixed(6)}`;
             setLocation(formattedCoordinates);
@@ -205,12 +204,13 @@ const DetailKehadiran = () => {
 
     const handleClockIn = async () => {
         if (!capturedImage) {
-            Alert.alert('Error', 'No image captured. Please take a photo first.');
+            showAlert('Silahkan mengambil foto terlebih dahulu!', 'Error');
             return;
         }
 
         if (isUserLate && !reasonInput.trim()) {
-            Alert.alert('Error', 'Please provide a reason for being late.');
+            showAlert('Silahkan memberikan Alasan Keterlambatan!', 'Error');
+            // Alert.alert('Error', 'Please provide a reason for being late.');
             return;
         }
 
@@ -229,8 +229,9 @@ const DetailKehadiran = () => {
                 navigation.navigate('App', { screen: 'Kehadiran' });
             }, 1500);
         } catch (error) {
-            console.error('Check-in error:', error);
-            Alert.alert('Error', `Error when checking in: ${error.message || 'Unknown error'}`);
+            console.error('Check-in error:', error.message);
+            // Alert.alert('Error', `Error when checking in: ${error.message || 'Unknown error'}`);
+            showAlert(`Error when checking in: ${error.message || 'Unknown error'}`, 'Error');
         }
     };
 
@@ -312,7 +313,11 @@ const DetailKehadiran = () => {
                                     <Text style={{ fontWeight: '400', fontSize: 14 }}>{locationName}</Text>
                                 </View>
                             </View>
-                            <CheckBox onPress={() => setIsWFH(!isWFH)} title="Sedang berada di luar kantor" isChecked={isWFH} />
+                            <CheckBox
+                                onPress={() => setIsWFH(!isWFH)}
+                                title="Sedang berada di luar kantor"
+                                isChecked={isWFH}
+                            />
                             {capturedImage && <Image source={{ uri: capturedImage }} style={styles.previewImage} />}
                             {isUserLate && (
                                 <View style={styles.lateContainer}>
@@ -327,25 +332,22 @@ const DetailKehadiran = () => {
                                 </View>
                             )}
                             <View style={styles.buttonContainer}>
-                            {isUserLate ? (
-                                <TouchableOpacity
-                                    style={[
-                                        styles.checkInButton, styles.enabledButton,
-                                    ]}
-                                    onPress={handleClockIn}
-                                >
-                                    <Text style={styles.buttonText}>Clock In</Text>
-                                </TouchableOpacity>
-                            ) : (
-                                <TouchableOpacity
-                                    style={[
-                                        styles.checkInButton,
-                                    ]}
-                                    onPress={handleClockIn}
-                                >
-                                    <Text style={styles.buttonText}>Clock In</Text>
-                                </TouchableOpacity>
-                            )}
+                                {isUserLate ? (
+                                    <TouchableOpacity
+                                        style={[
+                                            styles.checkInButton,
+                                            reasonInput ? styles.enabledButton : styles.disabledButton, // Apply the disabledButton style conditionally
+                                        ]}
+                                        onPress={handleClockIn}
+                                        disabled={!reasonInput} // Disable the button based on reasonInput
+                                    >
+                                        <Text style={styles.buttonText}>Clock In</Text>
+                                    </TouchableOpacity>
+                                ) : (
+                                    <TouchableOpacity style={[styles.checkInButton]} onPress={handleClockIn}>
+                                        <Text style={styles.buttonText}>Clock In</Text>
+                                    </TouchableOpacity>
+                                )}
                             </View>
                         </View>
                     </ScrollView>
@@ -387,13 +389,14 @@ const styles = StyleSheet.create({
         position: 'absolute',
         top: 60, // Adjust the top margin based on your needs
         width: '100%', // Ensure the header takes the full width
-        zIndex: 2, // Ensure it stays above other elements
+        zIndex: 11, // Ensure it stays above other elements
     },
     backIcon: {
         position: 'absolute',
         left: 20, // Adjust left padding if necessary
         color: 'white',
         fontSize: 24, // Ensure icon size matches the text size
+        zIndex: 11,
     },
     headerText: {
         fontSize: 18,
@@ -432,7 +435,7 @@ const styles = StyleSheet.create({
         borderRadius: 10,
     },
     lateContainer: {
-        marginBottom: 20,
+        marginBottom: 0,
     },
     statusView: {
         backgroundColor: '#ddd',
@@ -473,7 +476,7 @@ const styles = StyleSheet.create({
     checkInButton: {
         backgroundColor: '#27A0CF',
         borderRadius: 30,
-        padding: 10,
+        padding: 15,
         width: '100%', // Adjust the width as needed
         alignItems: 'center', // Center the text horizontally
         justifyContent: 'center', // Center the text vertically
@@ -502,6 +505,8 @@ const styles = StyleSheet.create({
         padding: 10,
         width: '100%',
         marginBottom: 20,
+        height: 100,
+        textAlignVertical: 'top',
     },
     header: {
         fontSize: 20,

@@ -5,7 +5,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Home from '../screens/Home';
 import Kehadiran from '../screens/Kehadiran';
 import Profile from '../screens/Profile';
-import Project from '../screens/Project';
+import ProjectDashboard from '../screens/ProjectDashboard';
 import Tugas from '../screens/Tugas';
 import { HomeIcon, KehadiranIcon, ProfileIcon, ProjectIcon, TugasIcon } from '../../assets/icon/icons';
 
@@ -15,7 +15,7 @@ const SCREEN_OPTIONS = {
     Home: { component: Home, icon: HomeIcon },
     Tugas: { component: Tugas, icon: TugasIcon },
     Kehadiran: { component: Kehadiran, icon: KehadiranIcon },
-    Project: { component: Project, icon: ProjectIcon },
+    Project: { component: ProjectDashboard, icon: ProjectIcon },
     Profile: { component: Profile, icon: ProfileIcon },
 };
 

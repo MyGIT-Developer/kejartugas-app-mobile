@@ -10,12 +10,9 @@ import {
     Dimensions,
 } from 'react-native';
 import React, { useState, useEffect, useCallback } from 'react';
-import ColorList from '../components/ColorList';
 import { LinearGradient } from 'expo-linear-gradient';
 import * as Location from 'expo-location';
-import Icon from 'react-native-vector-icons/MaterialIcons'; // Import the icon library
 import CircularButton from '../components/CircularButton';
-import DateTimePicker from '@react-native-community/datetimepicker'; // Import the date picker
 import { ScrollView } from 'react-native-gesture-handler';
 import { markAbsent, getAttendance, getAttendanceReport, checkOut, checkIn } from '../api/absent';
 import { getParameter } from '../api/parameter';
@@ -183,7 +180,7 @@ const Kehadiran = () => {
             return `${hours}h ${minutes}m`;
         };
 
-        const status = attendanceForDate ? attendanceForDate.status : 'No Status';
+        const status = attendanceForDate ? attendanceForDate.status : 'Not Absent';
         const checkIn = attendanceForDate?.checkin
             ? new Date(attendanceForDate?.checkin).toLocaleTimeString('id-ID', {
                   hour: '2-digit',
@@ -321,21 +318,20 @@ const Kehadiran = () => {
         try {
             const updateResponse = await checkOut(employeeId, companyId);
 
-            showAlert('You have successfully checked out!', 'success');
+            showAlert(`${updateResponse}`, 'success');
             setTimeout(() => {
                 setAlert((prev) => ({ ...prev, show: false }));
-            }, 1500);
+            }, 3000);
 
             fetchAttendanceData();
         } catch (error) {
             // console.error("Error when checking out:", error);
-            const errorMessage = error || 'Unknown error';
+            const errorMessage = error.message || 'Unknown error';
 
-            console.log('Check-out error:', errorMessage);
             showAlert(`${errorMessage}`, 'error');
             setTimeout(() => {
                 setAlert((prev) => ({ ...prev, show: false }));
-            }, 1500);
+            }, 3000);
         }
     };
 
@@ -368,9 +364,10 @@ const Kehadiran = () => {
                     end={{ x: 1, y: 1 }}
                 />
             </View>
-
+    
+            {/* ScrollView wrapping only scrollable content */}
             <ScrollView
-                contentContainerStyle={styles.scrollViewContent}
+                contentContainerStyle={[styles.scrollViewContent, { flexGrow: 1 }]}  // Ensure flexGrow is applied
                 refreshControl={
                     <RefreshControl
                         refreshing={refreshing}
@@ -380,71 +377,75 @@ const Kehadiran = () => {
                     />
                 }
             >
+                {/* Static Header */}
                 <Text style={styles.header}>Kehadiran</Text>
+    
+                {/* Main scrollable container */}
                 <View style={styles.mainContainer}>
+                    {/* Top Section */}
                     <View style={styles.upperContainer}>
                         <Text style={styles.timeText}>{currentTime}</Text>
                         <Text style={styles.locationText}>{errorMsg || locationName}</Text>
-
+    
                         <View style={styles.buttonContainer}>
-                            {isCheckedIn ? (
-                                <CircularButton
-                                    title="Clock Out"
-                                    onPress={handleClockOut}
-                                    colors={['#E11414', '#EA4545', '#EA8F8F']}
-                                    disabled={attendanceData.checkOut}
-                                />
-                            ) : (
-                                <CircularButton
-                                    title="Clock In"
-                                    onPress={handleClockIn}
-                                    colors={['#0E509E', '#5FA0DC', '#9FD2FF']}
-                                />
-                            )}
+                        {isCheckedIn ? (
+    <CircularButton
+        title="Clock Out"
+        onPress={handleClockOut}
+        colors={['#E11414', '#EA4545', '#EA8F8F']}
+        disabled={!!attendanceData.checkout} // Disable if user has already checked out
+    />
+) : (
+    <CircularButton
+        title="Clock In"
+        onPress={handleClockIn}
+        colors={['#0E509E', '#5FA0DC', '#9FD2FF']}
+    />
+)}
+
                         </View>
                     </View>
-
+    
+                    {/* Scrollable Section */}
                     <View style={styles.lowerContainer}>{paginatedDateViews}</View>
-                    <View>
-                        <View style={styles.paginationControls}>
-                            <TouchableOpacity onPress={handlePreviousPage} disabled={currentPage === 0}>
-                                <Feather
-                                    name="chevron-left"
-                                    size={24}
-                                    color="#148FFF"
-                                    style={[styles.paginationButton, currentPage === 0 && styles.disabledButton]}
-                                />
-                            </TouchableOpacity>
-
-                            <Text>
-                                Page {currentPage + 1} of {totalPages}
-                            </Text>
-
-                            <TouchableOpacity onPress={handleNextPage} disabled={currentPage === totalPages - 1}>
-                                <Feather
-                                    name="chevron-right"
-                                    size={24}
-                                    color="#148FFF"
-                                    style={[
-                                        styles.paginationButton,
-                                        currentPage === totalPages - 1 && styles.disabledButton,
-                                    ]}
-                                />
-                            </TouchableOpacity>
-                        </View>
+    
+                    {/* Pagination */}
+                    <View style={styles.paginationControls}>
+                        <TouchableOpacity onPress={handlePreviousPage} disabled={currentPage === 0}>
+                            <Feather
+                                name="chevron-left"
+                                size={24}
+                                color="#148FFF"
+                                style={[styles.paginationButton, currentPage === 0 && styles.disabledButton]}
+                            />
+                        </TouchableOpacity>
+    
+                        <Text>
+                            Page {currentPage + 1} of {totalPages}
+                        </Text>
+    
+                        <TouchableOpacity onPress={handleNextPage} disabled={currentPage === totalPages - 1}>
+                            <Feather
+                                name="chevron-right"
+                                size={24}
+                                color="#148FFF"
+                                style={[styles.paginationButton, currentPage === totalPages - 1 && styles.disabledButton]}
+                            />
+                        </TouchableOpacity>
                     </View>
-
-                    {/* <ScrollView style={styles.lowerContainer}>{dateViews}</ScrollView> */}
                 </View>
             </ScrollView>
+    
+            {/* Alert Popup */}
             <ReusableBottomPopUp
                 show={alert.show}
                 alertType={alert.type}
                 message={alert.message}
-                onConfirm={() => setAlert((prev) => ({ ...prev, show: false }))}
+                onConfirm={() => setAlert((prev) => ({ ...prev, show: false }))}  
             />
         </View>
     );
+    
 };
 
 const styles = StyleSheet.create({

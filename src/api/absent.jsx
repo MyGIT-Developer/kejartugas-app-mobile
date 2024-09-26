@@ -1,16 +1,24 @@
 import apiService from '../utils/apiService';
-import AsyncStorage from "@react-native-async-storage/async-storage";
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 // Function to mark an employee as absent
 export const markAbsent = async (companyId, employeeId, note, attendance_image, location) => {
     try {
-        const response = await apiService.post(`/attendance/`, {
-            companyId,
-            employeeId,
-            note,
-            attendance_image,
-            location,
-        });
+        const response = await apiService.post(
+            `/attendance/`,
+            {
+                companyId,
+                employeeId,
+                note,
+                attendance_image,
+                location,
+            },
+            {
+                headers: {
+                    Authorization: `Bearer ${await AsyncStorage.getItem('token')}`,
+                },
+            },
+        );
         return response.data;
     } catch (error) {
         throw new Error(error.response?.data?.message || 'Marking absent failed');
@@ -22,8 +30,8 @@ export const getAttendance = async (employeeId) => {
     try {
         const response = await apiService.get(`/attendance/${employeeId}`, {
             headers: {
-                Authorization: `Bearer ${await AsyncStorage.getItem('token')}`
-            }
+                Authorization: `Bearer ${await AsyncStorage.getItem('token')}`,
+            },
         });
         return response.data;
     } catch (error) {
@@ -34,11 +42,19 @@ export const getAttendance = async (employeeId) => {
 // Function to get the attendance report for all employees
 export const getAttendanceReport = async () => {
     try {
-        const response = await apiService.get('/attendance/report' , {
-            headers: {
-                Authorization: `Bearer ${await AsyncStorage.getItem('token')}`
-            }
-        });
+        const response = await apiService.get(
+            '/attendance/report',
+            {
+                headers: {
+                    Authorization: `Bearer ${await AsyncStorage.getItem('token')}`,
+                },
+            },
+            {
+                headers: {
+                    Authorization: `Bearer ${await AsyncStorage.getItem('token')}`,
+                },
+            },
+        );
         return response.data;
     } catch (error) {
         throw new Error(error.response?.data?.message || 'Fetching report failed');
@@ -59,8 +75,8 @@ export const checkIn = async (employeeId, companyId, note, attendanceImageBase64
         // Send POST request using apiService (no need for FormData, just a JSON payload)
         const response = await apiService.post(`/attendance/`, requestData, {
             headers: {
-                'Content-Type': 'application/json', // JSON payload
-            }
+                Authorization: `Bearer ${await AsyncStorage.getItem('token')}`,
+            },
         });
 
         return response.data;
@@ -71,18 +87,29 @@ export const checkIn = async (employeeId, companyId, note, attendanceImageBase64
     }
 };
 
-
 export const checkOut = async (employeeId, companyId) => {
     try {
         const checkOutData = {
+            action: 'checkout',
             employee_id: employeeId,
+            company_id: companyId,
         };
-        const response = await apiService.put(`/attendance/`, checkOutData, {
-            params: {
-                action: 'checkout',
-                company_id: companyId,
+        const response = await apiService.put(
+            `/attendance/`,
+            checkOutData,
+            // {
+            //     params: {
+            //         action: 'checkout',
+            //         company_id: companyId,
+            //         employee_id: employeeId,
+            //     },
+            // },
+            {
+                headers: {
+                    Authorization: `Bearer ${await AsyncStorage.getItem('token')}`,
+                },
             },
-        });
+        );
         return response.data.message;
     } catch (error) {
         throw new Error(error.response?.data?.message || 'Checking out failed');

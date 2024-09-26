@@ -34,6 +34,11 @@ const DetailProjek = ({ route }) => {
     const [refreshing, setRefreshing] = useState(false);
     const [activeFragment, setActiveFragment] = useState(0);
     const [visible, setVisible] = useState(false);
+    const [isExpanded, setIsExpanded] = useState(false);
+
+    const toggleExpand = () => {
+        setIsExpanded(!isExpanded);
+    };
 
     const togglePopover = () => setVisible(!visible);
 
@@ -145,7 +150,7 @@ const DetailProjek = ({ route }) => {
             </View>
             <View style={styles.headerSection}>
                 <Feather name="chevron-left" style={styles.backIcon} onPress={() => navigation.goBack()} />
-                <Text style={styles.header}>Projek</Text>
+                <Text style={styles.header}>Detail Projek</Text>
                 <SlidingButton fragments={fragments} activeFragment={activeFragment} onPress={setActiveFragment} />
             </View>
             <ScrollView
@@ -161,7 +166,7 @@ const DetailProjek = ({ route }) => {
             >
                 <View style={styles.upperContainer}>
                     <View style={styles.projectHeaderContainer}>
-                        <Text>Nama Proyek</Text>
+                        <Text style={{fontFamily: "Poppins-Regular"}}>Nama Proyek</Text>
 
                         <Popover
                             isVisible={visible}
@@ -193,7 +198,7 @@ const DetailProjek = ({ route }) => {
                                     style={styles.menuItem}
                                 >
                                     <View style={[styles.optionIcon, { backgroundColor: '#27CF56' }]}>
-                                        <Feather name="share-2" size={20} color="white" />
+                                        <Feather name="check-circle" size={20} color="white" />
                                     </View>
 
                                     <Text style={[styles.optionText, { color: 'black' }]}>Selesai</Text>
@@ -226,7 +231,15 @@ const DetailProjek = ({ route }) => {
                     </View>
                     <View style={styles.projectInfoContainer}>
                         <View style={styles.projectTextContainer}>
-                            <Text style={styles.projectName}>{projectData.project_name}</Text>
+                            <TouchableOpacity onPress={toggleExpand}>
+                                <Text
+                                    style={styles.projectName}
+                                    numberOfLines={isExpanded ? undefined : 2}
+                                    ellipsizeMode="tail"
+                                >
+                                    {projectData.project_name}
+                                </Text>
+                            </TouchableOpacity>
                             <View
                                 style={[
                                     styles.statusContainer,
@@ -282,6 +295,7 @@ const styles = StyleSheet.create({
         display: 'flex',
         flexDirection: 'column',
         gap: 20,
+        height: height,
     },
     headerSection: {
         justifyContent: 'center',
@@ -291,12 +305,13 @@ const styles = StyleSheet.create({
         gap: 20,
     },
     header: {
-        fontSize: 22,
+        fontSize: 24,
         fontWeight: 'bold',
         color: 'white',
-        textAlign: 'center',
+        alignSelf: 'center',
+        fontFamily: 'Poppins-Bold',
+        marginTop: 30,
         letterSpacing: -1,
-        marginTop: 35,
     },
     backIcon: {
         position: 'absolute',
@@ -307,9 +322,10 @@ const styles = StyleSheet.create({
     },
     upperContainer: {
         flexDirection: 'column',
-        justifyContent: 'space-between',
         alignItems: 'center',
-        padding: 20,
+        justifyContent: 'center',
+        paddingBottom: 20,
+        paddingHorizontal:20,
         borderRadius: 20,
         backgroundColor: 'white',
         shadowColor: '#000',
@@ -335,7 +351,6 @@ const styles = StyleSheet.create({
         justifyContent: 'space-between',
         alignItems: 'center',
         width: '100%',
-        marginTop: 10,
     },
     projectName: {
         color: 'black',
@@ -362,7 +377,8 @@ const styles = StyleSheet.create({
     },
     menuContainer: {
         width: '100%',
-        padding: 10,
+        padding: 20,
+        top: 0,
     },
     menuItem: {
         flexDirection: 'row',
