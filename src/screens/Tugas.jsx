@@ -23,27 +23,20 @@ const GRADIENT_COLORS = ['#0E509E', '#5FA0DC', '#9FD2FF'];
 
 const calculateRemainingDays = (endDate) => {
     const today = new Date();
+    today.setHours(0, 0, 0, 0); // Set to beginning of day for accurate comparison
     const end = new Date(endDate);
+    end.setHours(0, 0, 0, 0);
     const timeDiff = end.getTime() - today.getTime();
-    const daysDiff = Math.ceil(timeDiff / (1000 * 3600 * 24));
-    return daysDiff > 0 ? daysDiff : 0;
+    return Math.ceil(timeDiff / (1000 * 3600 * 24));
 };
 
 const getStatusBadgeColor = (status, endDate) => {
-    const today = new Date();
-    const end = new Date(endDate);
-    const timeDiff = end.getTime() - today.getTime();
-    const daysDiff = Math.ceil(timeDiff / (1000 * 3600 * 24));
+    const remainingDays = calculateRemainingDays(endDate);
 
-    // Check if the end date is today
-    if (daysDiff === 0) {
+    if (remainingDays === 0) {
         return { color: '#F69292', textColor: '#811616', label: 'Deadline Tugas Hari Ini' };
-    }
-
-    // Check if the task is overdue
-    if (daysDiff < 0) {
-        const overdueDays = Math.abs(daysDiff);
-        return { color: '#F69292', textColor: '#811616', label: `Terlambat selama ${overdueDays} hari` };
+    } else if (remainingDays < 0) {
+        return { color: '#F69292', textColor: '#811616', label: `Terlambat selama ${Math.abs(remainingDays)} hari` };
     }
 
     // Existing status handling logic
@@ -53,17 +46,18 @@ const getStatusBadgeColor = (status, endDate) => {
         case 'onReview':
             return { color: '#9AE1EA', textColor: '#333333', label: 'Dalam Peninjauan' };
         case 'rejected':
-            return { color: '#F69292', textColor: '#333333', label: 'Ditolak' };
+            return { color: '#F69292', textColor: '#811616', label: 'Ditolak' };
         case 'onHold':
-            return { color: '#F69292', textColor: '#333333', label: 'Ditunda' };
+            return { color: '#F69292', textColor: '#811616', label: 'Ditunda' };
         case 'Completed':
             return { color: '#C9F8C1', textColor: '#333333', label: 'Selesai' };
         case 'onPending':
             return { color: '#F0E08A', textColor: '#333333', label: 'Tersedia' };
         default:
-            return { color: '#E0E0E0', textColor: '#333333', label: status }; // Default color
+            return { color: '#E0E0E0', textColor: '#333333', label: status };
     }
 };
+
 const getCollectionStatusBadgeColor = (status) => {
     switch (status) {
         case 'finish':
@@ -75,39 +69,25 @@ const getCollectionStatusBadgeColor = (status) => {
         case 'overdue':
             return { color: '#F69292', textColor: '#811616', label: 'Overdue' };
         default:
-            return { color: '#E0E0E0', textColor: '#000000', label: status }; // Default color
+            return { color: '#E0E0E0', textColor: '#000000', label: status };
     }
 };
 
 const TaskCard = React.memo(({ task = {}, onProjectDetailPress = () => {}, onTaskDetailPress = () => {} }) => {
-    const isCompleted = task.task_status === 'Completed';
-    const { color: badgeColor, label: displayStatus } = getStatusBadgeColor(task.task_status);
-    const remainingDays = calculateRemainingDays(task.end_date);
+    const {
+        color: badgeColor,
+        textColor: badgeTextColor,
+        label: displayStatus,
+    } = getStatusBadgeColor(task.task_status, task.end_date);
 
     const renderStatusOrDays = () => {
-        if (isCompleted) {
-            return (
-                <View style={[styles.badge, { backgroundColor: badgeColor }]}>
-                    <Text style={styles.badgeText} numberOfLines={1} ellipsizeMode="tail">
-                        {displayStatus}
-                    </Text>
-                </View>
-            );
-        } else {
-            // Check if the task is overdue
-            const isOverdue = remainingDays < 0;
-            const overdueDays = Math.abs(remainingDays); // Calculate how many days overdue
-
-            return (
-                <View style={[styles.badge, { backgroundColor: isOverdue ? '#F63434' : '#E0E0E0' }]}>
-                    <Text style={styles.badgeText} numberOfLines={1} ellipsizeMode="tail">
-                        {isOverdue
-                            ? `Terlambat selama ${overdueDays} ${overdueDays === 1 ? 'hari' : 'hari'}`
-                            : `${remainingDays} ${remainingDays === 1 ? 'hari' : 'hari'} tersisa`}
-                    </Text>
-                </View>
-            );
-        }
+        return (
+            <View style={[styles.badge, { backgroundColor: badgeColor }]}>
+                <Text style={[styles.badgeText, { color: badgeTextColor }]} numberOfLines={1} ellipsizeMode="tail">
+                    {displayStatus}
+                </Text>
+            </View>
+        );
     };
 
     return (
@@ -322,7 +302,7 @@ const Tugas = () => {
             description: task.task_desc,
             progress: task.percentage_task || 0,
             status: task.task_status,
-            statusColor: getStatusBadgeColor(task.task_status).color,
+            statusColor: getStatusBadgeColor(task.task_status, task.end_date).color,
             collectionDate: task.task_submit_date || 'N/A',
             collectionStatus: task.task_submit_status || 'N/A',
             collectionStatusColor: getCollectionStatusBadgeColor(task.task_submit_status || 'N/A').color,
@@ -559,8 +539,9 @@ const styles = StyleSheet.create({
         // Styles remain the same
     },
     detailButtonText: {
-        color: '#0E509E',
+        color: '#444444',
         fontWeight: '500',
+        marginTop: 20,
         fontSize: 14,
         fontFamily: 'Poppins-Regular',
     },
