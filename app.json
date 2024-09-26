@@ -2,10 +2,9 @@
     "expo": {
         "name": "my-kejar-tugas",
         "slug": "my-kejar-tugas",
-        "main": "node_modules/expo/AppEntry.js",
         "version": "1.0.0",
         "orientation": "portrait",
-        "icon": "./assets/images/Meotrik_PM_Logo.png",
+        "icon": "./assets/images/mp-logo-512x512.png",
         "userInterfaceStyle": "light",
         "splash": {
             "image": "./assets/images/kt_splash.png"
@@ -16,11 +15,12 @@
         "assetBundlePatterns": ["**/*"],
         "ios": {
             "supportsTablet": true,
-            "bundleIdentifier": "com.innovation.kejartugas"
+            "bundleIdentifier": "com.innovation.kejartugas",
+            "jsEngine": "hermes"
         },
         "android": {
             "adaptiveIcon": {
-                "foregroundImage": "./assets/images/Meotrik_PM_Logo.png",
+                "foregroundImage": "./assets/images/mp-logo-1024x1024.png",
                 "backgroundColor": "#FFFFFF"
             },
             "package": "com.innovation.kejartugas",
