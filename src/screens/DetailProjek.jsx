@@ -34,6 +34,11 @@ const DetailProjek = ({ route }) => {
     const [refreshing, setRefreshing] = useState(false);
     const [activeFragment, setActiveFragment] = useState(0);
     const [visible, setVisible] = useState(false);
+    const [isExpanded, setIsExpanded] = useState(false);
+
+    const toggleExpand = () => {
+        setIsExpanded(!isExpanded);
+    };
 
     const togglePopover = () => setVisible(!visible);
 
@@ -161,7 +166,7 @@ const DetailProjek = ({ route }) => {
             >
                 <View style={styles.upperContainer}>
                     <View style={styles.projectHeaderContainer}>
-                        <Text>Nama Proyek</Text>
+                        <Text style={{fontFamily: "Poppins-Regular"}}>Nama Proyek</Text>
 
                         <Popover
                             isVisible={visible}
@@ -226,7 +231,15 @@ const DetailProjek = ({ route }) => {
                     </View>
                     <View style={styles.projectInfoContainer}>
                         <View style={styles.projectTextContainer}>
-                            <Text style={styles.projectName}>{projectData.project_name}</Text>
+                            <TouchableOpacity onPress={toggleExpand}>
+                                <Text
+                                    style={styles.projectName}
+                                    numberOfLines={isExpanded ? undefined : 2}
+                                    ellipsizeMode="tail"
+                                >
+                                    {projectData.project_name}
+                                </Text>
+                            </TouchableOpacity>
                             <View
                                 style={[
                                     styles.statusContainer,
@@ -292,12 +305,13 @@ const styles = StyleSheet.create({
         gap: 20,
     },
     header: {
-        fontSize: 22,
+        fontSize: 24,
         fontWeight: 'bold',
         color: 'white',
-        textAlign: 'center',
+        alignSelf: 'center',
+        fontFamily: 'Poppins-Bold',
+        marginTop: 30,
         letterSpacing: -1,
-        marginTop: 35,
     },
     backIcon: {
         position: 'absolute',
@@ -308,9 +322,10 @@ const styles = StyleSheet.create({
     },
     upperContainer: {
         flexDirection: 'column',
-        justifyContent: 'space-between',
         alignItems: 'center',
-        padding: 20,
+        justifyContent: 'center',
+        paddingBottom: 20,
+        paddingHorizontal:20,
         borderRadius: 20,
         backgroundColor: 'white',
         shadowColor: '#000',
@@ -336,7 +351,6 @@ const styles = StyleSheet.create({
         justifyContent: 'space-between',
         alignItems: 'center',
         width: '100%',
-        marginTop: 10,
     },
     projectName: {
         color: 'black',

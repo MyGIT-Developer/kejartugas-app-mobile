@@ -22,7 +22,11 @@ const ProjectList = () => {
     const [refreshing, setRefreshing] = useState(false);
     const [companyId, setCompanyId] = useState(null);
     const [activeFragment, setActiveFragment] = useState(0);
+    const [isExpanded, setIsExpanded] = useState(false);
 
+    const toggleExpand = () => {
+        setIsExpanded(!isExpanded);
+    };
     useEffect(() => {
         const getData = async () => {
             try {
@@ -65,14 +69,20 @@ const ProjectList = () => {
 
     const renderProjectItem = (item) => (
         <View key={item.id} style={styles.projectItem}>
-            <Text style={styles.projectName}>{item.project_name}</Text>
+            <TouchableOpacity onPress={toggleExpand}>
+                <Text style={styles.projectName} numberOfLines={isExpanded ? undefined : 2} ellipsizeMode="tail">
+                    {item.project_name}
+                </Text>
+            </TouchableOpacity>
             <View style={styles.progressContainer}>
                 <Progress.Bar
                     progress={Math.round(item.percentage).toFixed(1)}
-                    color="#27B44E"
+                    // color="#27B44E"
                     height={10}
                     borderRadius={25}
                     borderWidth={0.2}
+                    width={100} 
+                    unfilledColor="#E5E5E5"
                     style={{ flex: 1 }}
                 />
                 <Text style={styles.percentageText}>
@@ -99,7 +109,10 @@ const ProjectList = () => {
             contentContainerStyle={styles.projectList}
         >
             {project && Array.isArray(project) ? (
-                project && project.filter((item) => (filterType ? item.project_type === filterType : "general")).map(renderProjectItem)
+                project &&
+                project
+                    .filter((item) => (item.project_type === filterType || !filterType))
+                    .map(renderProjectItem)
             ) : (
                 <Text>No projects found</Text>
             )}
@@ -109,27 +122,23 @@ const ProjectList = () => {
     const fragments = [
         {
             title: 'Semua Proyek',
-            screen: ({ onScrollBeginDrag, onScrollEndDrag }) => (
-                <ProjectListView onScrollBeginDrag={onScrollBeginDrag} onScrollEndDrag={onScrollEndDrag} />
+            screen: () => (
+                <ProjectListView />
             ),
         },
         {
             title: 'General',
-            screen: ({ onScrollBeginDrag, onScrollEndDrag }) => (
+            screen: () => (
                 <ProjectListView
                     filterType="general"
-                    onScrollBeginDrag={onScrollBeginDrag}
-                    onScrollEndDrag={onScrollEndDrag}
                 />
             ),
         },
         {
             title: 'Maintenance',
-            screen: ({ onScrollBeginDrag, onScrollEndDrag }) => (
+            screen: () => (
                 <ProjectListView
                     filterType="maintenance"
-                    onScrollBeginDrag={onScrollBeginDrag}
-                    onScrollEndDrag={onScrollEndDrag}
                 />
             ),
         },
@@ -185,18 +194,18 @@ const ProjectList = () => {
 
 const styles = StyleSheet.create({
     container: {
-        minHeight: height,
+        maxHeight: height,
         flexGrow: 1,
     },
     backgroundBox: {
-        height: 155,
-        width: '100%',
-        position: 'absolute',
+        height: 155, // Set your desired height
+        width: '100%', // Set your desired width
+        position: 'absolute', // Position it behind other elements
         top: 0,
         left: 0,
     },
     linearGradient: {
-        flex: 1,
+        flex: 1, // Ensure the gradient covers the entire view
         borderBottomLeftRadius: 30,
         borderBottomRightRadius: 30,
     },
@@ -224,7 +233,6 @@ const styles = StyleSheet.create({
     },
     sectionContainer: {
         flexGrow: 1,
-       
     },
     centered: {
         flex: 1,

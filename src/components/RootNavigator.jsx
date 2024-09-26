@@ -1,53 +1,57 @@
 import React from 'react';
-import { createStackNavigator, CardStyleInterpolators } from '@react-navigation/stack';
+import { createStackNavigator } from '@react-navigation/stack';
+import { CardStyleInterpolators } from '@react-navigation/stack';
 import AppNavigator from '../components/AppNavigator';
-import Login from '../screens/Login';
-import WaitingMail from '../screens/WaitingMail';
-import SentEmail from '../screens/SentEmail';
 import SplashScreen from '../screens/SplashScreen';
+import Login from '../screens/Login';
 import DetailKehadiran from '../screens/DetailKehadiran';
 import ForgotPassword from '../screens/ForgotPassword';
 import BoardingScreen from '../screens/BoardingScreen';
-import Step1 from '../screens/Step1'; // Add this import
-import Step2 from '../screens/Step2'; // Add this import
-import success from '../components/SuccessRegist'; // Add this import
-import DetailProjek from '../screens/DetailProjek'; // Add this import
-import ProjectList from '../screens/ProjectList'; // Add this import
-import TaskOnReview from '../screens/TaskOnReview'; // Add this import
-import ProjectOnWorking from '../screens/ProjectOnWorking'; // Add this import
-import SubmitTugas from '../screens/SubmitTugas'; // Add this import
-import DetailTaskSection from '../screens/DetailTaskSection'; // Add this import
+import Step1 from '../screens/Step1';
+import Step2 from '../screens/Step2';
+import DetailProjek from '../screens/DetailProjek';
+import ProjectList from '../screens/ProjectList';
+import TaskOnReview from '../screens/TaskOnReview';
+import ProjectOnWorking from '../screens/ProjectOnWorking';
+import SubmitTugas from '../screens/SubmitTugas';
+import DetailTaskSection from '../screens/DetailTaskSection';
 import AddProjectForm from '../screens/AddProjectForm';
 
 const Stack = createStackNavigator();
 
+const defaultScreenOptions = {
+  headerShown: false,
+  gestureEnabled: true,
+  gestureDirection: 'horizontal',
+  cardStyleInterpolator: CardStyleInterpolators.forHorizontalIOS,
+};
+
+const screens = [
+  { name: 'SplashScreen', component: SplashScreen },
+  { name: 'Login', component: Login },
+  { name: 'App', component: AppNavigator },
+  { name: 'DetailKehadiran', component: DetailKehadiran },
+  { name: 'ForgotPassword', component: ForgotPassword },
+  { name: 'BoardingScreen', component: BoardingScreen },
+  { name: 'Step1', component: Step1 },
+  { name: 'Step2', component: Step2 },
+  { name: 'DetailProjek', component: DetailProjek},
+  { name: 'ProjectList', component: ProjectList },
+  { name: 'TaskOnReview', component: TaskOnReview },
+  { name: 'ProjectOnWorking', component: ProjectOnWorking },
+  { name: 'SubmitTugas', component: SubmitTugas },
+  { name: 'DetailTaskSection', component: DetailTaskSection },
+  { name: 'AddProjectForm', component: AddProjectForm },
+];
+
 const RootNavigator = () => (
-    <Stack.Navigator
-        screenOptions={{
-            headerShown: false,
-            gestureEnabled: true,
-            gestureDirection: 'horizontal',
-            cardStyleInterpolator: CardStyleInterpolators.forHorizontalIOS,
-        }}
-    >
-        <Stack.Screen name="SplashScreen" component={SplashScreen} />
-        <Stack.Screen name="Login" component={Login} />
-        <Stack.Screen name="App" component={AppNavigator} />
-        <Stack.Screen name="DetailKehadiran" component={DetailKehadiran} />
-        <Stack.Screen name="ForgotPassword" component={ForgotPassword} />
-        <Stack.Screen name="BoardingScreen" component={BoardingScreen} />
-        <Stack.Screen name="Step1" component={Step1} />
-        <Stack.Screen name="Step2" component={Step2} />
-        <Stack.Screen name="DetailProjek" component={DetailProjek} options={{
-          gestureEnabled: false, // Disable swipe back gesture
-        }}/>
-        <Stack.Screen name="ProjectList" component={ProjectList} />
-        <Stack.Screen name="TaskOnReview" component={TaskOnReview} />
-        <Stack.Screen name="ProjectOnWorking" component={ProjectOnWorking} />
-        <Stack.Screen name="SubmitTugas" component={SubmitTugas} />
-        <Stack.Screen name="DetailTaskSection" component={DetailTaskSection} />
-        <Stack.Screen name="AddProjectForm" component={AddProjectForm} />
-    </Stack.Navigator>
+  <Stack.Navigator screenOptions={defaultScreenOptions}>
+    {screens.map(({ name, component }) => (
+      <Stack.Screen key={name} name={name} component={component} options={{
+        gestureEnabled: false, // Disable swipe back gesture
+      }}  />
+    ))}
+  </Stack.Navigator>
 );
 
 export default RootNavigator;

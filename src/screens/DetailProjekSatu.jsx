@@ -31,26 +31,36 @@ const DetailProjekSatu = ({ data }) => {
     return (
         <ScrollView contentContainerStyle={styles.container}>
             <View style={styles.infoContainer}>
-                <View style={styles.column}>
-                    <InfoRow label="Tipe" value={data.project_type} />
-                    <InfoRow label="Ditugaskan Oleh" value={data.assign_by_name} />
-                    <InfoRow label="Periode Proyek" value={`${formatDate(data.start_date)} - ${formatDate(data.end_date)}`} />
+                <View style={{ display: 'flex', flexDirection: 'row' }}>
+                    <View style={styles.column}>
+                        <InfoRow label="Tipe Projek" value={data.project_type} />
+                        <InfoRow label="Ditugaskan Oleh" value={data.assign_by_name} />
+                    </View>
+                    <View style={styles.column}>
+                        <InfoRow label="Divisi" value={data.team_name} />
+                    </View>
                 </View>
-                <View style={styles.column}>
-                    <InfoRow label="Divisi" value={data.team_name} />
-                    <InfoRow label="Ditugaskan Kepada" value={data.assignedEmployees.map((employee) => employee.employee_name).join(', ')} />
-                    <InfoRow label="Keterangan" value={data.project_desc ?? '-'} />
-                </View>
+
+                <InfoRow
+                    label="Ditugaskan Kepada"
+                    value={data.assignedEmployees.map((employee) => employee.employee_name).join(', ')}
+                />
+
+                <InfoRow label="Keterangan" value={data.project_desc ?? '-'} />
             </View>
 
             <View style={styles.midContainer}>
-                <CountContainer label="Tugas Dalam Proses" value={data.total_tasks_working_on_it} borderColor="#DD9968" />
+                <CountContainer
+                    label="Tugas Dalam Proses"
+                    value={data.total_tasks_working_on_it}
+                    borderColor="#DD9968"
+                />
                 <CountContainer label="Semua Tugas Selesai" value={data.total_task_completed} borderColor="#3AD665" />
                 <CountContainer label="Total Tugas" value={data.total_task_created} borderColor="#DD6868" />
-            </View> 
+            </View>
 
             <View style={styles.lowerContainer}>
-                <LineChartExample taskData={data.tasks}/>
+                <LineChartExample taskData={data.tasks} />
             </View>
         </ScrollView>
     );
@@ -58,20 +68,24 @@ const DetailProjekSatu = ({ data }) => {
 
 const styles = StyleSheet.create({
     container: {
-        minHeight: height,
+        display: 'flex',
         flexGrow: 1,
+        paddingHorizontal: 20,
+        flexDirection: 'column',
+        width: SCREEN_WIDTH,
     },
     infoContainer: {
-        flexDirection: 'row',
+        display: 'flex',
+        flexDirection: 'column',
         justifyContent: 'space-between',
         backgroundColor: 'white',
         padding: 20,
+        gap: 10,
         borderRadius: 20,
         shadowColor: '#000',
         shadowOffset: { width: 0, height: 5 },
         shadowOpacity: 0.3,
         elevation: 5,
-        width: SCREEN_WIDTH - 40,
         marginBottom: 20,
     },
     column: {
@@ -84,15 +98,15 @@ const styles = StyleSheet.create({
     },
     midContainer: {
         flexDirection: 'row',
-        justifyContent: 'space-between',  // Adjust spacing between boxes
+        justifyContent: 'space-between', // Adjust spacing between boxes
         flexWrap: 'wrap', // Allow wrapping to prevent overflow
         gap: 10,
         paddingHorizontal: 20, // Add padding for better alignment
     },
     countContainer: {
-        flex: 1,  // Allow each count box to take equal space
+        flex: 1, // Allow each count box to take equal space
         paddingVertical: 10,
-        paddingHorizontal:2,
+        paddingHorizontal: 2,
         borderWidth: 2,
         borderRadius: 10,
         backgroundColor: 'white',
@@ -103,21 +117,23 @@ const styles = StyleSheet.create({
         // alignItems: 'center',
     },
     countLabel: {
-        fontSize: 12,  // Adjust for readability
+        fontSize: 12, // Adjust for readability
         color: '#333',
     },
     countValue: {
         fontSize: 30,
         fontWeight: '600',
+        fontFamily: 'Poppins-Bold',
     },
     fieldText: {
         fontSize: 12,
+        fontFamily: 'Poppins-Medium',
     },
     fieldValueText: {
         fontSize: 13,
         fontWeight: '600',
+        fontFamily: 'Poppins-Bold',
     },
 });
-
 
 export default DetailProjekSatu;

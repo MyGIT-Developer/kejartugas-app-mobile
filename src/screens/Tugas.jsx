@@ -121,6 +121,7 @@ const TaskSection = ({
         )}
     </View>
 );
+
 const Tugas = () => {
     const [isLoading, setIsLoading] = useState(true);
     const [refreshing, setRefreshing] = useState(false);
