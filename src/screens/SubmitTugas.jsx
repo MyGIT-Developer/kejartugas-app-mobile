@@ -3,16 +3,26 @@ import { View, Text, TextInput, TouchableOpacity, StyleSheet, Alert, Image } fro
 import { LinearGradient } from 'expo-linear-gradient';
 import Icon from 'react-native-vector-icons/Feather';
 import * as ImagePicker from 'expo-image-picker';
+import * as FileSystem from 'expo-file-system';
 import { useNavigation } from '@react-navigation/native';
-import ReusableAlertBottomPopUp from '../components/ReusableBottomPopUp'; // Adjust the import path as needed
+import ReusableAlertBottomPopUp from '../components/ReusableBottomPopUp';
+import { submitTask } from '../api/task';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
-const SubmitTugas = () => {
+const SubmitTugas = ({ route }) => {
+    const { taskId } = route.params || {}; // Default to an empty object
     const navigation = useNavigation();
     const [imageUri, setImageUri] = useState(null);
     const [showAlert, setShowAlert] = useState(false);
     const [alertMessage, setAlertMessage] = useState('');
     const [isSuccess, setIsSuccess] = useState(true);
     const [description, setDescription] = useState('');
+    const [isLoading, setIsLoading] = useState(false); // Loading state
+
+    if (!taskId) {
+        console.error('taskId is undefined');
+        return <Text>Error: Task ID is missing!</Text>; // Fallback UI
+    }
 
     const openImagePicker = async () => {
         const result = await ImagePicker.launchImageLibraryAsync({
@@ -47,11 +57,45 @@ const SubmitTugas = () => {
         ]);
     };
 
-    const handleSavePress = () => {
-        // Here you can add any logic to save the data if needed
-        setIsSuccess(true); // Set to true if the save is successful
-        setAlertMessage('Pengumpulan berhasil disimpan.');
-        setShowAlert(true);
+    const handleSavePress = async () => {
+        if (!description || !imageUri) {
+            setAlertMessage('Please provide a description and an image.');
+            setShowAlert(true);
+            return; // Prevent submission
+        }
+
+        setIsLoading(true); // Set loading state
+
+        try {
+            const employeeId = await AsyncStorage.getItem('employeeId');
+            const companyId = await AsyncStorage.getItem('companyId');
+
+            let taskImageBase64 = '';
+            if (imageUri) {
+                taskImageBase64 = await FileSystem.readAsStringAsync(imageUri, {
+                    encoding: FileSystem.EncodingType.Base64,
+                });
+            }
+
+            const payload = {
+                uploaded_by: employeeId,
+                company_id: companyId,
+                task_image: taskImageBase64,
+                task_submit_reason: description,
+            };
+
+            await submitTask(taskId, payload);
+            setIsSuccess(true);
+            setAlertMessage('Pengumpulan berhasil disimpan.');
+            setShowAlert(true);
+        } catch (error) {
+            console.error(error); // Log error for debugging
+            setIsSuccess(false);
+            setAlertMessage('Pengumpulan gagal. Coba lagi.');
+            setShowAlert(true);
+        } finally {
+            setIsLoading(false); // Reset loading state
+        }
     };
 
     const handleCancelPress = () => {
@@ -60,7 +104,9 @@ const SubmitTugas = () => {
 
     const handleAlertConfirm = () => {
         setShowAlert(false);
-        navigation.goBack(); // Navigate back when the alert button is pressed
+        if (isSuccess) {
+            navigation.goBack();
+        }
     };
 
     return (
@@ -108,8 +154,14 @@ const SubmitTugas = () => {
                     <TouchableOpacity style={[styles.button, styles.cancelButton]} onPress={handleCancelPress}>
                         <Text style={styles.buttonText}>Batal</Text>
                     </TouchableOpacity>
-                    <TouchableOpacity style={[styles.button, styles.saveButton]} onPress={handleSavePress}>
-                        <Text style={[styles.buttonText, styles.saveButtonText]}>Simpan</Text>
+                    <TouchableOpacity
+                        style={[styles.button, styles.saveButton]}
+                        onPress={handleSavePress}
+                        disabled={isLoading}
+                    >
+                        <Text style={[styles.buttonText, styles.saveButtonText]}>
+                            {isLoading ? 'Mengirim...' : 'Simpan'}
+                        </Text>
                     </TouchableOpacity>
                 </View>
             </View>
@@ -133,25 +185,25 @@ const styles = StyleSheet.create({
         height: 89,
         paddingTop: 40,
         paddingHorizontal: 16,
-        justifyContent: 'center', // Center vertically
-        flexDirection: 'row', // Align items in a row
-        alignItems: 'center', // Align items vertically
+        justifyContent: 'center',
+        flexDirection: 'row',
+        alignItems: 'center',
     },
     headerContent: {
         flexDirection: 'row',
-        flex: 1, // Allow the content to take full width
-        justifyContent: 'space-between', // Space out the back button and title
+        flex: 1,
+        justifyContent: 'space-between',
         alignItems: 'center',
     },
     backButton: {
-        marginRight: 8, // Reduced margin for closer alignment
+        marginRight: 8,
     },
     headerTitle: {
         color: '#FFFFFF',
         fontSize: 20,
         fontWeight: 'bold',
-        flex: 1, // Allow the title to take available space
-        textAlign: 'center', // Center the title text
+        flex: 1,
+        textAlign: 'center',
     },
     content: {
         flex: 1,
@@ -196,21 +248,21 @@ const styles = StyleSheet.create({
     },
     button: {
         width: 93,
-        height: 44,
-        borderRadius: 8,
+        height: 40,
         justifyContent: 'center',
         alignItems: 'center',
+        borderRadius: 8,
         marginLeft: 8,
     },
     cancelButton: {
-        backgroundColor: '#EEEEEE',
+        backgroundColor: '#F2F2F2',
     },
     saveButton: {
-        backgroundColor: '#3498DB',
+        backgroundColor: '#0E509E',
     },
     buttonText: {
         fontSize: 16,
-        fontWeight: 'bold',
+        color: '#FFFFFF',
     },
     saveButtonText: {
         color: '#FFFFFF',

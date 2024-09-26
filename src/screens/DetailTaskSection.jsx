@@ -9,7 +9,6 @@ import { Ionicons } from '@expo/vector-icons';
 const groupTasksByProject = (tasks) => {
     const groupedTasks = {};
     tasks.forEach((task) => {
-        // Overwrite the array for the subtitle key
         groupedTasks[task.subtitle] = groupedTasks[task.subtitle] || [];
         groupedTasks[task.subtitle].push(task);
     });
@@ -17,7 +16,27 @@ const groupTasksByProject = (tasks) => {
 };
 
 const TaskCard = ({ projectName, tasks, onTaskPress }) => {
-    const [isExpanded, setIsExpanded] = useState(false); // State for toggling project details
+    const [isExpanded, setIsExpanded] = useState(false);
+
+    // Calculate project duration
+    const calculateDuration = (start_date, end_date) => {
+        const start = new Date(start_date);
+        const end = new Date(end_date);
+        const diffTime = Math.abs(end - start);
+        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+        const years = Math.floor(diffDays / 365);
+        const months = Math.floor((diffDays % 365) / 30);
+        const days = diffDays % 30;
+
+        let duration = '';
+        if (years > 0) duration += `${years} Tahun `;
+        if (months > 0) duration += `${months} Bulan `;
+        if (days > 0) duration += `${days} Hari`;
+        return duration.trim();
+    };
+
+    // Assuming all tasks in a project have the same project details
+    const projectDetails = tasks.length > 0 ? tasks[0] : null;
 
     return (
         <View style={styles.taskCard}>
@@ -26,34 +45,51 @@ const TaskCard = ({ projectName, tasks, onTaskPress }) => {
                 <View key={task.id || index} style={styles.taskItem}>
                     <View style={styles.taskInfo}>
                         <Text style={styles.taskName}>{task.title}</Text>
-                        {task.status === 'Completed' ? (
-                            <View style={styles.remainingDaysContainer}>
-                                <Text style={styles.remainingDays}>Completed</Text>
-                            </View>
-                        ) : (
-                            <View style={styles.remainingDaysContainer}>
-                                <Text style={styles.remainingDays}>Tersisa {task.remainingDays} Hari</Text>
-                            </View>
-                        )}
+                        <View
+                            style={[
+                                styles.statusContainer,
+                                task.status === 'Completed' ? styles.completedStatus : styles.ongoingStatus,
+                            ]}
+                        >
+                            <Text style={styles.statusText}>
+                                {task.status === 'Completed' ? 'Completed' : `Tersisa ${task.remainingDays} Hari`}
+                            </Text>
+                        </View>
                     </View>
                     <TouchableOpacity style={styles.detailButton} onPress={() => onTaskPress(task)}>
                         <Text style={styles.detailButtonText}>Detail</Text>
                     </TouchableOpacity>
                 </View>
             ))}
-            <TouchableOpacity
-                style={styles.projectDetailButton}
-                onPress={() => setIsExpanded(!isExpanded)} // Toggle the visibility
-            >
+            <TouchableOpacity style={styles.projectDetailButton} onPress={() => setIsExpanded(!isExpanded)}>
                 <Text style={styles.projectDetailButtonText}>
                     {isExpanded ? 'Sembunyikan detail proyek' : 'Lihat detail proyek'}
                 </Text>
+                <Ionicons
+                    name={isExpanded ? 'chevron-up' : 'chevron-down'}
+                    size={20}
+                    color="#1f1f1f"
+                    style={styles.chevronIcon}
+                />
             </TouchableOpacity>
-            {isExpanded && (
+            {isExpanded && projectDetails && (
                 <View style={styles.projectDetails}>
-                    <Text style={styles.detailText}>Ditugaskan Oleh: Aa Dhanu</Text>
-                    <Text style={styles.detailText}>Keterangan Proyek: Tidak ada Keterangan</Text>
-                    <Text style={styles.detailText}>Durasi Proyek: 17 Tahun</Text>
+                    <View style={styles.detailRow}>
+                        <View style={styles.leftColumn}>
+                            <Text style={styles.detailLabel}>Ditugaskan Oleh:</Text>
+                            <Text style={styles.detailValue}>{projectDetails.assignedBy}</Text>
+                            <Text style={styles.detailLabel}>Durasi Proyek:</Text>
+                            <Text style={styles.detailValue}>
+                                {calculateDuration(projectDetails.start_date, projectDetails.end_date)}
+                            </Text>
+                        </View>
+                        <View style={styles.rightColumn}>
+                            <Text style={styles.detailLabel}>Keterangan Proyek:</Text>
+                            <Text style={styles.detailValue}>
+                                {projectDetails.description || 'Tidak ada Keterangan'}
+                            </Text>
+                        </View>
+                    </View>
                 </View>
             )}
         </View>
@@ -125,6 +161,7 @@ const styles = StyleSheet.create({
         fontSize: 24,
         fontWeight: 'bold',
         color: 'white',
+        fontFamily: 'Poppins-Bold', // Updated to use Poppins-Bold
         alignSelf: 'center',
     },
     headerContent: {
@@ -157,6 +194,7 @@ const styles = StyleSheet.create({
         fontWeight: 'bold',
         marginBottom: 8,
         color: '#1C1C1E',
+        fontFamily: 'Poppins-SemiBold', // Updated to use Poppins-SemiBold
     },
     taskItem: {
         flexDirection: 'row',
@@ -170,21 +208,26 @@ const styles = StyleSheet.create({
     taskName: {
         fontSize: 16,
         color: '#1C1C1E',
+        fontFamily: 'Poppins-Medium', // Updated to use Poppins-Medium
     },
-    remainingDaysContainer: {
-        backgroundColor: '#C9F8C1',
+    statusContainer: {
         paddingHorizontal: 8,
         height: 22,
         borderRadius: 19,
         justifyContent: 'center',
-        marginTop: 14,
+        marginTop: 4,
         maxWidth: 150,
         alignSelf: 'flex-start',
     },
-    remainingDays: {
+    completedStatus: {
+        backgroundColor: '#C9F8C1',
+    },
+    ongoingStatus: {
+        backgroundColor: '#FFE4E1',
+    },
+    statusText: {
         fontSize: 12,
-        color: '#0A642E',
-        fontFamily: 'Poppins-Medium',
+        fontFamily: 'Poppins-Medium', // Updated to use Poppins-Medium
         textAlign: 'center',
     },
     detailButton: {
@@ -195,26 +238,53 @@ const styles = StyleSheet.create({
     },
     detailButtonText: {
         fontSize: 14,
-        color: '#007AFF',
+        color: '#1f1f1f',
+        fontFamily: 'Poppins-Regular', // Updated to use Poppins-Regular
     },
     projectDetailButton: {
+        flexDirection: 'row',
+        alignItems: 'center',
         alignSelf: 'flex-end',
         marginTop: 10,
     },
     projectDetailButtonText: {
         fontSize: 14,
-        color: '#007AFF',
+        color: '#1f1f1f',
+        marginRight: 5,
+        fontFamily: 'Poppins-Regular', // Updated to use Poppins-Regular
+    },
+    chevronIcon: {
+        marginTop: 2,
     },
     projectDetails: {
         marginTop: 10,
         padding: 10,
-        backgroundColor: '#f0f0f0',
+        backgroundColor: 'transparent',
         borderRadius: 5,
     },
-    detailText: {
+    detailRow: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+    },
+    leftColumn: {
+        flex: 1,
+        marginRight: 10,
+    },
+    rightColumn: {
+        flex: 1,
+    },
+    detailLabel: {
         fontSize: 14,
         color: '#333',
-        marginBottom: 5,
+        marginBottom: 2,
+        fontFamily: 'Poppins-Medium', // Updated to use Poppins-Medium
+        fontWeight: 'bold', // Optionally retain bold
+    },
+    detailValue: {
+        fontSize: 14,
+        color: '#333',
+        marginBottom: 8,
+        fontFamily: 'Poppins-Regular', // Updated to use Poppins-Regular
     },
 });
 

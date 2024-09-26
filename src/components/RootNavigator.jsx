@@ -2,21 +2,18 @@ import React from 'react';
 import { createStackNavigator, CardStyleInterpolators } from '@react-navigation/stack';
 import AppNavigator from '../components/AppNavigator';
 import Login from '../screens/Login';
-import WaitingMail from '../screens/WaitingMail';
-import SentEmail from '../screens/SentEmail';
 import SplashScreen from '../screens/SplashScreen';
 import DetailKehadiran from '../screens/DetailKehadiran';
 import ForgotPassword from '../screens/ForgotPassword';
 import BoardingScreen from '../screens/BoardingScreen';
-import Step1 from '../screens/Step1'; // Add this import
-import Step2 from '../screens/Step2'; // Add this import
-import success from '../components/SuccessRegist'; // Add this import
-import DetailProjek from '../screens/DetailProjek'; // Add this import
-import ProjectList from '../screens/ProjectList'; // Add this import
-import TaskOnReview from '../screens/TaskOnReview'; // Add this import
-import ProjectOnWorking from '../screens/ProjectOnWorking'; // Add this import
-import SubmitTugas from '../screens/SubmitTugas'; // Add this import
-import DetailTaskSection from '../screens/DetailTaskSection'; // Add this import
+import Step1 from '../screens/Step1';
+import Step2 from '../screens/Step2';
+import DetailProjek from '../screens/DetailProjek';
+import ProjectList from '../screens/ProjectList';
+import TaskOnReview from '../screens/TaskOnReview';
+import ProjectOnWorking from '../screens/ProjectOnWorking';
+import SubmitTugas from '../screens/SubmitTugas';
+import DetailTaskSection from '../screens/DetailTaskSection';
 import AddProjectForm from '../screens/AddProjectForm';
 
 const Stack = createStackNavigator();

@@ -13,6 +13,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import Shimmer from '../components/Shimmer';
 import DetailProyekModal from '../components/ReusableBottomModal';
 import DraggableModalTask from '../components/DraggableModalTask';
+import ReusableModalSuccess from '../components/TaskModalSuccess';
 import { useNavigation } from '@react-navigation/native';
 import { useFonts } from '../utils/UseFonts';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -20,7 +21,21 @@ import { fetchTotalTasksForEmployee } from '../api/task';
 
 const GRADIENT_COLORS = ['#0E509E', '#5FA0DC', '#9FD2FF'];
 
-const getStatusBadgeColor = (status) => {
+const calculateRemainingDays = (endDate) => {
+    const today = new Date();
+    const end = new Date(endDate);
+    const timeDiff = end.getTime() - today.getTime();
+    const daysDiff = Math.ceil(timeDiff / (1000 * 3600 * 24));
+    return daysDiff > 0 ? daysDiff : 0;
+};
+
+const getStatusBadgeColor = (status, remainingDays) => {
+    // Handle overdue case
+    if (remainingDays < 0) {
+        return { color: '#F63434', label: `Terlambat selama ${Math.abs(remainingDays)} hari` };
+    }
+
+    // Existing status handling logic
     switch (status) {
         case 'workingOnIt':
             return { color: '#CCC8C8', label: 'Dalam Pengerjaan' };
@@ -35,12 +50,54 @@ const getStatusBadgeColor = (status) => {
         case 'onPending':
             return { color: '#F0E08A', label: 'Tersedia' };
         default:
-            return { color: '#E0E0E0', label: status }; // Warna default
+            return { color: '#E0E0E0', label: status }; // Default color
+    }
+};
+const getCollectionStatusBadgeColor = (status) => {
+    switch (status) {
+        case 'finish':
+            return { color: '#A7C8E5', textColor: '#092D58', label: 'Labeling' };
+        case 'earlyFinish':
+            return { color: '#9ADFAD', textColor: '#0A642E', label: 'Early Finish' };
+        case 'finish in delay':
+            return { color: '#F0E089', textColor: '#80490A', label: 'Finish Delay' };
+        case 'overdue':
+            return { color: '#F69292', textColor: '#811616', label: 'Overdue' };
+        default:
+            return { color: '#E0E0E0', textColor: '#000000', label: status }; // Default color
     }
 };
 
 const TaskCard = React.memo(({ task = {}, onProjectDetailPress = () => {}, onTaskDetailPress = () => {} }) => {
+    const isCompleted = task.task_status === 'Completed';
     const { color: badgeColor, label: displayStatus } = getStatusBadgeColor(task.task_status);
+    const remainingDays = calculateRemainingDays(task.end_date);
+
+    const renderStatusOrDays = () => {
+        if (isCompleted) {
+            return (
+                <View style={[styles.badge, { backgroundColor: badgeColor }]}>
+                    <Text style={styles.badgeText} numberOfLines={1} ellipsizeMode="tail">
+                        {displayStatus}
+                    </Text>
+                </View>
+            );
+        } else {
+            // Check if the task is overdue
+            const isOverdue = remainingDays < 0;
+            const overdueDays = Math.abs(remainingDays); // Calculate how many days overdue
+
+            return (
+                <View style={[styles.badge, { backgroundColor: isOverdue ? '#F63434' : '#E0E0E0' }]}>
+                    <Text style={styles.badgeText} numberOfLines={1} ellipsizeMode="tail">
+                        {isOverdue
+                            ? `Terlambat selama ${overdueDays} ${overdueDays === 1 ? 'hari' : 'hari'}`
+                            : `${remainingDays} ${remainingDays === 1 ? 'hari' : 'hari'} tersisa`}
+                    </Text>
+                </View>
+            );
+        }
+    };
 
     return (
         <View style={styles.taskCard}>
@@ -52,11 +109,7 @@ const TaskCard = React.memo(({ task = {}, onProjectDetailPress = () => {}, onTas
                     {task.project_name}
                 </Text>
             </View>
-            <View style={[styles.statusBadge, { backgroundColor: badgeColor }]}>
-                <Text style={styles.statusText} numberOfLines={1} ellipsizeMode="tail">
-                    {displayStatus}
-                </Text>
-            </View>
+            {renderStatusOrDays()}
             <View style={styles.buttonContainer}>
                 <TouchableOpacity style={styles.detailButton} onPress={() => onTaskDetailPress(task)}>
                     <Text style={styles.detailButtonText}>Lihat detail {'>'}</Text>
@@ -73,7 +126,6 @@ const ShimmerTaskCard = () => (
     <View style={styles.taskCard}>
         <Shimmer width={200} height={20} style={styles.shimmerTitle} />
         <Shimmer width={150} height={15} style={styles.shimmerSubtitle} />
-        {/* <Shimmer width={100} height={25} style={styles.shimmerStatus} /> */}
         <Shimmer width={100} height={15} style={styles.shimmerButton} />
     </View>
 );
@@ -121,6 +173,7 @@ const TaskSection = ({
         )}
     </View>
 );
+
 const Tugas = () => {
     const [isLoading, setIsLoading] = useState(true);
     const [refreshing, setRefreshing] = useState(false);
@@ -137,6 +190,7 @@ const Tugas = () => {
     const [selectedTask, setSelectedTask] = useState(null);
     const [error, setError] = useState(null);
     const [projects, setProjects] = useState([]);
+    const [modalType, setModalType] = useState('default');
 
     const navigation = useNavigation();
 
@@ -161,9 +215,7 @@ const Tugas = () => {
 
             // Sort tasks by start_date (or end_date) in descending order (most recent first)
             const sortedTasks = data.employeeTasks.sort((a, b) => {
-                return new Date(b.start_date) - new Date(a.start_date); // Sort by start_date
-                // Use this line instead to sort by end_date
-                // return new Date(b.end_date) - new Date(a.end_date);
+                return new Date(b.start_date) - new Date(a.start_date);
             });
 
             // Categorize tasks by status
@@ -193,9 +245,8 @@ const Tugas = () => {
             // Store TaskIds to AsyncStorage and add console log
             for (const status in tasksByStatus) {
                 tasksByStatus[status].forEach(async (task) => {
-                    console.log(`Task object for status ${status}:`, task); // Log the entire task object
+                    console.log(`Task object for status ${status}:`, task);
 
-                    // Use the correct field (id) to store Task IDs
                     if (task.id) {
                         await AsyncStorage.setItem(`task_${task.id}`, JSON.stringify(task.id));
                     } else {
@@ -219,7 +270,7 @@ const Tugas = () => {
 
     const handleSeeAllPress = (sectionTitle, tasks) => {
         navigation.navigate('DetailTaskSection', {
-            sectionTitle, // Pass the section title directly
+            sectionTitle,
             tasks: tasks.map((task) => ({
                 title: task.task_name,
                 subtitle: task.project_name,
@@ -229,6 +280,9 @@ const Tugas = () => {
                 startDate: task.start_date,
                 endDate: task.end_date,
                 assignedBy: task.assign_by_name,
+                description: task.project_desc,
+                start_date: task.project_start_date,
+                end_date: task.project_end_date,
                 progress: task.percentage_task || 0,
             })),
         });
@@ -236,10 +290,10 @@ const Tugas = () => {
 
     const handleProjectDetailPress = (task) => {
         const projectDetails = {
-            assign_by_name: task.assign_by_name, // Make sure the property names match your task structure
+            assign_by_name: task.assign_by_name,
             start_date: task.project_start_date,
             end_date: task.project_end_date,
-            description: task.project_desc, // Add description if needed
+            description: task.project_desc,
         };
 
         setSelectedProject(projectDetails);
@@ -247,18 +301,33 @@ const Tugas = () => {
     };
 
     const handleTaskDetailPress = (task) => {
-        // Assuming `task` is from `employeeTasks`
+        const baseUrl = 'http://202.10.36.103:8000/';
         const taskDetails = {
+            id: task.id,
             title: task.task_name,
             startDate: task.start_date,
             endDate: task.end_date,
-            assignedBy: task.assign_by_name, // Assuming this field exists
+            assignedBy: task.assign_by_name,
             description: task.task_desc,
-            progress: task.percentage_task || 0, // Accessing percentage_task directly
+            progress: task.percentage_task || 0,
             status: task.task_status,
+            statusColor: getStatusBadgeColor(task.task_status).color,
+            collectionDate: task.task_submit_date || 'N/A',
+            collectionStatus: task.task_submit_status || 'N/A',
+            collectionStatusColor: getCollectionStatusBadgeColor(task.task_submit_status || 'N/A').color,
+            collectionStatusTextColor: getCollectionStatusBadgeColor(task.task_submit_status || 'N/A').textColor,
+            collectionDescription: task.task_desc || 'N/A',
+            task_image: task.task_image ? `${baseUrl}${task.task_image}` : null,
         };
 
         setSelectedTask(taskDetails);
+
+        if (task.task_status === 'Completed' || task.task_name === 'Selesai') {
+            setModalType('success');
+        } else {
+            setModalType('default');
+        }
+
         setDraggableModalVisible(true);
     };
 
@@ -337,11 +406,22 @@ const Tugas = () => {
                 <View style={styles.bottomSpacer} />
             </ScrollView>
 
-            <DraggableModalTask
-                visible={draggableModalVisible}
-                onClose={() => setDraggableModalVisible(false)}
-                taskDetails={selectedTask || {}}
-            />
+            {modalType === 'default' ? (
+                <DraggableModalTask
+                    visible={draggableModalVisible}
+                    onClose={() => {
+                        setDraggableModalVisible(false);
+                        setSelectedTask(null); // Optional: Reset selectedTask on close
+                    }}
+                    taskDetails={selectedTask || {}}
+                />
+            ) : (
+                <ReusableModalSuccess
+                    visible={draggableModalVisible}
+                    onClose={() => setDraggableModalVisible(false)}
+                    taskDetails={selectedTask || {}}
+                />
+            )}
 
             <DetailProyekModal
                 visible={modalVisible}
@@ -351,7 +431,6 @@ const Tugas = () => {
         </SafeAreaView>
     );
 };
-
 const styles = StyleSheet.create({
     safeArea: {
         flex: 1,
@@ -382,7 +461,6 @@ const styles = StyleSheet.create({
     content: {
         padding: 20,
     },
-
     sectionHeader: {
         flexDirection: 'row',
         justifyContent: 'space-between',
@@ -443,6 +521,20 @@ const styles = StyleSheet.create({
         fontSize: 12,
         fontFamily: 'Poppins-Regular',
     },
+    badge: {
+        paddingHorizontal: 8,
+        paddingVertical: 4,
+        borderRadius: 12,
+        position: 'absolute',
+        bottom: 50,
+        left: 10,
+    },
+    badgeText: {
+        color: '#333',
+        fontWeight: '500',
+        fontSize: 12,
+        fontFamily: 'Poppins-Regular',
+    },
     buttonContainer: {
         flexDirection: 'row',
         justifyContent: 'space-between',
@@ -455,22 +547,6 @@ const styles = StyleSheet.create({
     detailButton: {
         // Styles remain the same
     },
-
-    section: {
-        marginBottom: 20,
-    },
-    noTasksContainer: {
-        height: 100, // Adjust this value to match the height of your task cards
-        justifyContent: 'center',
-        alignItems: 'center',
-    },
-    noTasksText: {
-        fontSize: 16,
-        color: '#666',
-        fontFamily: 'Poppins-Regular',
-        textAlign: 'center',
-    },
-
     detailButtonText: {
         color: '#0E509E',
         fontWeight: '500',
@@ -488,6 +564,20 @@ const styles = StyleSheet.create({
         fontWeight: '500',
         fontSize: 14,
         fontFamily: 'Poppins-Regular',
+    },
+    section: {
+        marginBottom: 20,
+    },
+    noTasksContainer: {
+        height: 100, // Adjust this value to match the height of your task cards
+        justifyContent: 'center',
+        alignItems: 'center',
+    },
+    noTasksText: {
+        fontSize: 16,
+        color: '#666',
+        fontFamily: 'Poppins-Regular',
+        textAlign: 'center',
     },
     shimmerTitle: {
         marginBottom: 10,
@@ -517,6 +607,17 @@ const styles = StyleSheet.create({
     label: {
         fontSize: 16,
         marginVertical: 5,
+    },
+    remainingDays: {
+        position: 'absolute',
+        bottom: 50,
+        left: 10,
+    },
+    remainingDaysText: {
+        color: '#0E509E',
+        fontWeight: '500',
+        fontSize: 14,
+        fontFamily: 'Poppins-Regular',
     },
 });
 
