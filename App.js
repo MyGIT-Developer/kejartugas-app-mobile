@@ -1,9 +1,10 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { NavigationContainer } from '@react-navigation/native';
 import { ThemeProvider } from 'styled-components/native';
 import RootNavigator from './src/components/RootNavigator';
 import { useFonts } from './src/utils/UseFonts';
 import { Text, TextInput, StyleSheet } from 'react-native';
+import * as SplashScreen from 'expo-splash-screen'; // Import SplashScreen
 
 const theme = {
     fonts: {
@@ -15,8 +16,19 @@ const theme = {
     },
 };
 
+SplashScreen.preventAutoHideAsync(); // Prevent the splash screen from auto-hiding
+
 export default function App() {
     const fontsLoaded = useFonts();
+
+    useEffect(() => {
+        if (fontsLoaded) {
+            // Hide the splash screen after 3 seconds
+            setTimeout(async () => {
+                await SplashScreen.hideAsync();
+            }, 3000);
+        }
+    }, [fontsLoaded]);
 
     if (!fontsLoaded) {
         return null;

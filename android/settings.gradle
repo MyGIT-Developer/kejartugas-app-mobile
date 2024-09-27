@@ -44,7 +44,7 @@ if (getRNMinorVersion() >= 75) {
   }
 }
 
-rootProject.name = 'my-kejar-tugas'
+rootProject.name = 'Kejar Tugas'
 
 dependencyResolutionManagement {
   versionCatalogs {

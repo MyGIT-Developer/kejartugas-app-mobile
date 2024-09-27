@@ -36,6 +36,7 @@
         <category android:name="android.intent.category.BROWSABLE"/>
         <data android:scheme="com.innovation.kejartugas"/>
         <data android:scheme="exp+my-kejar-tugas"/>
+        <data android:scheme="exp+kejartugas"/>
       </intent-filter>
     </activity>
     <activity android:name="com.facebook.react.devsupport.DevSettingsActivity" android:exported="false"/>

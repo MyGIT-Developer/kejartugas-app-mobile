@@ -1,7 +1,7 @@
 {
     "expo": {
-        "name": "my-kejar-tugas",
-        "slug": "my-kejar-tugas",
+        "name": "Kejar Tugas",
+        "slug": "Kejar Tugas",
         "version": "1.0.0",
         "orientation": "portrait",
         "icon": "./assets/images/mp-logo-512x512.png",
@@ -20,8 +20,7 @@
         },
         "android": {
             "adaptiveIcon": {
-                "foregroundImage": "./assets/images/mp-logo-1024x1024.png",
-                "backgroundColor": "#FFFFFF"
+                "foregroundImage": "./assets/images/mp-logo-512x512.png"
             },
             "package": "com.innovation.kejartugas",
             "permissions": [
