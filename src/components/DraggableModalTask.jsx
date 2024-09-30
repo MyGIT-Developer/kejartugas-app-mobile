@@ -4,7 +4,7 @@ import * as Progress from 'react-native-progress';
 import { useFonts } from '../utils/UseFonts';
 import { useNavigation } from '@react-navigation/native';
 
-const { height: SCREEN_HEIGHT, width: SCREEN_WIDTH } = Dimensions.get('window');
+const { height: SCREEN_HEIGHT } = Dimensions.get('window');
 
 const getStatusBadgeColor = (status) => {
     switch (status) {
@@ -27,7 +27,6 @@ const getStatusBadgeColor = (status) => {
 
 const DraggableModalTask = ({ visible, onClose, taskDetails }) => {
     const navigation = useNavigation();
-    const [isFullScreen, setIsFullScreen] = useState(false);
     const modalY = useRef(new Animated.Value(SCREEN_HEIGHT)).current;
     const fontsLoaded = useFonts();
 
@@ -53,7 +52,6 @@ const DraggableModalTask = ({ visible, onClose, taskDetails }) => {
     };
 
     const handleSubmit = () => {
-        // Navigate to SubmitTugas and pass the taskId as a parameter
         navigation.navigate('SubmitTugas', { taskId: taskDetails.id });
         onClose(); // Close the modal after navigation
     };

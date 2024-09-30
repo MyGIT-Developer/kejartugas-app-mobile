@@ -21,7 +21,10 @@ import { fetchTotalTasksForEmployee } from '../api/task';
 
 const GRADIENT_COLORS = ['#0E509E', '#5FA0DC', '#9FD2FF'];
 
-const calculateRemainingDays = (endDate) => {
+const calculateRemainingDays = (endDate, status) => {
+    if (status === 'Completed') {
+        return 0; // No remaining days for completed tasks
+    }
     const today = new Date();
     today.setHours(0, 0, 0, 0); // Set to beginning of day for accurate comparison
     const end = new Date(endDate);
@@ -31,7 +34,11 @@ const calculateRemainingDays = (endDate) => {
 };
 
 const getStatusBadgeColor = (status, endDate) => {
-    const remainingDays = calculateRemainingDays(endDate);
+    if (status === 'Completed') {
+        return { color: '#C9F8C1', textColor: '#333333', label: 'Selesai' };
+    }
+
+    const remainingDays = calculateRemainingDays(endDate, status);
 
     if (remainingDays === 0) {
         return { color: '#F69292', textColor: '#811616', label: 'Deadline Tugas Hari Ini' };
@@ -39,7 +46,6 @@ const getStatusBadgeColor = (status, endDate) => {
         return { color: '#F69292', textColor: '#811616', label: `Terlambat selama ${Math.abs(remainingDays)} hari` };
     }
 
-    // Existing status handling logic
     switch (status) {
         case 'workingOnIt':
             return { color: '#CCC8C8', textColor: '#333333', label: 'Dalam Pengerjaan' };
@@ -49,8 +55,6 @@ const getStatusBadgeColor = (status, endDate) => {
             return { color: '#F69292', textColor: '#811616', label: 'Ditolak' };
         case 'onHold':
             return { color: '#F69292', textColor: '#811616', label: 'Ditunda' };
-        case 'Completed':
-            return { color: '#C9F8C1', textColor: '#333333', label: 'Selesai' };
         case 'onPending':
             return { color: '#F0E08A', textColor: '#333333', label: 'Tersedia' };
         default:
@@ -68,6 +72,8 @@ const getCollectionStatusBadgeColor = (status) => {
             return { color: '#F0E089', textColor: '#80490A', label: 'Finish Delay' };
         case 'overdue':
             return { color: '#F69292', textColor: '#811616', label: 'Overdue' };
+        case 'Completed':
+            return { color: '#C9F8C1', textColor: '#333333', label: 'Selesai' };
         default:
             return { color: '#E0E0E0', textColor: '#000000', label: status };
     }
@@ -260,21 +266,35 @@ const Tugas = () => {
     };
 
     const handleSeeAllPress = (sectionTitle, tasks) => {
+        console.log('See All Pressed for Section:', sectionTitle); // Log section title
+        console.log('Tasks in this section:', tasks);
+        const baseUrl = 'http://202.10.36.103:8000/';
         navigation.navigate('DetailTaskSection', {
             sectionTitle,
             tasks: tasks.map((task) => ({
                 title: task.task_name,
                 subtitle: task.project_name,
-                status: task.task_status,
+                task_status: task.task_status, // Ensure this matches your data structure
                 id: task.id,
-                description: task.task_desc,
-                startDate: task.start_date,
-                endDate: task.end_date,
+                task_desc: task.task_desc, // Ensure this matches your data structure
+                start_date: task.start_date,
+                end_date: task.end_date,
                 assignedBy: task.assign_by_name,
-                description: task.project_desc,
-                start_date: task.project_start_date,
-                end_date: task.project_end_date,
-                progress: task.percentage_task || 0,
+                project_desc: task.project_desc, // Ensure this matches your data structure
+                project_start_date: task.project_start_date,
+                project_end_date: task.project_end_date,
+                percentage_task: task.percentage_task || 0, // Ensure this matches your data structure
+                statusColor: getStatusBadgeColor(task.task_status, task.end_date).color,
+                collectionDate: task.task_submit_date || 'N/A',
+                collectionStatus: task.task_status === 'Completed' ? 'Selesai' : task.task_submit_status || 'N/A',
+                collectionStatusColor: getCollectionStatusBadgeColor(
+                    task.task_status === 'Completed' ? 'Completed' : task.task_submit_status || 'N/A',
+                ).color,
+                collectionStatusTextColor: getCollectionStatusBadgeColor(
+                    task.task_status === 'Completed' ? 'Completed' : task.task_submit_status || 'N/A',
+                ).textColor,
+                collectionDescription: task.task_desc || 'N/A',
+                task_image: task.task_image ? `${baseUrl}${task.task_image}` : null,
             })),
         });
     };
@@ -304,16 +324,20 @@ const Tugas = () => {
             status: task.task_status,
             statusColor: getStatusBadgeColor(task.task_status, task.end_date).color,
             collectionDate: task.task_submit_date || 'N/A',
-            collectionStatus: task.task_submit_status || 'N/A',
-            collectionStatusColor: getCollectionStatusBadgeColor(task.task_submit_status || 'N/A').color,
-            collectionStatusTextColor: getCollectionStatusBadgeColor(task.task_submit_status || 'N/A').textColor,
+            collectionStatus: task.task_status === 'Completed' ? 'Selesai' : task.task_submit_status || 'N/A',
+            collectionStatusColor: getCollectionStatusBadgeColor(
+                task.task_status === 'Completed' ? 'Completed' : task.task_submit_status || 'N/A',
+            ).color,
+            collectionStatusTextColor: getCollectionStatusBadgeColor(
+                task.task_status === 'Completed' ? 'Completed' : task.task_submit_status || 'N/A',
+            ).textColor,
             collectionDescription: task.task_desc || 'N/A',
             task_image: task.task_image ? `${baseUrl}${task.task_image}` : null,
         };
 
         setSelectedTask(taskDetails);
 
-        if (task.task_status === 'Completed' || task.task_name === 'Selesai') {
+        if (task.task_status === 'Completed') {
             setModalType('success');
         } else {
             setModalType('default');

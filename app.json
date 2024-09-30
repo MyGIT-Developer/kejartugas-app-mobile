@@ -1,7 +1,7 @@
 {
     "expo": {
         "name": "Kejar Tugas",
-        "slug": "Kejar Tugas",
+        "slug": "kejar-tugas",
         "version": "1.0.0",
         "orientation": "portrait",
         "icon": "./assets/images/mp-logo-512x512.png",

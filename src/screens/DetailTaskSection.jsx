@@ -2,8 +2,10 @@ import React, { useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, SafeAreaView, StatusBar, ScrollView } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useNavigation, useRoute } from '@react-navigation/native';
-import DraggableModalTask from '../components/DraggableModalTask'; // Update the path accordingly
+import DraggableModalTask from '../components/DraggableModalTask';
+import ReusableModalSuccess from '../components/TaskModalSuccess';
 import { Ionicons } from '@expo/vector-icons';
+import { fetchTaskById } from '../api/task'; // Import the fetchTaskById function
 
 // Group tasks by project name
 const groupTasksByProject = (tasks) => {
@@ -13,6 +15,66 @@ const groupTasksByProject = (tasks) => {
         groupedTasks[task.subtitle].push(task);
     });
     return groupedTasks;
+};
+
+const calculateRemainingDays = (endDate) => {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0); // Set to beginning of day for accurate comparison
+    const end = new Date(endDate);
+    end.setHours(0, 0, 0, 0);
+    const timeDiff = end.getTime() - today.getTime();
+    return Math.ceil(timeDiff / (1000 * 3600 * 24));
+};
+
+const getStatusBadgeColor = (status, endDate) => {
+    if (status === 'Completed') {
+        return { color: '#C9F8C1', textColor: '#333333', label: 'Selesai' };
+    }
+
+    const remainingDays = calculateRemainingDays(endDate, status);
+
+    if (remainingDays === 0) {
+        return { color: '#F69292', textColor: '#811616', label: 'Deadline Tugas Hari Ini' };
+    } else if (remainingDays < 0) {
+        return { color: '#F69292', textColor: '#811616', label: `Terlambat selama ${Math.abs(remainingDays)} hari` };
+    } else if (remainingDays > 0) {
+        return { color: '#FFE9CB', textColor: '#E07706', label: `Tersisa ${remainingDays} hari` };
+    }
+
+    // Existing status handling logic
+    switch (status) {
+        case 'workingOnIt':
+            return { color: '#CCC8C8', textColor: '#333333', label: 'Dalam Pengerjaan' };
+        case 'onReview':
+            return { color: '#9AE1EA', textColor: '#333333', label: 'Dalam Peninjauan' };
+        case 'rejected':
+            return { color: '#050404FF', textColor: '#811616', label: 'Ditolak' };
+        case 'onHold':
+            return { color: '#F69292', textColor: '#811616', label: 'Ditunda' };
+        case 'Completed':
+            return { color: '#C9F8C1', textColor: '#333333', label: 'Selesai' }; // Updated label
+        case 'onPending':
+            return { color: '#F0E08A', textColor: '#333333', label: 'Tersedia' };
+        default:
+            return { color: '#E0E0E0', textColor: '#333333', label: status };
+    }
+};
+
+const getCollectionStatusBadgeColor = (status) => {
+    switch (status) {
+        case 'finish':
+            return { color: '#A7C8E5', textColor: '#092D58', label: 'Labeling' };
+        case 'earlyFinish':
+            return { color: '#9ADFAD', textColor: '#0A642E', label: 'Early Finish' };
+        case 'finish in delay':
+            return { color: '#F0E089', textColor: '#80490A', label: 'Finish Delay' };
+        case 'overdue':
+            return { color: '#F69292', textColor: '#811616', label: 'Overdue' };
+        case 'Completed':
+            return { color: '#C9F8C1', textColor: '#333333', label: 'Selesai' };
+        default:
+            return { color: '#E0E0E0', textColor: '#000000', label: status };
+    }
 };
 
 const TaskCard = ({ projectName, tasks, onTaskPress }) => {
@@ -42,21 +104,19 @@ const TaskCard = ({ projectName, tasks, onTaskPress }) => {
         return text.length > maxLength ? text.substring(0, maxLength - 3) + '...' : text;
     };
 
-    const getStatusText = (task) => {
-        if (task.status === 'Completed') {
-            return 'Completed';
-        }
-
-        const today = new Date();
-        today.setHours(0, 0, 0, 0);
-        const endDate = new Date(task.end_date);
-        endDate.setHours(0, 0, 0, 0);
-
-        if (endDate.getTime() === today.getTime()) {
-            return 'Deadline Hari Ini';
-        } else {
-            return `Tersisa ${task.remainingDays || 0} Hari`;
-        }
+    const renderStatusOrDays = (task) => {
+        const {
+            color: badgeColor,
+            textColor: badgeTextColor,
+            label: displayStatus,
+        } = getStatusBadgeColor(task.task_status, task.end_date);
+        return (
+            <View style={[styles.badge, { backgroundColor: badgeColor }]}>
+                <Text style={[styles.badgeText, { color: badgeTextColor }]} numberOfLines={1} ellipsizeMode="tail">
+                    {displayStatus}
+                </Text>
+            </View>
+        );
     };
 
     return (
@@ -68,18 +128,7 @@ const TaskCard = ({ projectName, tasks, onTaskPress }) => {
                         <Text style={styles.taskName} numberOfLines={2}>
                             {truncateText(task.title, 50)}
                         </Text>
-                        <View
-                            style={[
-                                styles.statusContainer,
-                                task.status === 'Completed'
-                                    ? styles.completedStatus
-                                    : getStatusText(task) === 'Deadline Hari Ini'
-                                    ? styles.deadlineStatus
-                                    : styles.ongoingStatus,
-                            ]}
-                        >
-                            <Text style={styles.statusText}>{getStatusText(task)}</Text>
-                        </View>
+                        {renderStatusOrDays(task)}
                     </View>
                     <TouchableOpacity
                         style={[styles.detailButton, { alignSelf: 'flex-start', marginTop: 5 }]}
@@ -129,14 +178,72 @@ const DetailTaskSection = () => {
     const route = useRoute();
     const { sectionTitle, tasks = [] } = route.params || {};
 
-    const [isModalVisible, setIsModalVisible] = useState(false);
+    const [draggableModalVisible, setDraggableModalVisible] = useState(false);
     const [selectedTask, setSelectedTask] = useState(null);
+    const [modalType, setModalType] = useState('default'); // Initialize modalType state
 
     const groupedTasks = groupTasksByProject(tasks);
 
-    const handleTaskPress = (task) => {
-        setSelectedTask(task);
-        setIsModalVisible(true);
+    const handleTaskDetailPress = async (task) => {
+        const baseUrl = 'http://202.10.36.103:8000/';
+        try {
+            const response = await fetchTaskById(task.id); // Fetch task details by ID
+            const taskDetails = response.data; // Access the data field from the response
+            console.log('Fetched task details:', taskDetails); // Debugging log
+
+            // Transform the task details to match the structure expected by DraggableModalTask
+            const transformedTaskDetails = {
+                id: taskDetails.id,
+                title: taskDetails.task_name,
+                startDate: taskDetails.start_date,
+                endDate: taskDetails.end_date,
+                assignedBy: taskDetails.assign_by ? taskDetails.assign_by.name : 'N/A', // Accessing nested object
+                description: taskDetails.task_desc || 'N/A',
+                progress: taskDetails.percentage_task || 0,
+                status: taskDetails.task_status,
+                statusColor: getStatusBadgeColor(taskDetails.task_status, taskDetails.end_date).color,
+                collectionDate: taskDetails.task_submit_date || 'N/A',
+                collectionStatus:
+                    taskDetails.task_status === 'Completed' ? 'Selesai' : taskDetails.task_submit_status || 'N/A',
+                collectionStatusColor: getCollectionStatusBadgeColor(
+                    taskDetails.task_status === 'Completed' ? 'Completed' : taskDetails.task_submit_status || 'N/A',
+                ).color,
+                collectionStatusTextColor: getCollectionStatusBadgeColor(
+                    taskDetails.task_status === 'Completed' ? 'Completed' : taskDetails.task_submit_status || 'N/A',
+                ).textColor,
+                collectionDescription: taskDetails.task_desc || 'N/A',
+                task_image: taskDetails.task_image ? `${baseUrl}${taskDetails.task_image}` : null,
+                // Additional fields based on your previous structure
+                baselineWeight: taskDetails.baseline_weight || '0',
+                actualWeight: taskDetails.actual_weight || '0',
+                durationTask: taskDetails.duration_task || 0,
+                assignedEmployees:
+                    taskDetails.assignedEmployees.map((emp) => ({
+                        employeeId: emp.employee_id,
+                        employeeName: emp.employee_name,
+                    })) || [],
+                taskProgress:
+                    taskDetails.taskProgress.map((progress) => ({
+                        tasksId: progress.tasks_id,
+                        updateDate: progress.update_date,
+                        percentage: progress.percentage,
+                    })) || [],
+            };
+
+            setSelectedTask(transformedTaskDetails);
+            console.log(transformedTaskDetails); // Debugging log
+
+            if (taskDetails.task_status === 'Completed') {
+                setModalType('success');
+            } else {
+                setModalType('default');
+            }
+
+            setDraggableModalVisible(true);
+        } catch (error) {
+            console.error('Error fetching task details:', error);
+            // Optionally, show an alert or a message to the user
+        }
     };
 
     return (
@@ -156,16 +263,25 @@ const DetailTaskSection = () => {
                         key={index}
                         projectName={projectName}
                         tasks={groupedTasks[projectName]}
-                        onTaskPress={handleTaskPress}
+                        onTaskPress={handleTaskDetailPress} // Update here
                     />
                 ))}
             </ScrollView>
 
-            {selectedTask && (
+            {modalType === 'default' ? (
                 <DraggableModalTask
-                    visible={isModalVisible}
-                    onClose={() => setIsModalVisible(false)}
-                    taskDetails={selectedTask}
+                    visible={draggableModalVisible}
+                    onClose={() => {
+                        setDraggableModalVisible(false);
+                        setSelectedTask(null); // Optional: Reset selectedTask on close
+                    }}
+                    taskDetails={selectedTask || {}}
+                />
+            ) : (
+                <ReusableModalSuccess
+                    visible={draggableModalVisible}
+                    onClose={() => setDraggableModalVisible(false)}
+                    taskDetails={selectedTask || {}}
                 />
             )}
         </SafeAreaView>
@@ -241,28 +357,16 @@ const styles = StyleSheet.create({
         fontFamily: 'Poppins-Medium',
         marginBottom: 4,
     },
-    statusContainer: {
+    badge: {
         paddingHorizontal: 8,
-        height: 22,
-        borderRadius: 19,
-        justifyContent: 'center',
-        marginTop: 4,
-        maxWidth: 150,
+        paddingVertical: 4,
+        borderRadius: 12,
         alignSelf: 'flex-start',
+        marginTop: 4,
     },
-    completedStatus: {
-        backgroundColor: '#C9F8C1',
-    },
-    ongoingStatus: {
-        backgroundColor: '#FFE4E1',
-    },
-    deadlineStatus: {
-        backgroundColor: '#FFD700', // Yellow color for deadline day
-    },
-    statusText: {
+    badgeText: {
         fontSize: 12,
         fontFamily: 'Poppins-Medium',
-        textAlign: 'center',
     },
     detailButton: {
         paddingHorizontal: 12,
