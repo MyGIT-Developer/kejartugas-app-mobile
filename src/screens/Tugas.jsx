@@ -316,12 +316,16 @@ const Tugas = () => {
         const taskDetails = {
             id: task.id,
             title: task.task_name,
+            subtitle: task.project_name,
             startDate: task.start_date,
             endDate: task.end_date,
             assignedBy: task.assign_by_name,
             description: task.task_desc,
             progress: task.percentage_task || 0,
             status: task.task_status,
+            project_desc: task.project_desc, // Ensure this matches your data structure
+            project_start_date: task.project_start_date,
+            project_end_date: task.project_end_date,
             statusColor: getStatusBadgeColor(task.task_status, task.end_date).color,
             collectionDate: task.task_submit_date || 'N/A',
             collectionStatus: task.task_status === 'Completed' ? 'Selesai' : task.task_submit_status || 'N/A',

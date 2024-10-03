@@ -42,3 +42,18 @@ export const fetchTaskById = async (taskId) => {
         throw new Error(error.response?.data?.message || 'Fetching task failed');
     }
 };
+
+// apiService.js or the appropriate file for your API functions
+export const fetchChatByTaskId = async (taskId) => {
+    try {
+        const token = await AsyncStorage.getItem('token');
+        const response = await apiService.get(`/chat/${taskId}`, {
+            headers: {
+                Authorization: `Bearer ${token}`,
+            },
+        });
+        return response.data; // Return the data field directly
+    } catch (error) {
+        throw new Error(error.response?.data?.message || 'Fetching chat messages failed');
+    }
+};

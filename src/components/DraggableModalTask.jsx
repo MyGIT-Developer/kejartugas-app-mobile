@@ -3,6 +3,7 @@ import { View, Text, StyleSheet, TouchableOpacity, Dimensions, ScrollView, Modal
 import * as Progress from 'react-native-progress';
 import { useFonts } from '../utils/UseFonts';
 import { useNavigation } from '@react-navigation/native';
+import { fetchChatByTaskId } from '../api/task';
 
 const { height: SCREEN_HEIGHT } = Dimensions.get('window');
 
@@ -49,6 +50,21 @@ const DraggableModalTask = ({ visible, onClose, taskDetails }) => {
             toValue: SCREEN_HEIGHT,
             useNativeDriver: true,
         }).start(() => onClose());
+    };
+    const handleCommentPress = async () => {
+        try {
+            // Navigate to ChatInterface and pass the taskId and taskDetails
+            navigation.navigate('ChatInterface', {
+                taskId: taskDetails.id,
+                taskDetails: taskDetails,
+                taskSubtitle: taskDetails.subtitle, // Pass taskDetails here
+                // chatData can be removed if not used in ChatInterface
+            });
+            onClose();
+        } catch (error) {
+            console.error('Error navigating to chat:', error.message);
+            // Handle error (e.g., show an alert or notification)
+        }
     };
 
     const handleSubmit = () => {
@@ -113,7 +129,7 @@ const DraggableModalTask = ({ visible, onClose, taskDetails }) => {
                                 <View style={styles.infoColumn}>
                                     <Text style={styles.infoLabel}>Ditugaskan Oleh</Text>
                                     <Text style={styles.infoValue}>{taskDetails.assignedBy}</Text>
-                                    <TouchableOpacity style={styles.commentButton}>
+                                    <TouchableOpacity style={styles.commentButton} onPress={handleCommentPress}>
                                         <Text style={styles.commentButtonText}>Tulis Komentar</Text>
                                     </TouchableOpacity>
                                 </View>
