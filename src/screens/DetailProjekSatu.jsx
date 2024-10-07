@@ -59,9 +59,9 @@ const DetailProjekSatu = ({ data }) => {
                 <CountContainer label="Total Tugas" value={data.total_task_created} borderColor="#DD6868" />
             </View>
 
-            <View style={styles.lowerContainer}>
+            {/* <View style={styles.lowerContainer}>
                 <LineChartExample taskData={data.tasks} />
-            </View>
+            </View> */}
         </ScrollView>
     );
 };
@@ -98,15 +98,12 @@ const styles = StyleSheet.create({
     },
     midContainer: {
         flexDirection: 'row',
-        justifyContent: 'space-between', // Adjust spacing between boxes
-        flexWrap: 'wrap', // Allow wrapping to prevent overflow
         gap: 10,
-        paddingHorizontal: 20, // Add padding for better alignment
     },
     countContainer: {
         flex: 1, // Allow each count box to take equal space
-        paddingVertical: 10,
-        paddingHorizontal: 2,
+        paddingVertical: 5,
+        paddingHorizontal: 5,
         borderWidth: 2,
         borderRadius: 10,
         backgroundColor: 'white',
@@ -114,11 +111,16 @@ const styles = StyleSheet.create({
         shadowOffset: { width: 0, height: 5 },
         shadowOpacity: 0.1,
         elevation: 3,
-        // alignItems: 'center',
+        display: 'flex',
+        flexDirection: 'column',
+        justifyContent: 'space-between',
     },
     countLabel: {
         fontSize: 12, // Adjust for readability
+        fontWeight: '600',
+        fontFamily: 'Poppins-Medium',
         color: '#333',
+        lineHeight: 20,
     },
     countValue: {
         fontSize: 30,

@@ -145,8 +145,10 @@ const TaskOnReview = () => {
                                                 alignItems: 'center',
                                             }}
                                         >
-                                            <Progress.Bar progress={item.percentage} color="green" />
-                                            <Text>{item.percentage ? Math.round(item.percentage).toFixed(1) : "0"}%</Text>
+                                            <Progress.Bar progress={item.percentage} color="#27B44E" />
+                                            <Text>
+                                                {item.percentage ? Math.round(item.percentage).toFixed(1) : '0'}%
+                                            </Text>
                                         </View>
 
                                         <TouchableOpacity
@@ -164,7 +166,9 @@ const TaskOnReview = () => {
                                     </View>
                                 ))
                             ) : (
-                                <Text>No projects found</Text>
+                                <Text style={{ fontFamily: 'Poppins-Medium', letterSpacing: -0.3 }}>
+                                    No projects found
+                                </Text>
                             )}
                         </ScrollView>
                     </View>
@@ -220,7 +224,9 @@ const TaskOnReview = () => {
                                     </View>
                                 ))
                             ) : (
-                                <Text>No projects found</Text>
+                                <Text style={{ fontFamily: 'Poppins-Medium', letterSpacing: -0.3 }}>
+                                    No projects found
+                                </Text>
                             )}
                         </ScrollView>
                     </View>
@@ -276,7 +282,9 @@ const TaskOnReview = () => {
                                     </View>
                                 ))
                             ) : (
-                                <Text>No projects found</Text>
+                                <Text style={{ fontFamily: 'Poppins-Medium', letterSpacing: -0.3 }}>
+                                    No projects found
+                                </Text>
                             )}
                         </ScrollView>
                     </View>

@@ -106,10 +106,10 @@ const DraggableModalTask = ({ visible, onClose, taskDetails }) => {
                                 size={60}
                                 progress={taskDetails.progress / 100}
                                 thickness={6}
-                                color="#4CAF50"
+                                color="#27B44E"
                                 unfilledColor="#E8F5E9"
                                 borderWidth={0}
-                                showsText
+                                showsText={true}
                                 formatText={() => `${taskDetails.progress}%`}
                                 textStyle={styles.progressText}
                             />

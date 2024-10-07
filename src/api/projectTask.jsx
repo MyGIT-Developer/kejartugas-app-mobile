@@ -39,3 +39,19 @@ export const CreateProject = async (formdata) => {
         throw new Error(error || 'Creating project failed');
     }
 }
+
+export const getTask = async (companyId) => {
+    try {
+        const response = await apiService.get(`/tasks`, {
+            headers: {
+                Authorization: `Bearer ${await AsyncStorage.getItem('token')}`
+            },
+            params: {
+                company_id: companyId
+            }
+        });
+        return response.data.data;
+    } catch (error) {
+        throw new Error(error.response?.data?.message || 'Fetching parameter failed');
+    }
+}

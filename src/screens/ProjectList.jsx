@@ -76,21 +76,18 @@ const ProjectList = () => {
             </TouchableOpacity>
             <View style={styles.progressContainer}>
                 <Progress.Bar
-                    progress={Math.round(item.percentage).toFixed(1)}
-                    // color="#27B44E"
-                    height={10}
-                    borderRadius={25}
-                    borderWidth={0.2}
-                    width={100} 
-                    unfilledColor="#E5E5E5"
-                    style={{ flex: 1 }}
+                    progress={item.percentage / 100}
+                    color="#27B44E"
+                    width={null}
+                    style={styles.progressBar}
                 />
                 <Text style={styles.percentageText}>
                     {item.percentage ? Math.round(item.percentage).toFixed(1) : '0'}%
                 </Text>
             </View>
             <TouchableOpacity style={styles.detailButton} onPress={() => handleGoToDetail(item.id)}>
-                <Text>Lihat Detail</Text>
+                <Text style={{  fontFamily: 'Poppins-Medium',
+        letterSpacing: -0.3,}}>Lihat Detail</Text>
                 <Feather name="chevron-right" size={24} color="black" />
             </TouchableOpacity>
         </View>
@@ -110,11 +107,11 @@ const ProjectList = () => {
         >
             {project && Array.isArray(project) ? (
                 project &&
-                project
-                    .filter((item) => (item.project_type === filterType || !filterType))
-                    .map(renderProjectItem)
+                project.filter((item) => item.project_type === filterType || !filterType).map(renderProjectItem)
             ) : (
-                <Text>No projects found</Text>
+                <View>
+                    <Text style={{ fontFamily: 'Poppins-Regular', letterSpacing: -0.3 }}>Tidak ada Projek</Text>
+                </View>
             )}
         </ScrollView>
     );
@@ -122,25 +119,15 @@ const ProjectList = () => {
     const fragments = [
         {
             title: 'Semua Proyek',
-            screen: () => (
-                <ProjectListView />
-            ),
+            screen: () => <ProjectListView />,
         },
         {
             title: 'General',
-            screen: () => (
-                <ProjectListView
-                    filterType="general"
-                />
-            ),
+            screen: () => <ProjectListView filterType="general" />,
         },
         {
             title: 'Maintenance',
-            screen: () => (
-                <ProjectListView
-                    filterType="maintenance"
-                />
-            ),
+            screen: () => <ProjectListView filterType="maintenance" />,
         },
     ];
 
@@ -255,7 +242,8 @@ const styles = StyleSheet.create({
         elevation: 5,
     },
     projectName: {
-        fontWeight: '600',
+        fontFamily: 'Poppins-Medium',
+        letterSpacing: -0.3,
         fontSize: 16,
         marginBottom: 10,
     },
@@ -264,8 +252,13 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         marginBottom: 10,
     },
+    progressBar: {
+        flex: 1,
+    },
     percentageText: {
         marginLeft: 10,
+        fontFamily: 'Poppins-Medium',
+        letterSpacing: -0.3,
     },
     detailButton: {
         flexDirection: 'row',

@@ -138,6 +138,7 @@ const DetailProjek = ({ route }) => {
         );
     }
 
+    const percentageProject = projectData.percentage / 100;
     return (
         <View style={styles.container}>
             <View style={styles.backgroundBox}>
@@ -166,7 +167,7 @@ const DetailProjek = ({ route }) => {
             >
                 <View style={styles.upperContainer}>
                     <View style={styles.projectHeaderContainer}>
-                        <Text style={{fontFamily: "Poppins-Regular"}}>Nama Proyek</Text>
+                        <Text style={{ fontFamily: 'Poppins-Regular' }}>Nama Proyek</Text>
 
                         <Popover
                             isVisible={visible}
@@ -246,30 +247,29 @@ const DetailProjek = ({ route }) => {
                                     { backgroundColor: getBackgroundColor(projectData.project_status) },
                                 ]}
                             >
-                                <Text style={{ color: getIndicatorDotColor(projectData.project_status) }}>
+                                <Text
+                                    style={{
+                                        color: getIndicatorDotColor(projectData.project_status),
+                                        fontFamily: 'Poppins-Medium',
+                                        letterSpacing: -0.3,
+                                    }}
+                                >
                                     {getStatusText(projectData.project_status)}
                                 </Text>
                             </View>
                         </View>
                         <Progress.Circle
                             size={80}
-                            progress={projectData.percentage}
+                            progress={percentageProject}
                             thickness={8}
                             showsText={true}
-                            color="#4CAF50"
+                            color="#27B44E"
                             borderWidth={2}
                             borderColor="#E8F5E9"
                         />
                     </View>
                 </View>
-                <View>
-                    <SlidingFragment
-                        fragments={fragments}
-                        activeFragment={activeFragment}
-                        onSwipe={handleSwipe}
-                        data={projectData}
-                    />
-                </View>
+                <SlidingFragment fragments={fragments} activeFragment={activeFragment} data={projectData} />
             </ScrollView>
         </View>
     );
@@ -295,7 +295,6 @@ const styles = StyleSheet.create({
         display: 'flex',
         flexDirection: 'column',
         gap: 20,
-        height: height,
     },
     headerSection: {
         justifyContent: 'center',
@@ -325,7 +324,7 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         justifyContent: 'center',
         paddingBottom: 20,
-        paddingHorizontal:20,
+        paddingHorizontal: 20,
         borderRadius: 20,
         backgroundColor: 'white',
         shadowColor: '#000',
@@ -354,8 +353,9 @@ const styles = StyleSheet.create({
     },
     projectName: {
         color: 'black',
-        fontWeight: '600',
         fontSize: 20,
+        fontFamily: 'Poppins-Medium',
+        letterSpacing: -0.3,
     },
     statusContainer: {
         paddingVertical: 5,

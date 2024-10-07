@@ -16,13 +16,21 @@ import ProjectScrollView from '../components/ProjectScrollView';
 const ProjectCard = ({ item, handleGoToDetail }) => (
     <View style={styles.cardContainer}>
         <View style={styles.card}>
-            <Text style={styles.projectName} numberOfLines={2} ellipsizeMode="tail">{item.project_name}</Text>
+            <Text style={styles.projectName} numberOfLines={2} ellipsizeMode="tail">
+                {item.project_name}
+            </Text>
             <View style={styles.progressContainer}>
-                <Progress.Bar progress={item.percentage} color="green" width={null} style={styles.progressBar} />
-                <Text>{item.percentage ? Math.round(item.percentage).toFixed(1) : '0'}%</Text>
+                <Progress.Bar
+                    progress={item.percentage / 100}
+                    color="#27B44E"
+                    width={null}
+                    style={styles.progressBar}
+                />
+                <Text style={{  fontFamily: 'Poppins-Medium',
+        letterSpacing: -0.3,}}>{item.percentage ? Math.round(item.percentage).toFixed(1) : '0'}%</Text>
             </View>
             <TouchableOpacity style={styles.detailButton} onPress={() => handleGoToDetail(item.id)}>
-                <Text>Lihat Detail</Text>
+                <Text style={{ fontFamily: 'Poppins-Medium', letterSpacing: -0.3 }}>Lihat Detail</Text>
                 <Feather name="chevron-right" size={24} color="black" />
             </TouchableOpacity>
         </View>
@@ -46,7 +54,26 @@ const ProjectSection = ({ title, projects, status, handleGoTo, handleGoToDetail 
                             <ProjectCard key={index} item={item} handleGoToDetail={handleGoToDetail} />
                         ))
                 ) : (
-                    <Text>No projects found</Text>
+                    <View
+                        style={{
+                            backgroundColor: 'white',
+                            borderRadius: 19,
+                            padding: 15,
+                            height: 125,
+                            width: 312,
+                            shadowColor: '#000',
+                            shadowOffset: { width: 0, height: 2 },
+                            shadowOpacity: 0.1,
+                            shadowRadius: 4,
+                            elevation: 5,
+                            textAlign: 'center',
+                            justifyContent: 'center',
+                        }}
+                    >
+                        <Text style={{ fontSize: 10, fontFamily: 'Poppins-Medium', letterSpacing: -0.3 }}>
+                            No projects found
+                        </Text>
+                    </View>
                 )}
             </ScrollView>
         ) : (
@@ -144,35 +171,35 @@ const ProjectDashboard = () => {
     };
 
     return (
-        <ScrollView
-            refreshControl={
-                <RefreshControl
-                    refreshing={refreshing}
-                    onRefresh={onRefresh}
-                    colors={['#0E509E']}
-                    tintColor="#0E509E"
-                />
-            }
-            contentContainerStyle={styles.container}
-        >
-            <View style={styles.backgroundBox}>
-                <LinearGradient
-                    colors={['#0E509E', '#5FA0DC', '#9FD2FF']}
-                    style={styles.linearGradient}
-                    start={{ x: 0, y: 0 }}
-                    end={{ x: 1, y: 1 }}
-                />
-            </View>
-            <View style={styles.headerSection}>
-                <Text style={styles.headerTitle}>Projek</Text>
-                <View style={styles.searchSection}>
-                    <Feather name="search" />
-                    <TextInput style={styles.input} placeholder="Pencarian" underlineColorAndroid="transparent" />
+        <>
+            <ScrollView contentContainerStyle={styles.container}>
+                <View style={styles.backgroundBox}>
+                    <LinearGradient
+                        colors={['#0E509E', '#5FA0DC', '#9FD2FF']}
+                        style={styles.linearGradient}
+                        start={{ x: 0, y: 0 }}
+                        end={{ x: 1, y: 1 }}
+                    />
                 </View>
-            </View>
+                <View style={styles.headerSection}>
+                    <Text style={styles.headerTitle}>Projek</Text>
+                    <View style={styles.searchSection}>
+                        <Feather name="search" />
+                        <TextInput style={styles.input} placeholder="Pencarian" underlineColorAndroid="transparent" />
+                    </View>
+                </View>
 
-            <ScrollView style={{ flex: 1 }}>
-                <View style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+                <ScrollView
+                    refreshControl={
+                        <RefreshControl
+                            refreshing={refreshing}
+                            onRefresh={onRefresh}
+                            colors={['#0E509E']}
+                            tintColor="#0E509E"
+                        />
+                    }
+                    contentContainerStyle={{ marginBottom: 100 }}
+                >
                     <ProjectSection
                         title="Semua Proyek"
                         projects={project}
@@ -184,25 +211,34 @@ const ProjectDashboard = () => {
                         title="Dalam Pengerjaan"
                         projects={project}
                         status="workingOnIt"
-                        handleGoTo={handleGoTo}
+                        handleGoTo={() => handleGoTo('onProgress')}
                     />
                     <ProjectSection
                         title="Dalam Peninjauan"
                         projects={project}
                         status="onReview"
-                        handleGoTo={handleGoTo}
+                        handleGoTo={() => handleGoTo('onReview')}
                     />
-                </View>
-
-                <FloatingButton />
+                </ScrollView>
             </ScrollView>
-        </ScrollView>
+            <FloatingButton />
+        </>
     );
 };
 
 const styles = StyleSheet.create({
     container: {
-        minHeight: height, // Ensure the content is at least as tall as the screen
+        flexGrow: 1,
+    },
+    backgroundBox: {
+        position: 'absolute',
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0,
+    },
+    linearGradient: {
+        flex: 1,
     },
     cardContainer: {
         marginHorizontal: 20,
@@ -222,7 +258,8 @@ const styles = StyleSheet.create({
         elevation: 5,
     },
     projectName: {
-        fontWeight: '600',
+        fontFamily: 'Poppins-Medium',
+        letterSpacing: -0.3,
         fontSize: 16,
     },
     progressContainer: {
@@ -261,10 +298,11 @@ const styles = StyleSheet.create({
     },
     headerTitle: {
         fontSize: 24,
-        fontWeight: 'bold',
         color: 'white',
         alignSelf: 'center',
         fontFamily: 'Poppins-Bold',
+        letterSpacing: -0.3,
+        lineHeight: 30,
         marginTop: 50,
     },
     searchSection: {
@@ -286,14 +324,6 @@ const styles = StyleSheet.create({
         letterSpacing: -1,
         fontWeight: 'semibold',
     },
-    mainContainer: {
-        height: '200vh',
-        borderRadius: 20,
-        margin: 20,
-        display: 'flex',
-        flexDirection: 'column',
-        gap: 20,
-    },
     sectionContainer: {
         flex: 1,
         display: 'flex',
@@ -308,12 +338,14 @@ const styles = StyleSheet.create({
     },
     sectionTitle: {
         fontSize: 18,
-        fontWeight: 'bold',
-        fontFamily: 'Poppins-Bold',
+        fontFamily: 'Poppins-Medium',
+        letterSpacing: -0.3,
+        lineHeight: 30,
     },
     seeAllText: {
         color: '#0E509E',
         fontFamily: 'Poppins-Regular',
+        lineHeight: 30,
     },
 });
 
