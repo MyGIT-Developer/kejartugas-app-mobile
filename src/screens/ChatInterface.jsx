@@ -178,11 +178,11 @@ const ChatInterface = ({ route, navigation }) => {
             hour: '2-digit',
             minute: '2-digit',
         });
-
+    
         const isCurrentUser = item.employee_id === employeeId;
         const showDateHeader =
             index === 0 || new Date(item.time).toDateString() !== new Date(messages[index - 1].time).toDateString();
-
+    
         return (
             <>
                 {showDateHeader && <Text style={styles.dateLabel}>{renderDateHeader(item.time)}</Text>}
@@ -202,7 +202,25 @@ const ChatInterface = ({ route, navigation }) => {
                     </Text>
                     <View style={styles.bubbleAndTimeContainer}>
                         {isCurrentUser && (
-                            <Text style={[styles.messageTime, styles.currentUserTime]}>{timeInGMT7}</Text>
+                            <View style={styles.timeAndIconContainer}>
+                                <Text style={[styles.messageTime, styles.currentUserTime]}>{timeInGMT7}</Text>
+                                {item.status === 'sending' && (
+                                    <Ionicons
+                                        name="time-outline"
+                                        size={12}
+                                        color="#777"
+                                        style={styles.sendingIcon}
+                                    />
+                                )}
+                                {item.status === 'failed' && (
+                                    <Ionicons
+                                        name="alert-circle-outline"
+                                        size={12}
+                                        color="red"
+                                        style={styles.sendingIcon}
+                                    />
+                                )}
+                            </View>
                         )}
                         <View
                             style={[
@@ -219,14 +237,10 @@ const ChatInterface = ({ route, navigation }) => {
                                 {item.message}
                             </Text>
                         </View>
-                        {!isCurrentUser && <Text style={[styles.messageTime, styles.otherUserTime]}>{timeInGMT7}</Text>}
+                        {!isCurrentUser && (
+                            <Text style={[styles.messageTime, styles.otherUserTime]}>{timeInGMT7}</Text>
+                        )}
                     </View>
-                    {item.status === 'sending' && (
-                        <Ionicons name="time-outline" size={12} color="#777" style={styles.sendingIcon} />
-                    )}
-                    {item.status === 'failed' && (
-                        <Ionicons name="alert-circle-outline" size={12} color="red" style={styles.sendingIcon} />
-                    )}
                 </View>
             </>
         );
@@ -449,6 +463,13 @@ const styles = StyleSheet.create({
     },
     shimmerText: {
         borderRadius: 5,
+    },
+    timeAndIconContainer: {
+        flexDirection: 'row',
+        alignItems: 'center',
+    },
+    sendingIcon: {
+        marginLeft: 5,
     },
 });
 
