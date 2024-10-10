@@ -50,9 +50,9 @@ const ReusableAlertBottomPopUp = ({ show, alertType, message, onConfirm }) => {
                         <Text style={styles.message}>
                             {message || (isSuccess ? 'Action completed successfully.' : 'An error occurred.')}
                         </Text>
-                        {/* <TouchableOpacity style={styles.button} onPress={onConfirm}>
+                        <TouchableOpacity style={styles.button} onPress={onConfirm}>
                             <Text style={styles.buttonText}>Okay</Text>
-                        </TouchableOpacity> */}
+                        </TouchableOpacity>
                     </View>
                 </Animated.View>
             </View>
