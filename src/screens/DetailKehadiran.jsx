@@ -94,8 +94,9 @@ const DetailKehadiran = () => {
         try {
             const response = await getParameter(companyId);
             setjamTelat(response.data.jam_telat);
+            console.log('nasgor', response.data.jam_telat);
         } catch (error) {
-            console.error("Error fetching office hour data:", error);
+            console.error("Error fetching office hour data:", error.response.data.message);
             showAlert('Failed to fetch office hours', 'error');
         }
     };
