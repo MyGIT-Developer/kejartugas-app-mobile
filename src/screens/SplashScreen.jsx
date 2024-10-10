@@ -51,18 +51,18 @@ export default function SplashScreenWrapper() {
                             navigateTo('App');
                         } else {
                             await clearAuthData();
-                            navigateTo('BoardingScreen');
+                            navigateTo('Login');
                         }
                     } else {
-                        navigateTo('BoardingScreen');
+                        navigateTo('Login');
                     }
                 } else {
-                    navigateTo('BoardingScreen');
+                    navigateTo('Login');
                 }
             } catch (error) {
                 console.error('Error checking authentication status:', error);
                 await clearAuthData();
-                navigateTo('BoardingScreen');
+                navigateTo('Login');
             } finally {
                 setIsLoading(false);
                 // Hide the splash screen

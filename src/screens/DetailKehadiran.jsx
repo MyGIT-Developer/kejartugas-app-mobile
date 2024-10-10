@@ -40,7 +40,8 @@ const DetailKehadiran = () => {
     const [jamTelat, setjamTelat] = useState('');
     const navigation = useNavigation();
     const [isWFH, setIsWFH] = useState(false);
-
+    const [currentStep, setCurrentStep] = useState('camera');
+    
     const fetchOfficeHour = async () => {
         try {
             const response = await getParameter(companyId);
@@ -89,35 +90,37 @@ const DetailKehadiran = () => {
     const [location, setLocation] = useState(null);
 
     useEffect(() => {
-        // Get location permissions and device location
         (async () => {
-            let { status } = await Location.requestForegroundPermissionsAsync();
-            if (status !== 'granted') {
-                setErrorMsg('Permission to access location was denied');
-                return;
-            }
+            try {
+                let { status } = await Location.requestForegroundPermissionsAsync();
+                if (status !== 'granted') {
+                    setErrorMsg('Permission to access location was denied');
+                    return;
+                }
 
-            let location = await Location.getCurrentPositionAsync({});
-            const latitude = location.coords.latitude;
-            const longitude = location.coords.longitude;
+                let locationResult = await Location.getCurrentPositionAsync({});
+                const latitude = locationResult.coords.latitude;
+                const longitude = locationResult.coords.longitude;
 
-            // const latitude = -6.1974472;
-            // const longitude = 106.7610134;
-            // Format latitude and longitude
-            const formattedCoordinates = `${latitude.toFixed(6)}, ${longitude.toFixed(6)}`;
-            setLocation(formattedCoordinates);
-            // Reverse geocode to get location name
-            const [reverseGeocodeResult] = await Location.reverseGeocodeAsync({
-                latitude,
-                longitude,
-            });
+                // Format latitude and longitude
+                const formattedCoordinates = `${latitude.toFixed(6)}, ${longitude.toFixed(6)}`;
+                setLocation(formattedCoordinates);
 
-            if (reverseGeocodeResult) {
-                setLocationName(
-                    `${reverseGeocodeResult.street}, ${reverseGeocodeResult.city}, ${reverseGeocodeResult.region}, ${reverseGeocodeResult.country}`,
-                );
-            } else {
-                setLocationName('Unable to retrieve location name');
+                // Reverse geocode to get location name
+                const [reverseGeocodeResult] = await Location.reverseGeocodeAsync({
+                    latitude,
+                    longitude,
+                });
+
+                if (reverseGeocodeResult) {
+                    setLocationName(
+                        `${reverseGeocodeResult.street || ''}, ${reverseGeocodeResult.city || ''}, ${reverseGeocodeResult.region || ''}, ${reverseGeocodeResult.country || ''}`.replace(/^[,\s]+|[,\s]+$/g, '').replace(/,\s*,/g, ',')
+                    );
+                } else {
+                    setLocationName('Unable to retrieve location name');
+                }
+            } catch (error) {
+                setErrorMsg('Error getting location: ' + error.message);
             }
         })();
     }, []);
@@ -138,16 +141,16 @@ const DetailKehadiran = () => {
 
     const isUserLate = calculateLateStatus();
     const [capturedImage, setCapturedImage] = useState(null);
-
     useEffect(() => {
         const setupPage = async () => {
             await getStoredData();
-            await getLocation();
-            triggerCamera();
+            if (currentStep === 'camera') {
+                triggerCamera();
+            }
         };
 
         setupPage();
-    }, []);
+    }, [currentStep]);
 
     const getStoredData = async () => {
         try {
@@ -157,6 +160,29 @@ const DetailKehadiran = () => {
             setCompanyId(storedCompanyId);
         } catch (error) {
             console.error('Error fetching AsyncStorage data:', error);
+        }
+    };
+
+    const triggerCamera = async () => {
+        try {
+            const result = await launchCameraAsync({
+                mediaTypes: MediaTypeOptions.Images,
+                allowsEditing: false,
+                quality: 1,
+                base64: true,
+            });
+
+            if (!result.canceled && result.assets && result.assets[0].uri) {
+                setCapturedImage(result.assets[0].uri);
+                setCurrentStep('location');
+            } else {
+                Alert.alert('Camera was canceled or no valid image was captured.');
+                navigation.goBack();
+            }
+        } catch (error) {
+            console.error('Camera error:', error);
+            Alert.alert('Error', `Error when using camera: ${error.message || 'Unknown error'}`);
+            navigation.goBack();
         }
     };
 
@@ -177,40 +203,20 @@ const DetailKehadiran = () => {
 
         if (reverseGeocodeResult) {
             setLocationName(
-                `${reverseGeocodeResult.street}, ${reverseGeocodeResult.city}, ${reverseGeocodeResult.region}, ${reverseGeocodeResult.country}`,
+                `${reverseGeocodeResult.street}, ${reverseGeocodeResult.city}, ${reverseGeocodeResult.region}, ${reverseGeocodeResult.country}`
             );
         }
     };
 
-    const triggerCamera = async () => {
-        try {
-            const result = await launchCameraAsync({
-                mediaTypes: MediaTypeOptions.Images,
-                allowsEditing: false,
-                quality: 1,
-                base64: true,
-            });
-
-            if (!result.canceled && result.assets && result.assets[0].uri) {
-                setCapturedImage(result.assets[0].uri);
-            } else {
-                Alert.alert('Camera was canceled or no valid image was captured.');
-            }
-        } catch (error) {
-            console.error('Camera error:', error);
-            Alert.alert('Error', `Error when using camera: ${error.message || 'Unknown error'}`);
+    useEffect(() => {
+        if (currentStep === 'location') {
+            getLocation();
         }
-    };
+    }, [currentStep]);
 
     const handleClockIn = async () => {
-        if (!capturedImage) {
-            showAlert('Silahkan mengambil foto terlebih dahulu!', 'Error');
-            return;
-        }
-
         if (isUserLate && !reasonInput.trim()) {
             showAlert('Silahkan memberikan Alasan Keterlambatan!', 'Error');
-            // Alert.alert('Error', 'Please provide a reason for being late.');
             return;
         }
 
@@ -221,7 +227,7 @@ const DetailKehadiran = () => {
                 isUserLate ? reasonInput : null,
                 capturedImage,
                 location,
-                isWFH,
+                isWFH
             );
             showAlert('Anda berhasil check-in!', 'success');
             setTimeout(() => {
@@ -230,7 +236,6 @@ const DetailKehadiran = () => {
             }, 1500);
         } catch (error) {
             console.error('Check-in error:', error.message);
-            // Alert.alert('Error', `Error when checking in: ${error.message || 'Unknown error'}`);
             showAlert(`Error when checking in: ${error.message || 'Unknown error'}`, 'Error');
         }
     };
@@ -243,6 +248,14 @@ const DetailKehadiran = () => {
         navigation.goBack();
     };
 
+    if (currentStep === 'camera') {
+        return (
+            <View style={styles.container}>
+                <Text>Preparing camera...</Text>
+            </View>
+        );
+    }
+
     return (
         <View style={{ flex: 1 }}>
             <View style={styles.backgroundBox}>
@@ -254,16 +267,13 @@ const DetailKehadiran = () => {
                 />
             </View>
 
-            {/* Container for the back icon and text */}
             <View style={styles.headerContainer}>
                 <Feather name="chevron-left" style={styles.backIcon} onPress={handleGoBack} />
                 <Text style={styles.headerText}>Lokasi Kehadiran</Text>
             </View>
 
-            {/* Map View */}
             <MyMap />
 
-            {/* Time and Location Overlay */}
             <DraggableOverlayBottom>
                 <KeyboardAvoidingView
                     behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
@@ -271,45 +281,12 @@ const DetailKehadiran = () => {
                 >
                     <ScrollView contentContainerStyle={styles.scrollViewContent}>
                         <View style={{ padding: 20, display: 'flex', flexDirection: 'column', gap: 15 }}>
-                            <View
-                                style={{
-                                    display: 'flex',
-                                    flexDirection: 'row',
-                                    justifyContent: 'space-between',
-                                    alignItems: 'center',
-                                    gap: 10,
-                                }}
-                            >
-                                <Text style={{ fontWeight: '500', fontSize: 20 }}>Clock In</Text>
-                                {isUserLate && (
-                                    <View style={[styles.statusView, { backgroundColor: '#ffbda5' }]}>
-                                        <View style={{ padding: 4, borderRadius: 50, backgroundColor: '#ff0002' }} />
-                                        <Text style={{ color: '#000' }}>Late</Text>
-                                    </View>
-                                )}
-                            </View>
-
                             <View style={styles.locationContainer}>
-                                <View
-                                    style={{
-                                        display: 'flex',
-                                        flexDirection: 'row',
-                                        gap: 3,
-                                        alignItems: 'center',
-                                    }}
-                                >
+                                <View style={{ display: 'flex', flexDirection: 'row', gap: 3, alignItems: 'center' }}>
                                     <Icon name="location-on" size={24} color="gray" style={{ fontWeight: '500' }} />
                                     <Text style={{ fontWeight: '500', fontSize: 18 }}>Lokasi saat ini</Text>
                                 </View>
-
-                                <View
-                                    style={{
-                                        display: 'flex',
-                                        flexDirection: 'row',
-                                        gap: 3,
-                                        alignItems: 'center',
-                                    }}
-                                >
+                                <View style={{ display: 'flex', flexDirection: 'row', gap: 3, alignItems: 'center' }}>
                                     <Text style={{ fontWeight: '400', fontSize: 14 }}>{locationName}</Text>
                                 </View>
                             </View>
@@ -321,7 +298,6 @@ const DetailKehadiran = () => {
                             {capturedImage && <Image source={{ uri: capturedImage }} style={styles.previewImage} />}
                             {isUserLate && (
                                 <View style={styles.lateContainer}>
-                                    {/* <Text style={styles.lateText}></Text> */}
                                     <TextInput
                                         style={styles.input}
                                         placeholder="Silahkan berikan alasan keterlambatan"
@@ -332,22 +308,16 @@ const DetailKehadiran = () => {
                                 </View>
                             )}
                             <View style={styles.buttonContainer}>
-                                {isUserLate ? (
-                                    <TouchableOpacity
-                                        style={[
-                                            styles.checkInButton,
-                                            reasonInput ? styles.enabledButton : styles.disabledButton, // Apply the disabledButton style conditionally
-                                        ]}
-                                        onPress={handleClockIn}
-                                        disabled={!reasonInput} // Disable the button based on reasonInput
-                                    >
-                                        <Text style={styles.buttonText}>Clock In</Text>
-                                    </TouchableOpacity>
-                                ) : (
-                                    <TouchableOpacity style={[styles.checkInButton]} onPress={handleClockIn}>
-                                        <Text style={styles.buttonText}>Clock In</Text>
-                                    </TouchableOpacity>
-                                )}
+                                <TouchableOpacity
+                                    style={[
+                                        styles.checkInButton,
+                                        isUserLate && !reasonInput ? styles.disabledButton : styles.enabledButton,
+                                    ]}
+                                    onPress={handleClockIn}
+                                    disabled={isUserLate && !reasonInput}
+                                >
+                                    <Text style={styles.buttonText}>Clock In</Text>
+                                </TouchableOpacity>
                             </View>
                         </View>
                     </ScrollView>
@@ -399,9 +369,11 @@ const styles = StyleSheet.create({
         zIndex: 11,
     },
     headerText: {
-        fontSize: 18,
-        fontWeight: '600',
+        fontSize: 22,
+        fontWeight: 'bold',
         color: 'white',
+        textAlign: 'center',
+        letterSpacing: -1,
     },
     overlayBottom: {
         position: 'absolute',

@@ -471,10 +471,11 @@ const styles = StyleSheet.create({
         borderBottomRightRadius: 30,
     },
     header: {
-        fontSize: 20,
+        fontSize: 22,
         fontWeight: 'bold',
         color: 'white',
         textAlign: 'center',
+        letterSpacing: -1,
         marginTop: 50,
     },
     mainContainer: {
