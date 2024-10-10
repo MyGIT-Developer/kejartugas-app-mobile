@@ -7,13 +7,13 @@ import {
     TouchableOpacity,
     SafeAreaView,
     RefreshControl,
-    Alert,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import Shimmer from '../components/Shimmer';
 import DetailProyekModal from '../components/ReusableBottomModal';
 import DraggableModalTask from '../components/DraggableModalTask';
 import ReusableModalSuccess from '../components/TaskModalSuccess';
+import ReusableAlert from '../components/ReusableAlert';
 import { useNavigation } from '@react-navigation/native';
 import { useFonts } from '../utils/UseFonts';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -22,11 +22,11 @@ import { fetchTotalTasksForEmployee } from '../api/task';
 const GRADIENT_COLORS = ['#0E509E', '#5FA0DC', '#9FD2FF'];
 
 const calculateRemainingDays = (endDate, status) => {
-    if (status === 'Completed') {
-        return 0; // No remaining days for completed tasks
+    if (status === 'Completed') {21111
+        return 0;
     }
     const today = new Date();
-    today.setHours(0, 0, 0, 0); // Set to beginning of day for accurate comparison
+    today.setHours(0, 0, 0, 0);
     const end = new Date(endDate);
     end.setHours(0, 0, 0, 0);
     const timeDiff = end.getTime() - today.getTime();
@@ -65,21 +65,25 @@ const getStatusBadgeColor = (status, endDate) => {
 const getCollectionStatusBadgeColor = (status) => {
     switch (status) {
         case 'finish':
-            return { color: '#A7C8E5', textColor: '#092D58', label: 'Labeling' };
+            return { color: '#A7C8E5', textColor: '#092D58', label: 'Tepat Waktu' };
         case 'earlyFinish':
-            return { color: '#9ADFAD', textColor: '#0A642E', label: 'Early Finish' };
+            return { color: '#9ADFAD', textColor: '#0A642E', label: 'Selesai Lebih Awal' };
         case 'finish in delay':
-            return { color: '#F0E089', textColor: '#80490A', label: 'Finish Delay' };
+            return { color: '#F0E089', textColor: '#80490A', label: 'Selesai Terlambat' };
         case 'overdue':
-            return { color: '#F69292', textColor: '#811616', label: 'Overdue' };
-        case 'Completed':
-            return { color: '#C9F8C1', textColor: '#333333', label: 'Selesai' };
+            return { color: '#F69292', textColor: '#811616', label: 'Terlambat' };
         default:
-            return { color: '#E0E0E0', textColor: '#000000', label: status };
+            return { color: '#E0E0E0', textColor: '#000000', label: status || 'Belum Dikumpulkan' };
     }
 };
 
-const TaskCard = React.memo(({ task = {}, onProjectDetailPress = () => {}, onTaskDetailPress = () => {} }) => {
+
+const TaskCard = React.memo(({ task, onProjectDetailPress, onTaskDetailPress }) => {
+    // Provide default values directly in the function parameters
+    task = task || {};
+    onProjectDetailPress = onProjectDetailPress || (() => {});
+    onTaskDetailPress = onTaskDetailPress || (() => {});
+
     const {
         color: badgeColor,
         textColor: badgeTextColor,
@@ -188,6 +192,7 @@ const Tugas = () => {
     const [error, setError] = useState(null);
     const [projects, setProjects] = useState([]);
     const [modalType, setModalType] = useState('default');
+    const [showAlert, setShowAlert] = useState(false);
 
     const navigation = useNavigation();
 
@@ -203,19 +208,16 @@ const Tugas = () => {
         setError(null);
         try {
             const employeeId = await AsyncStorage.getItem('employeeId');
-            console.log('Employee ID:', employeeId);
             if (!employeeId) {
-                throw new Error('Employee ID not found');
+                throw new Error('ID Karyawan tidak ditemukan');
             }
 
             const data = await fetchTotalTasksForEmployee(employeeId);
 
-            // Sort tasks by start_date (or end_date) in descending order (most recent first)
             const sortedTasks = data.employeeTasks.sort((a, b) => {
                 return new Date(b.start_date) - new Date(a.start_date);
             });
 
-            // Categorize tasks by status
             const tasksByStatus = {
                 inProgress: sortedTasks.filter((task) => task.task_status === 'workingOnIt'),
                 inReview: sortedTasks.filter((task) => task.task_status === 'onReview'),
@@ -225,7 +227,6 @@ const Tugas = () => {
             };
             setTasks(tasksByStatus);
 
-            // Group tasks by project
             const projectsMap = new Map();
             sortedTasks.forEach((task) => {
                 if (!projectsMap.has(task.project_id)) {
@@ -239,26 +240,16 @@ const Tugas = () => {
             });
             setProjects(Array.from(projectsMap.values()));
 
-            // Store TaskIds to AsyncStorage and add console log
             for (const status in tasksByStatus) {
                 tasksByStatus[status].forEach(async (task) => {
-                    console.log(`Task object for status ${status}:`, task);
-
                     if (task.id) {
                         await AsyncStorage.setItem(`task_${task.id}`, JSON.stringify(task.id));
-                    } else {
-                        console.log(`Task ID not found for task:`, task);
                     }
                 });
             }
         } catch (error) {
-            console.error('Error fetching tasks:', error);
-            if (error.response && error.response.status === 404) {
-                setError('Tasks not found. Please check the employee ID or the API endpoint.');
-            } else {
-                setError('Failed to fetch tasks. Please try again later.');
-            }
-            Alert.alert('Error', error.message);
+            setError('Gagal mengambil tugas. Silakan coba lagi nanti.');
+            setShowAlert(true);
         } finally {
             setIsLoading(false);
             setRefreshing(false);
@@ -266,8 +257,6 @@ const Tugas = () => {
     };
 
     const handleSeeAllPress = (sectionTitle, tasks) => {
-        console.log('See All Pressed for Section:', sectionTitle); // Log section title
-        console.log('Tasks in this section:', tasks);
         const baseUrl = 'http://202.10.36.103:8000/';
         navigation.navigate('DetailTaskSection', {
             sectionTitle,
@@ -286,13 +275,9 @@ const Tugas = () => {
                 percentage_task: task.percentage_task || 0, // Ensure this matches your data structure
                 statusColor: getStatusBadgeColor(task.task_status, task.end_date).color,
                 collectionDate: task.task_submit_date || 'N/A',
-                collectionStatus: task.task_status === 'Completed' ? 'Selesai' : task.task_submit_status || 'N/A',
-                collectionStatusColor: getCollectionStatusBadgeColor(
-                    task.task_status === 'Completed' ? 'Completed' : task.task_submit_status || 'N/A',
-                ).color,
-                collectionStatusTextColor: getCollectionStatusBadgeColor(
-                    task.task_status === 'Completed' ? 'Completed' : task.task_submit_status || 'N/A',
-                ).textColor,
+                collectionStatus: task.task_submit_status || 'N/A',
+                collectionStatusColor: getCollectionStatusBadgeColor(task.task_submit_status || 'N/A').color,
+                collectionStatusTextColor: getCollectionStatusBadgeColor(task.task_submit_status || 'N/A').textColor,
                 collectionDescription: task.task_desc || 'N/A',
                 task_image: task.task_image ? `${baseUrl}${task.task_image}` : null,
             })),
@@ -313,6 +298,7 @@ const Tugas = () => {
 
     const handleTaskDetailPress = (task) => {
         const baseUrl = 'http://202.10.36.103:8000/';
+        const collectionStatus = getCollectionStatusBadgeColor(task.task_submit_status || 'N/A');
         const taskDetails = {
             id: task.id,
             title: task.task_name,
@@ -328,13 +314,9 @@ const Tugas = () => {
             project_end_date: task.project_end_date,
             statusColor: getStatusBadgeColor(task.task_status, task.end_date).color,
             collectionDate: task.task_submit_date || 'N/A',
-            collectionStatus: task.task_status === 'Completed' ? 'Selesai' : task.task_submit_status || 'N/A',
-            collectionStatusColor: getCollectionStatusBadgeColor(
-                task.task_status === 'Completed' ? 'Completed' : task.task_submit_status || 'N/A',
-            ).color,
-            collectionStatusTextColor: getCollectionStatusBadgeColor(
-                task.task_status === 'Completed' ? 'Completed' : task.task_submit_status || 'N/A',
-            ).textColor,
+            collectionStatus: collectionStatus.label,
+            collectionStatusColor: collectionStatus.color,
+            collectionStatusTextColor: collectionStatus.textColor,
             collectionDescription: task.task_desc || 'N/A',
             task_image: task.task_image ? `${baseUrl}${task.task_image}` : null,
         };
@@ -370,57 +352,48 @@ const Tugas = () => {
                     <Text style={styles.headerTitle}>Tugas Saya</Text>
                 </LinearGradient>
 
-                {error ? (
-                    <View style={styles.errorContainer}>
-                        <Text style={styles.errorText}>{error}</Text>
-                        <TouchableOpacity style={styles.retryButton} onPress={fetchTasks}>
-                            <Text style={styles.retryButtonText}>Retry</Text>
-                        </TouchableOpacity>
-                    </View>
-                ) : (
-                    <View style={styles.content}>
-                        <TaskSection
-                            title="Dalam Pengerjaan"
-                            tasks={tasks.inProgress}
-                            isLoading={isLoading}
-                            onProjectDetailPress={handleProjectDetailPress}
-                            onTaskDetailPress={handleTaskDetailPress}
-                            onSeeAllPress={() => handleSeeAllPress('Dalam Pengerjaan', tasks.inProgress)}
-                        />
-                        <TaskSection
-                            title="Dalam Peninjauan"
-                            tasks={tasks.inReview}
-                            isLoading={isLoading}
-                            onProjectDetailPress={handleProjectDetailPress}
-                            onTaskDetailPress={handleTaskDetailPress}
-                            onSeeAllPress={() => handleSeeAllPress('Dalam Peninjauan', tasks.inReview)}
-                        />
-                        <TaskSection
-                            title="Ditolak"
-                            tasks={tasks.rejected}
-                            isLoading={isLoading}
-                            onProjectDetailPress={handleProjectDetailPress}
-                            onTaskDetailPress={handleTaskDetailPress}
-                            onSeeAllPress={() => handleSeeAllPress('Ditolak', tasks.rejected)}
-                        />
-                        <TaskSection
-                            title="Ditunda"
-                            tasks={tasks.postponed}
-                            isLoading={isLoading}
-                            onProjectDetailPress={handleProjectDetailPress}
-                            onTaskDetailPress={handleTaskDetailPress}
-                            onSeeAllPress={() => handleSeeAllPress('Ditunda', tasks.postponed)}
-                        />
-                        <TaskSection
-                            title="Selesai"
-                            tasks={tasks.completed}
-                            isLoading={isLoading}
-                            onProjectDetailPress={handleProjectDetailPress}
-                            onTaskDetailPress={handleTaskDetailPress}
-                            onSeeAllPress={() => handleSeeAllPress('Selesai', tasks.completed)}
-                        />
-                    </View>
-                )}
+                <View style={styles.content}>
+                    <TaskSection
+                        title="Dalam Pengerjaan"
+                        tasks={tasks.inProgress}
+                        isLoading={isLoading}
+                        onProjectDetailPress={handleProjectDetailPress}
+                        onTaskDetailPress={handleTaskDetailPress}
+                        onSeeAllPress={() => handleSeeAllPress('Dalam Pengerjaan', tasks.inProgress)}
+                    />
+                    <TaskSection
+                        title="Dalam Peninjauan"
+                        tasks={tasks.inReview}
+                        isLoading={isLoading}
+                        onProjectDetailPress={handleProjectDetailPress}
+                        onTaskDetailPress={handleTaskDetailPress}
+                        onSeeAllPress={() => handleSeeAllPress('Dalam Peninjauan', tasks.inReview)}
+                    />
+                    <TaskSection
+                        title="Ditolak"
+                        tasks={tasks.rejected}
+                        isLoading={isLoading}
+                        onProjectDetailPress={handleProjectDetailPress}
+                        onTaskDetailPress={handleTaskDetailPress}
+                        onSeeAllPress={() => handleSeeAllPress('Ditolak', tasks.rejected)}
+                    />
+                    <TaskSection
+                        title="Ditunda"
+                        tasks={tasks.postponed}
+                        isLoading={isLoading}
+                        onProjectDetailPress={handleProjectDetailPress}
+                        onTaskDetailPress={handleTaskDetailPress}
+                        onSeeAllPress={() => handleSeeAllPress('Ditunda', tasks.postponed)}
+                    />
+                    <TaskSection
+                        title="Selesai"
+                        tasks={tasks.completed}
+                        isLoading={isLoading}
+                        onProjectDetailPress={handleProjectDetailPress}
+                        onTaskDetailPress={handleTaskDetailPress}
+                        onSeeAllPress={() => handleSeeAllPress('Selesai', tasks.completed)}
+                    />
+                </View>
 
                 <View style={styles.bottomSpacer} />
             </ScrollView>
@@ -430,7 +403,7 @@ const Tugas = () => {
                     visible={draggableModalVisible}
                     onClose={() => {
                         setDraggableModalVisible(false);
-                        setSelectedTask(null); // Optional: Reset selectedTask on close
+                        setSelectedTask(null);
                     }}
                     taskDetails={selectedTask || {}}
                 />
@@ -447,9 +420,17 @@ const Tugas = () => {
                 onClose={() => setModalVisible(false)}
                 projectDetails={selectedProject || {}}
             />
+
+            <ReusableAlert
+                show={showAlert}
+                alertType="error"
+                message={error}
+                onConfirm={() => setShowAlert(false)}
+            />
         </SafeAreaView>
     );
 };
+
 const styles = StyleSheet.create({
     safeArea: {
         flex: 1,

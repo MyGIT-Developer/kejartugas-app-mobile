@@ -106,13 +106,18 @@ const DraggableModalTask = ({ visible, onClose, taskDetails }) => {
                                 size={60}
                                 progress={taskDetails.progress / 100}
                                 thickness={6}
-                                color="#27B44E"
+                                color={taskDetails.progress === 0 ? "#E0E0E0" : taskDetails.progress < 50 ? "#F69292" : taskDetails.progress < 75 ? "#F0E08A" : "#C9F8C1"} 
                                 unfilledColor="#E8F5E9"
                                 borderWidth={0}
                                 showsText={true}
                                 formatText={() => `${taskDetails.progress}%`}
-                                textStyle={styles.progressText}
+                                textStyle={{
+                                    fontFamily: 'Poppins-SemiBold',
+                                    fontSize: 14,
+                                    color: taskDetails.progress === 0 ? "#000000" : taskDetails.progress < 50 ? "#811616" : taskDetails.progress < 75 ? "#656218" : "#0A642E" // Text color based on progress
+                                }}
                             />
+
                         </View>
                         <View style={styles.infoContainer}>
                             <View style={styles.infoRow}>

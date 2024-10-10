@@ -63,17 +63,15 @@ const getStatusBadgeColor = (status, endDate) => {
 const getCollectionStatusBadgeColor = (status) => {
     switch (status) {
         case 'finish':
-            return { color: '#A7C8E5', textColor: '#092D58', label: 'Labeling' };
+            return { color: '#A7C8E5', textColor: '#092D58', label: 'Selesai' };
         case 'earlyFinish':
-            return { color: '#9ADFAD', textColor: '#0A642E', label: 'Early Finish' };
+            return { color: '#9ADFAD', textColor: '#0A642E', label: 'Selesai Lebih Awal' };
         case 'finish in delay':
-            return { color: '#F0E089', textColor: '#80490A', label: 'Finish Delay' };
+            return { color: '#F0E089', textColor: '#80490A', label: 'Selesai Terlambat' };
         case 'overdue':
-            return { color: '#F69292', textColor: '#811616', label: 'Overdue' };
-        case 'Completed':
-            return { color: '#C9F8C1', textColor: '#333333', label: 'Selesai' };
+            return { color: '#F69292', textColor: '#811616', label: 'Terlambat' };
         default:
-            return { color: '#E0E0E0', textColor: '#000000', label: status };
+            return { color: '#E0E0E0', textColor: '#000000', label: status || 'Belum Dikumpulkan' };
     }
 };
 
@@ -189,8 +187,7 @@ const DetailTaskSection = () => {
         try {
             const response = await fetchTaskById(task.id); // Fetch task details by ID
             const taskDetails = response.data; // Access the data field from the response
-            console.log('Fetched task details:', taskDetails); // Debugging log
-
+            const collectionStatus = getCollectionStatusBadgeColor(taskDetails.task_submit_status || 'N/A');
             // Transform the task details to match the structure expected by DraggableModalTask
             const transformedTaskDetails = {
                 id: taskDetails.id,
@@ -202,17 +199,13 @@ const DetailTaskSection = () => {
                 progress: taskDetails.percentage_task || 0,
                 status: taskDetails.task_status,
                 statusColor: getStatusBadgeColor(taskDetails.task_status, taskDetails.end_date).color,
-                collectionDate: taskDetails.task_submit_date || 'N/A',
-                collectionStatus:
-                    taskDetails.task_status === 'Completed' ? 'Selesai' : taskDetails.task_submit_status || 'N/A',
-                collectionStatusColor: getCollectionStatusBadgeColor(
-                    taskDetails.task_status === 'Completed' ? 'Completed' : taskDetails.task_submit_status || 'N/A',
-                ).color,
-                collectionStatusTextColor: getCollectionStatusBadgeColor(
-                    taskDetails.task_status === 'Completed' ? 'Completed' : taskDetails.task_submit_status || 'N/A',
-                ).textColor,
+                collectionDate: task.task_submit_date || 'N/A',
+                collectionStatus: collectionStatus.label,
+                collectionStatusColor: collectionStatus.color,
+                collectionStatusTextColor: collectionStatus.textColor,
                 collectionDescription: taskDetails.task_desc || 'N/A',
                 task_image: taskDetails.task_image ? `${baseUrl}${taskDetails.task_image}` : null,
+    
                 // Additional fields based on your previous structure
                 baselineWeight: taskDetails.baseline_weight || '0',
                 actualWeight: taskDetails.actual_weight || '0',
@@ -229,22 +222,23 @@ const DetailTaskSection = () => {
                         percentage: progress.percentage,
                     })) || [],
             };
-
+    
             setSelectedTask(transformedTaskDetails);
-            console.log(transformedTaskDetails); // Debugging log
-
+    
+            // Optionally check task status for modal type
             if (taskDetails.task_status === 'Completed') {
                 setModalType('success');
             } else {
                 setModalType('default');
             }
-
+    
             setDraggableModalVisible(true);
         } catch (error) {
             console.error('Error fetching task details:', error);
             // Optionally, show an alert or a message to the user
         }
     };
+    
 
     return (
         <SafeAreaView style={styles.safeArea}>

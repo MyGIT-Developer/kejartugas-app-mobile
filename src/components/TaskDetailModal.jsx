@@ -14,14 +14,22 @@ const TaskDetailModal = ({ visible, onClose, taskDetails }) => {
                             <Text style={styles.sectionTitle}>Informasi Umum</Text>
                             <Text style={styles.taskTitle}>{taskDetails.title}</Text>
                             <View style={styles.progressContainer}>
-                                <ProgressCircle
-                                    progress={taskDetails.progress / 100} // Assuming progress is a percentage
-                                    size={120}
-                                    showsText={true}
-                                    formatText={(progress) => `${Math.round(progress * 100)}%`}
-                                    color="#3498db"
-                                    unfilledColor="#e0e0e0"
-                                />
+                            <Progress.Circle
+                                size={60}
+                                progress={taskDetails.progress / 100}
+                                thickness={6}
+                                color={taskDetails.progress === 0 ? "#E0E0E0" : taskDetails.progress < 50 ? "#F69292" : taskDetails.progress < 75 ? "#F0E08A" : "#C9F8C1"} 
+                                unfilledColor="#E8F5E9"
+                                borderWidth={0}
+                                showsText={true}
+                                formatText={() => `${taskDetails.progress}%`}
+                                textStyle={{
+                                    fontFamily: 'Poppins-SemiBold',
+                                    fontSize: 14,
+                                    color: taskDetails.progress === 0 ? "#000000" : taskDetails.progress < 50 ? "#811616" : taskDetails.progress < 75 ? "#656218" : "#0A642E" // Text color based on progress
+                                }}
+                            />
+
                             </View>
                             <View style={styles.row}>
                                 <Text style={styles.label}>Tanggal Mulai</Text>

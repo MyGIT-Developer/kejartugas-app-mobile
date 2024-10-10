@@ -2,16 +2,30 @@ import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Modal, Dimensions, Image } from 'react-native';
 import { useFonts } from '../utils/UseFonts';
 import * as Progress from 'react-native-progress';
+import { useNavigation } from '@react-navigation/native'; 
 
 const { height: SCREEN_HEIGHT } = Dimensions.get('window');
 
 const TaskModalSuccess = ({ visible, onClose, taskDetails }) => {
     const fontsLoaded = useFonts();
-
+    const navigation = useNavigation();
     if (!fontsLoaded) {
         return null;
     }
 
+    const handleCommentPress = async () => {
+        try {
+            // Navigate to ChatInterface and pass the taskId and taskDetails
+            navigation.navigate('ChatInterface', {
+                taskId: taskDetails.id,
+                taskDetails: taskDetails,
+                taskSubtitle: taskDetails.subtitle, // Pass taskDetails here
+                // chatData can be removed if not used in ChatInterface
+            });
+        } catch (error) {
+            console.log(error);
+        }
+    };
     return (
         <Modal animationType="slide" transparent={true} visible={visible} onRequestClose={onClose}>
             <View style={styles.modalContainer}>
@@ -32,15 +46,21 @@ const TaskModalSuccess = ({ visible, onClose, taskDetails }) => {
                             </View>
                             <Progress.Circle
                                 size={60}
-                                progress={taskDetails.progress / 100} // Ensure this is a fraction (0 to 1)
+                                progress={taskDetails.progress / 100}
                                 thickness={6}
-                                color="#27B44E"
+                                color={taskDetails.progress === 0 ? "#E0E0E0" : taskDetails.progress < 50 ? "#F69292" : taskDetails.progress < 75 ? "#F0E08A" : "#C9F8C1"} 
                                 unfilledColor="#E8F5E9"
                                 borderWidth={0}
                                 showsText={true}
-                                formatText={() => `${taskDetails.progress}%`} // Display the percentage
-                                textStyle={styles.progressText}
+                                formatText={() => `${taskDetails.progress}%`}
+                                textStyle={{
+                                    fontFamily: 'Poppins-SemiBold',
+                                    fontSize: 14,
+                                    color: taskDetails.progress === 0 ? "#000000" : taskDetails.progress < 50 ? "#811616" : taskDetails.progress < 75 ? "#656218" : "#0A642E" // Text color based on progress
+                                }}
                             />
+
+
                         </View>
                         <View style={styles.infoContainer}>
                             {/* General Information */}
@@ -114,7 +134,7 @@ const TaskModalSuccess = ({ visible, onClose, taskDetails }) => {
                                     <Text style={styles.infoValue}>
                                         {taskDetails.collectionDescription || 'Tidak ada keterangan tersedia'}
                                     </Text>
-                                    <TouchableOpacity style={styles.commentButton} onPress={() => {}}>
+                                    <TouchableOpacity style={styles.commentButton} onPress={handleCommentPress}>
                                         <Text style={styles.commentButtonText}>Tulis Komentar</Text>
                                     </TouchableOpacity>
                                 </View>

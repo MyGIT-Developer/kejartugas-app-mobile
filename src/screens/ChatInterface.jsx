@@ -8,14 +8,20 @@ import {
     TouchableOpacity,
     SafeAreaView,
     RefreshControl,
+    Alert,
+    Dimensions,
+
 } from 'react-native';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import { LinearGradient } from 'expo-linear-gradient';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { fetchChatByTaskId } from '../api/task';
+import { fetchChatByTaskId, sendChatMessage } from '../api/task';
+import Shimmer from '../components/Shimmer';
 
-const ChatInterface = ({ route }) => {
-    const { taskId, taskDetails } = route.params || {};
+const { width: SCREEN_WIDTH } = Dimensions.get('window');
+
+const ChatInterface = ({ route, navigation }) => {
+    const { taskId, taskDetails, taskSubtitle } = route.params || {};
 
     if (!taskDetails) {
         return (
@@ -29,43 +35,29 @@ const ChatInterface = ({ route }) => {
     const [inputText, setInputText] = useState('');
     const [sending, setSending] = useState(false);
     const [employeeId, setEmployeeId] = useState(null);
+    const [companyId, setCompanyId] = useState(null);
     const [refreshing, setRefreshing] = useState(false);
+    const [isLoading, setIsLoading] = useState(true);
 
     const flatListRef = useRef(null);
 
     useEffect(() => {
-        const getEmployeeId = async () => {
-            const id = await AsyncStorage.getItem('employeeId');
-            setEmployeeId(id);
-            console.log('Fetched Employee ID:', id);
-        };
-        getEmployeeId();
-
-        const loadChatMessages = async () => {
+        const getEmployeeAndCompanyId = async () => {
             try {
-                const response = await fetchChatByTaskId(taskId);
-                console.log('Fetched Messages:', response);
-                if (response.status === 'success') {
-                    const fetchedMessages = response.data.map((msg) => ({
-                        id: msg.id.toString(),
-                        message: msg.message,
-                        employee_name: msg.employee_name,
-                        employee_id: msg.employee_id.toString(),
-                        time: msg.created_at,
-                        status: 'sent',
-                    }));
-                    setMessages(fetchedMessages);
-                }
+                const id = await AsyncStorage.getItem('employeeId');
+                const compId = await AsyncStorage.getItem('companyId');
+                setEmployeeId(id);
+                setCompanyId(compId);
             } catch (error) {
-                console.error('Error fetching chat messages:', error.message);
+                Alert.alert('Error', 'Failed to load user data. Please try again.');
             }
         };
-
+        getEmployeeAndCompanyId();
         loadChatMessages();
     }, [taskId]);
 
-    const onRefresh = async () => {
-        setRefreshing(true);
+    const loadChatMessages = async () => {
+        setIsLoading(true);
         try {
             const response = await fetchChatByTaskId(taskId);
             if (response.status === 'success') {
@@ -74,29 +66,48 @@ const ChatInterface = ({ route }) => {
                     message: msg.message,
                     employee_name: msg.employee_name,
                     employee_id: msg.employee_id.toString(),
-                    time: msg.created_at,
+                    time: msg.created_at_wib,
                     status: 'sent',
                 }));
+                fetchedMessages.sort((a, b) => new Date(a.time) - new Date(b.time));
                 setMessages(fetchedMessages);
+                scrollToBottom();
             }
         } catch (error) {
-            console.error('Error refreshing chat messages:', error.message);
+            Alert.alert('Error', 'Failed to load chat messages. Please try again.');
         } finally {
-            setRefreshing(false);
+            setIsLoading(false);
+        }
+    };
+
+
+    const onRefresh = async () => {
+        setRefreshing(true);
+        await loadChatMessages();
+        setRefreshing(false);
+    };
+
+    const scrollToBottom = () => {
+        if (flatListRef.current && messages.length > 0) {
+            flatListRef.current.scrollToEnd({ animated: false });
         }
     };
 
     useEffect(() => {
-        if (flatListRef.current && messages.length > 0) {
-            flatListRef.current.scrollToEnd({ animated: false });
+        scrollToBottom();
+    }, [messages])
+    const handleBackPress = () => {
+        // Option 2: Go back to the previous screen
+        navigation.goBack();
+    };
+    const handleSend = async () => {
+        if (!inputText.trim() || !employeeId || !companyId) {
+            Alert.alert('Error', 'Missing required information. Please try again.');
+            return;
         }
-    }, [messages]);
-
-    const handleSend = () => {
-        if (!inputText.trim()) return;
 
         const newMessage = {
-            id: (messages.length + 1).toString(),
+            id: Date.now().toString(),
             message: inputText,
             employee_name: 'You',
             employee_id: employeeId,
@@ -104,57 +115,120 @@ const ChatInterface = ({ route }) => {
             status: 'sending',
         };
 
-        setMessages([...messages, newMessage]);
+        setMessages((prevMessages) => [...prevMessages, newMessage]);
         setInputText('');
         setSending(true);
 
-        setTimeout(() => {
+        try {
+            const response = await sendChatMessage(employeeId, taskId, inputText.trim(), companyId);
+
+            if (response && response.id) {
+                setMessages((prevMessages) =>
+                    prevMessages.map((msg) =>
+                        msg.id === newMessage.id ? { ...msg, status: 'sent', id: response.id.toString() } : msg,
+                    ),
+                );
+            } else {
+                setMessages((prevMessages) =>
+                    prevMessages.map((msg) => (msg.id === newMessage.id ? { ...msg, status: 'sent' } : msg)),
+                );
+            }
+        } catch (error) {
+            Alert.alert('Error', 'Failed to send message. Please try again.');
+
             setMessages((prevMessages) =>
-                prevMessages.map((msg) => (msg.id === newMessage.id ? { ...msg, status: 'sent' } : msg)),
+                prevMessages.map((msg) => (msg.id === newMessage.id ? { ...msg, status: 'failed' } : msg)),
             );
+        } finally {
             setSending(false);
-        }, 2000);
+        }
+    };
+    const renderShimmer = () => (
+        <View style={styles.shimmerContainer}>
+            {[...Array(5)].map((_, index) => (
+                <View key={index} style={styles.shimmerMessageContainer}>
+                    <Shimmer width={40} height={40} style={styles.shimmerAvatar} />
+                    <View style={styles.shimmerTextContainer}>
+                        <Shimmer width={SCREEN_WIDTH * 0.6} height={20} style={styles.shimmerText} />
+                        <Shimmer width={SCREEN_WIDTH * 0.4} height={15} style={[styles.shimmerText, { marginTop: 5 }]} />
+                    </View>
+                </View>
+            ))}
+        </View>
+    );
+
+    const renderDateHeader = (date) => {
+        const messageDate = new Date(date);
+        const today = new Date();
+        const yesterday = new Date(today);
+        yesterday.setDate(yesterday.getDate() - 1);
+
+        if (messageDate.toDateString() === today.toDateString()) {
+            return 'Hari Ini';
+        } else if (messageDate.toDateString() === yesterday.toDateString()) {
+            return 'Kemarin';
+        } else {
+            return messageDate.toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' });
+        }
     };
 
-    const renderMessage = ({ item }) => {
+    const renderMessage = ({ item, index }) => {
         const messageTime = new Date(item.time);
-        const timeInGMT7 = new Date(messageTime.setHours(messageTime.getHours() + 7)).toLocaleTimeString('id-ID', {
+        const timeInGMT7 = messageTime.toLocaleTimeString('id-ID', {
             hour: '2-digit',
             minute: '2-digit',
         });
 
         const isCurrentUser = item.employee_id === employeeId;
+        const showDateHeader =
+            index === 0 || new Date(item.time).toDateString() !== new Date(messages[index - 1].time).toDateString();
 
         return (
-            <View
-                style={[
-                    styles.messageContainer,
-                    isCurrentUser ? styles.currentUserContainer : styles.otherUserContainer,
-                ]}
-            >
-                <Text style={[styles.messageSender, isCurrentUser ? styles.currentUserSender : styles.otherUserSender]}>
-                    {isCurrentUser ? 'You' : item.employee_name}
-                </Text>
-                <View style={styles.bubbleAndTimeContainer}>
-                    {isCurrentUser && <Text style={[styles.messageTime, styles.currentUserTime]}>{timeInGMT7}</Text>}
-                    <View
+            <>
+                {showDateHeader && <Text style={styles.dateLabel}>{renderDateHeader(item.time)}</Text>}
+                <View
+                    style={[
+                        styles.messageContainer,
+                        isCurrentUser ? styles.currentUserContainer : styles.otherUserContainer,
+                    ]}
+                >
+                    <Text
                         style={[
-                            styles.messageBubble,
-                            isCurrentUser ? styles.currentUserBubble : styles.otherUserBubble,
+                            styles.messageSender,
+                            isCurrentUser ? styles.currentUserSender : styles.otherUserSender,
                         ]}
                     >
-                        <Text
-                            style={[styles.messageText, isCurrentUser ? styles.currentUserText : styles.otherUserText]}
+                        {isCurrentUser ? 'You' : item.employee_name}
+                    </Text>
+                    <View style={styles.bubbleAndTimeContainer}>
+                        {isCurrentUser && (
+                            <Text style={[styles.messageTime, styles.currentUserTime]}>{timeInGMT7}</Text>
+                        )}
+                        <View
+                            style={[
+                                styles.messageBubble,
+                                isCurrentUser ? styles.currentUserBubble : styles.otherUserBubble,
+                            ]}
                         >
-                            {item.message}
-                        </Text>
+                            <Text
+                                style={[
+                                    styles.messageText,
+                                    isCurrentUser ? styles.currentUserText : styles.otherUserText,
+                                ]}
+                            >
+                                {item.message}
+                            </Text>
+                        </View>
+                        {!isCurrentUser && <Text style={[styles.messageTime, styles.otherUserTime]}>{timeInGMT7}</Text>}
                     </View>
-                    {!isCurrentUser && <Text style={[styles.messageTime, styles.otherUserTime]}>{timeInGMT7}</Text>}
+                    {item.status === 'sending' && (
+                        <Ionicons name="time-outline" size={12} color="#777" style={styles.sendingIcon} />
+                    )}
+                    {item.status === 'failed' && (
+                        <Ionicons name="alert-circle-outline" size={12} color="red" style={styles.sendingIcon} />
+                    )}
                 </View>
-                {item.status === 'sending' && (
-                    <Ionicons name="time-outline" size={12} color="#777" style={styles.sendingIcon} />
-                )}
-            </View>
+            </>
         );
     };
 
@@ -168,26 +242,31 @@ const ChatInterface = ({ route }) => {
                     end={{ x: 1, y: 1 }}
                 >
                     <View style={styles.headerContent}>
-                        <TouchableOpacity style={styles.backButton}>
+                        <TouchableOpacity style={styles.backButton} onPress={handleBackPress}>
                             <Ionicons name="arrow-back" color="#fff" size={28} />
                         </TouchableOpacity>
                         <View style={styles.headerTextContainer}>
                             <Text style={styles.header}>{taskDetails.title || 'Task Title'}</Text>
-                            <Text style={styles.subHeader}>Kejartugas</Text>
+                            <Text style={styles.subHeader}>{taskDetails.subtitle || 'Task Title'}</Text>
                         </View>
                     </View>
                 </LinearGradient>
             </View>
 
-            <FlatList
-                ref={flatListRef}
-                data={messages}
-                renderItem={renderMessage}
-                keyExtractor={(item) => item.id}
-                contentContainerStyle={styles.messageContainerStyle}
-                ListHeaderComponent={() => <Text style={styles.dateLabel}>Hari Ini</Text>}
-                refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
-            />
+            {isLoading ? (
+                renderShimmer()
+            ) : (
+                <FlatList
+                    ref={flatListRef}
+                    data={messages}
+                    renderItem={renderMessage}
+                    keyExtractor={(item) => item.id}
+                    contentContainerStyle={styles.messageContainerStyle}
+                    refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
+                    onContentSizeChange={scrollToBottom}
+                    onLayout={scrollToBottom}
+                />
+            )}
 
             <View style={styles.inputContainer}>
                 <TextInput
@@ -212,13 +291,13 @@ const styles = StyleSheet.create({
         backgroundColor: '#f0f0f0',
     },
     backgroundBox: {
-        height: 110,
+        height: 130,
     },
     linearGradient: {
         flex: 1,
         borderBottomLeftRadius: 50,
         borderBottomRightRadius: 50,
-        paddingTop: 40, // Adjust this value to give more space for the header
+        paddingTop: 40,
         paddingHorizontal: 20,
         elevation: 5,
     },
@@ -234,18 +313,18 @@ const styles = StyleSheet.create({
         flex: 1,
         alignItems: 'flex-start',
         alignSelf: 'center',
-        marginBottom: 5, // Reduced margin to pull the text up
+        marginBottom: 5,
     },
     header: {
-        fontSize: 20, // Slightly larger font size
+        fontSize: 20,
         fontWeight: 'bold',
         color: '#fff',
-        marginBottom: 2, // Spacing between title and subtitle
+        marginBottom: 2,
     },
     subHeader: {
         color: '#dfefff',
-        fontSize: 12, // Slightly smaller font size
-        marginTop: 0, // Removed top margin to keep it close to the header
+        fontSize: 12,
+        marginTop: 0,
     },
     messageContainerStyle: {
         flexGrow: 1,
@@ -260,7 +339,7 @@ const styles = StyleSheet.create({
         paddingVertical: 5,
         color: '#6b6b6b',
         fontSize: 12,
-        marginBottom: 10,
+        marginVertical: 10,
     },
     messageContainer: {
         marginBottom: 15,
@@ -351,6 +430,25 @@ const styles = StyleSheet.create({
         color: 'red',
         fontSize: 16,
         fontWeight: 'bold',
+    },
+    shimmerContainer: {
+        flex: 1,
+        paddingHorizontal: 15,
+        paddingTop: 10,
+    },
+    shimmerMessageContainer: {
+        flexDirection: 'row',
+        marginBottom: 20,
+    },
+    shimmerAvatar: {
+        borderRadius: 20,
+        marginRight: 10,
+    },
+    shimmerTextContainer: {
+        flex: 1,
+    },
+    shimmerText: {
+        borderRadius: 5,
     },
 });
 
