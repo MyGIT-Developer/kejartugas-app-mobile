@@ -1,31 +1,33 @@
-import React, { useState, useEffect } from 'react';
 import {
     View,
     Text,
     StyleSheet,
+    Button,
     Alert,
     TextInput,
     TouchableOpacity,
     KeyboardAvoidingView,
     Platform,
     Image,
-    ScrollView,
 } from 'react-native';
+import React, { useState, useEffect } from 'react';
 import { LinearGradient } from 'expo-linear-gradient';
 import * as Location from 'expo-location';
 import Icon from 'react-native-vector-icons/MaterialIcons';
+import { ScrollView } from 'react-native-gesture-handler';
 import { markAbsent, getAttendance, getAttendanceReport, checkOut, checkIn } from '../api/absent';
 import { getParameter } from '../api/parameter';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useNavigation } from '@react-navigation/native';
-import { launchCameraAsync, MediaTypeOptions } from 'expo-image-picker';
+import { launchCameraAsync, MediaTypeOptions, requestCameraPermissionsAsync } from 'expo-image-picker';
 import * as FileSystem from 'expo-file-system';
-import * as ImagePicker from 'expo-image-picker';
 import MyMap from '../components/Maps';
 import ReusableBottomPopUp from '../components/ReusableBottomPopUp';
 import { Feather } from '@expo/vector-icons';
 import CheckBox from '../components/Checkbox';
 import DraggableOverlayBottom from '../components/DraggableOverlayBottom';
+import DraggableModalTask from '../components/DraggableModalTask';
+import ClickableBottomOverlay from '../components/ClickableBottomOverlay';
 
 const DetailKehadiran = () => {
     const [currentTime, setCurrentTime] = useState('');
@@ -38,45 +40,69 @@ const DetailKehadiran = () => {
     const [jamTelat, setjamTelat] = useState('');
     const navigation = useNavigation();
     const [isWFH, setIsWFH] = useState(false);
-    const [currentStep, setCurrentStep] = useState('camera');
     const [capturedImage, setCapturedImage] = useState(null);
     const [alert, setAlert] = useState({ show: false, type: 'success', message: '' });
     const [reasonInput, setReasonInput] = useState('');
     const [location, setLocation] = useState(null);
-    const [isCameraReady, setIsCameraReady] = useState(false);
 
     useEffect(() => {
         const setupPage = async () => {
             await getStoredData();
-            if (currentStep === 'camera' && isCameraReady) {
-                await requestCameraPermission();
-            }
+            await getLocation();
+            await requestCameraPermission();
         };
 
         setupPage();
-    }, [currentStep, isCameraReady]);
+    }, []);
+
+    const requestCameraPermission = async () => {
+        const { status } = await requestCameraPermissionsAsync();
+        if (status !== 'granted') {
+            Alert.alert('Permission required', 'Camera permission is required to use this feature.');
+        }
+    };
+
+    const fetchOfficeHour = async () => {
+        try {
+            const response = await getParameter(companyId);
+            setjamTelat(response.data.jam_telat);
+        } catch (error) {
+            console.error("Error fetching office hour data:", error);
+        }
+    };
 
     useEffect(() => {
-        setIsCameraReady(true);
-        return () => setIsCameraReady(false);
-    }, []);
+        fetchOfficeHour();
+    }, [companyId]);
+
+    const fetchAttendanceData = async () => {
+        try {
+            const response = await getAttendance(employeeId);
+            setAttendanceData(response.attendance);
+            setIsCheckedIn(response.isCheckedInToday);
+        } catch (error) {
+            console.error("Error fetching attendance data:", error);
+        }
+    };
+
+    useEffect(() => {
+        fetchAttendanceData();
+    }, [employeeId]);
 
     useEffect(() => {
         const interval = setInterval(() => {
             const now = new Date();
-            const options = { hour: '2-digit', minute: '2-digit', hour12: true };
+            const options = {
+                hour: '2-digit',
+                minute: '2-digit',
+                hour12: true,
+            };
             const time = now.toLocaleTimeString([], options);
             setCurrentTime(time);
         }, 1000);
 
         return () => clearInterval(interval);
     }, []);
-
-    useEffect(() => {
-        fetchOfficeHour();
-        fetchAttendanceData();
-        getLocation();
-    }, [companyId, employeeId]);
 
     const getStoredData = async () => {
         try {
@@ -86,70 +112,29 @@ const DetailKehadiran = () => {
             setCompanyId(storedCompanyId);
         } catch (error) {
             console.error('Error fetching AsyncStorage data:', error);
-            showAlert('Failed to load user data', 'error');
-        }
-    };
-
-    const fetchOfficeHour = async () => {
-        try {
-            const response = await getParameter(companyId);
-            setjamTelat(response.data.jam_telat);
-            console.log('nasgor', response.data.jam_telat);
-        } catch (error) {
-            console.error("Error fetching office hour data:", error.response.data.message);
-            showAlert('Failed to fetch office hours', 'error');
-        }
-    };
-
-    const fetchAttendanceData = async () => {
-        try {
-            const response = await getAttendance(employeeId);
-            setAttendanceData(response.attendance);
-            setIsCheckedIn(response.isCheckedInToday);
-        } catch (error) {
-            console.error("Error fetching attendance data:", error);
-            showAlert('Failed to load attendance data', 'error');
         }
     };
 
     const getLocation = async () => {
-        try {
-            let { status } = await Location.requestForegroundPermissionsAsync();
-            if (status !== 'granted') {
-                setErrorMsg('Permission to access location was denied');
-                return;
-            }
-
-            let locationResult = await Location.getCurrentPositionAsync({});
-            const latitude = locationResult.coords.latitude;
-            const longitude = locationResult.coords.longitude;
-
-            const formattedCoordinates = `${latitude.toFixed(6)}, ${longitude.toFixed(6)}`;
-            setLocation(formattedCoordinates);
-
-            const [reverseGeocodeResult] = await Location.reverseGeocodeAsync({ latitude, longitude });
-
-            if (reverseGeocodeResult) {
-                setLocationName(
-                    `${reverseGeocodeResult.street || ''}, ${reverseGeocodeResult.city || ''}, ${reverseGeocodeResult.region || ''}, ${reverseGeocodeResult.country || ''}`.replace(/^[,\s]+|[,\s]+$/g, '').replace(/,\s*,/g, ',')
-                );
-            } else {
-                setLocationName('Unable to retrieve location name');
-            }
-        } catch (error) {
-            setErrorMsg('Error getting location: ' + error.message);
-            showAlert('Failed to get location', 'error');
-        }
-    };
-
-    const requestCameraPermission = async () => {
-        const { status } = await ImagePicker.requestCameraPermissionsAsync();
+        let { status } = await Location.requestForegroundPermissionsAsync();
         if (status !== 'granted') {
-            Alert.alert('Permission needed', 'Camera permission is required to take photos.');
-            return false;
+            Alert.alert('Permission to access location was denied');
+            return;
         }
-        triggerCamera();
-        return true;
+
+        let location = await Location.getCurrentPositionAsync({});
+        setLocation(`${location.coords.latitude}, ${location.coords.longitude}`);
+
+        const [reverseGeocodeResult] = await Location.reverseGeocodeAsync({
+            latitude: location.coords.latitude,
+            longitude: location.coords.longitude,
+        });
+
+        if (reverseGeocodeResult) {
+            setLocationName(
+                `${reverseGeocodeResult.street}, ${reverseGeocodeResult.city}, ${reverseGeocodeResult.region}, ${reverseGeocodeResult.country}`,
+            );
+        }
     };
 
     const triggerCamera = async () => {
@@ -162,30 +147,13 @@ const DetailKehadiran = () => {
             });
 
             if (!result.canceled && result.assets && result.assets[0].uri) {
-                if (await validateImage(result.assets[0].uri)) {
-                    setCapturedImage(result.assets[0].uri);
-                    setCurrentStep('location');
-                } else {
-                    throw new Error('Invalid image data');
-                }
+                setCapturedImage(result.assets[0].uri);
             } else {
-                Alert.alert('Camera was canceled or no valid image was captured.');
-                navigation.goBack();
+                console.log('Camera was canceled or no valid image was captured.');
             }
         } catch (error) {
             console.error('Camera error:', error);
             Alert.alert('Error', `Error when using camera: ${error.message || 'Unknown error'}`);
-            navigation.goBack();
-        }
-    };
-
-    const validateImage = async (uri) => {
-        try {
-            const fileInfo = await FileSystem.getInfoAsync(uri);
-            return fileInfo.exists && fileInfo.size > 0;
-        } catch (error) {
-            console.error('Error validating image:', error);
-            return false;
         }
     };
 
@@ -203,20 +171,24 @@ const DetailKehadiran = () => {
     const isUserLate = calculateLateStatus();
 
     const handleClockIn = async () => {
+        if (!capturedImage) {
+            showAlert('Silahkan mengambil foto terlebih dahulu!', 'Error');
+            return;
+        }
+
         if (isUserLate && !reasonInput.trim()) {
-            showAlert('Silahkan memberikan Alasan Keterlambatan!', 'error');
+            showAlert('Silahkan memberikan Alasan Keterlambatan!', 'Error');
             return;
         }
 
         try {
-            await ensureDirectoryExists(FileSystem.documentDirectory + 'recents/');
             const response = await checkIn(
                 employeeId,
                 companyId,
                 isUserLate ? reasonInput : null,
                 capturedImage,
                 location,
-                isWFH
+                isWFH,
             );
             showAlert('Anda berhasil check-in!', 'success');
             setTimeout(() => {
@@ -225,14 +197,7 @@ const DetailKehadiran = () => {
             }, 1500);
         } catch (error) {
             console.error('Check-in error:', error.message);
-            showAlert(`Error when checking in: ${error.message || 'Unknown error'}`, 'error');
-        }
-    };
-
-    const ensureDirectoryExists = async (directory) => {
-        const dirInfo = await FileSystem.getInfoAsync(directory);
-        if (!dirInfo.exists) {
-            await FileSystem.makeDirectoryAsync(directory, { intermediates: true });
+            showAlert(`Error when checking in: ${error.message || 'Unknown error'}`, 'Error');
         }
     };
 
@@ -243,14 +208,6 @@ const DetailKehadiran = () => {
     const handleGoBack = () => {
         navigation.goBack();
     };
-
-    if (currentStep === 'camera') {
-        return (
-            <View style={styles.container}>
-                <Text>Preparing camera...</Text>
-            </View>
-        );
-    }
 
     return (
         <View style={{ flex: 1 }}>
@@ -277,12 +234,39 @@ const DetailKehadiran = () => {
                 >
                     <ScrollView contentContainerStyle={styles.scrollViewContent}>
                         <View style={{ padding: 20, display: 'flex', flexDirection: 'column', gap: 15 }}>
+                            <View style={{
+                                display: 'flex',
+                                flexDirection: 'row',
+                                justifyContent: 'space-between',
+                                alignItems: 'center',
+                                gap: 10,
+                            }}>
+                                <Text style={{ fontWeight: '500', fontSize: 20 }}>Clock In</Text>
+                                {isUserLate && (
+                                    <View style={[styles.statusView, { backgroundColor: '#ffbda5' }]}>
+                                        <View style={{ padding: 4, borderRadius: 50, backgroundColor: '#ff0002' }} />
+                                        <Text style={{ color: '#000' }}>Late</Text>
+                                    </View>
+                                )}
+                            </View>
+
                             <View style={styles.locationContainer}>
-                                <View style={{ display: 'flex', flexDirection: 'row', gap: 3, alignItems: 'center' }}>
+                                <View style={{
+                                    display: 'flex',
+                                    flexDirection: 'row',
+                                    gap: 3,
+                                    alignItems: 'center',
+                                }}>
                                     <Icon name="location-on" size={24} color="gray" style={{ fontWeight: '500' }} />
                                     <Text style={{ fontWeight: '500', fontSize: 18 }}>Lokasi saat ini</Text>
                                 </View>
-                                <View style={{ display: 'flex', flexDirection: 'row', gap: 3, alignItems: 'center' }}>
+
+                                <View style={{
+                                    display: 'flex',
+                                    flexDirection: 'row',
+                                    gap: 3,
+                                    alignItems: 'center',
+                                }}>
                                     <Text style={{ fontWeight: '400', fontSize: 14 }}>{locationName}</Text>
                                 </View>
                             </View>
@@ -291,7 +275,13 @@ const DetailKehadiran = () => {
                                 title="Sedang berada di luar kantor"
                                 isChecked={isWFH}
                             />
-                            {capturedImage && <Image source={{ uri: capturedImage }} style={styles.previewImage} />}
+                            {capturedImage ? (
+                                <Image source={{ uri: capturedImage }} style={styles.previewImage} />
+                            ) : (
+                                <TouchableOpacity style={styles.captureButton} onPress={triggerCamera}>
+                                    <Text style={styles.captureButtonText}>Capture Image</Text>
+                                </TouchableOpacity>
+                            )}
                             {isUserLate && (
                                 <View style={styles.lateContainer}>
                                     <TextInput
@@ -304,16 +294,22 @@ const DetailKehadiran = () => {
                                 </View>
                             )}
                             <View style={styles.buttonContainer}>
-                                <TouchableOpacity
-                                    style={[
-                                        styles.checkInButton,
-                                        isUserLate && !reasonInput ? styles.disabledButton : styles.enabledButton,
-                                    ]}
-                                    onPress={handleClockIn}
-                                    disabled={isUserLate && !reasonInput}
-                                >
-                                    <Text style={styles.buttonText}>Clock In</Text>
-                                </TouchableOpacity>
+                                {isUserLate ? (
+                                    <TouchableOpacity
+                                        style={[
+                                            styles.checkInButton,
+                                            reasonInput ? styles.enabledButton : styles.disabledButton,
+                                        ]}
+                                        onPress={handleClockIn}
+                                        disabled={!reasonInput}
+                                    >
+                                        <Text style={styles.buttonText}>Clock In</Text>
+                                    </TouchableOpacity>
+                                ) : (
+                                    <TouchableOpacity style={[styles.checkInButton]} onPress={handleClockIn}>
+                                        <Text style={styles.buttonText}>Clock In</Text>
+                                    </TouchableOpacity>
+                                )}
                             </View>
                         </View>
                     </ScrollView>
@@ -328,7 +324,6 @@ const DetailKehadiran = () => {
         </View>
     );
 };
-
 
 const styles = StyleSheet.create({
     container: {
@@ -366,11 +361,9 @@ const styles = StyleSheet.create({
         zIndex: 11,
     },
     headerText: {
-        fontSize: 22,
-        fontWeight: 'bold',
+        fontSize: 18,
+        fontWeight: '600',
         color: 'white',
-        textAlign: 'center',
-        letterSpacing: -1,
     },
     overlayBottom: {
         position: 'absolute',
@@ -533,6 +526,18 @@ const styles = StyleSheet.create({
         borderRadius: 20,
         marginHorizontal: 20,
         height: 250,
+    },
+    captureButton: {
+        backgroundColor: '#27A0CF',
+        padding: 15,
+        borderRadius: 10,
+        alignItems: 'center',
+        marginBottom: 20,
+    },
+    captureButtonText: {
+        color: 'white',
+        fontSize: 16,
+        fontWeight: 'bold',
     },
 });
 
