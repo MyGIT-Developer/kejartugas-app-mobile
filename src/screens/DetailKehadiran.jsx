@@ -1,33 +1,31 @@
+import React, { useState, useEffect } from 'react';
 import {
     View,
     Text,
     StyleSheet,
-    Button,
     Alert,
     TextInput,
     TouchableOpacity,
     KeyboardAvoidingView,
     Platform,
     Image,
+    ScrollView,
 } from 'react-native';
-import React, { useState, useEffect } from 'react';
 import { LinearGradient } from 'expo-linear-gradient';
 import * as Location from 'expo-location';
-import Icon from 'react-native-vector-icons/MaterialIcons'; // Import the icon library
-import { ScrollView } from 'react-native-gesture-handler';
+import Icon from 'react-native-vector-icons/MaterialIcons';
 import { markAbsent, getAttendance, getAttendanceReport, checkOut, checkIn } from '../api/absent';
 import { getParameter } from '../api/parameter';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useNavigation } from '@react-navigation/native';
 import { launchCameraAsync, MediaTypeOptions } from 'expo-image-picker';
-import * as FileSystem from 'expo-file-system'; // To convert image to base64
+import * as FileSystem from 'expo-file-system';
+import * as ImagePicker from 'expo-image-picker';
 import MyMap from '../components/Maps';
 import ReusableBottomPopUp from '../components/ReusableBottomPopUp';
 import { Feather } from '@expo/vector-icons';
 import CheckBox from '../components/Checkbox';
-import DraggableOverlayBottom from '../components/DraggableOverlayBottom'; // Adjust the import path as needed
-import DraggableModalTask from '../components/DraggableModalTask'; // Adjust the import path as needed
-import ClickableBottomOverlay from '../components/ClickableBottomOverlay';
+import DraggableOverlayBottom from '../components/DraggableOverlayBottom';
 
 const DetailKehadiran = () => {
     const [currentTime, setCurrentTime] = useState('');
@@ -41,20 +39,66 @@ const DetailKehadiran = () => {
     const navigation = useNavigation();
     const [isWFH, setIsWFH] = useState(false);
     const [currentStep, setCurrentStep] = useState('camera');
-    
-    const fetchOfficeHour = async () => {
-        try {
-            const response = await getParameter(companyId);
+    const [capturedImage, setCapturedImage] = useState(null);
+    const [alert, setAlert] = useState({ show: false, type: 'success', message: '' });
+    const [reasonInput, setReasonInput] = useState('');
+    const [location, setLocation] = useState(null);
+    const [isCameraReady, setIsCameraReady] = useState(false);
 
-            setjamTelat(response.data.jam_telat);
-        } catch (error) {
-            // console.error("Error fetching office hour data:", error);
-        }
-    };
+    useEffect(() => {
+        const setupPage = async () => {
+            await getStoredData();
+            if (currentStep === 'camera' && isCameraReady) {
+                await requestCameraPermission();
+            }
+        };
+
+        setupPage();
+    }, [currentStep, isCameraReady]);
+
+    useEffect(() => {
+        setIsCameraReady(true);
+        return () => setIsCameraReady(false);
+    }, []);
+
+    useEffect(() => {
+        const interval = setInterval(() => {
+            const now = new Date();
+            const options = { hour: '2-digit', minute: '2-digit', hour12: true };
+            const time = now.toLocaleTimeString([], options);
+            setCurrentTime(time);
+        }, 1000);
+
+        return () => clearInterval(interval);
+    }, []);
 
     useEffect(() => {
         fetchOfficeHour();
-    }, [companyId]);
+        fetchAttendanceData();
+        getLocation();
+    }, [companyId, employeeId]);
+
+    const getStoredData = async () => {
+        try {
+            const storedEmployeeId = await AsyncStorage.getItem('employeeId');
+            const storedCompanyId = await AsyncStorage.getItem('companyId');
+            setEmployeeId(storedEmployeeId);
+            setCompanyId(storedCompanyId);
+        } catch (error) {
+            console.error('Error fetching AsyncStorage data:', error);
+            showAlert('Failed to load user data', 'error');
+        }
+    };
+
+    const fetchOfficeHour = async () => {
+        try {
+            const response = await getParameter(companyId);
+            setjamTelat(response.data.jam_telat);
+        } catch (error) {
+            console.error("Error fetching office hour data:", error);
+            showAlert('Failed to fetch office hours', 'error');
+        }
+    };
 
     const fetchAttendanceData = async () => {
         try {
@@ -62,71 +106,87 @@ const DetailKehadiran = () => {
             setAttendanceData(response.attendance);
             setIsCheckedIn(response.isCheckedInToday);
         } catch (error) {
-            // console.error("Error fetching attendance data:", error);
+            console.error("Error fetching attendance data:", error);
+            showAlert('Failed to load attendance data', 'error');
         }
     };
 
-    useEffect(() => {
-        fetchAttendanceData();
-    }, [employeeId]);
-
-    useEffect(() => {
-        // Update time every second
-        const interval = setInterval(() => {
-            const now = new Date();
-            const options = {
-                hour: '2-digit',
-                minute: '2-digit',
-                hour12: true,
-            };
-            const time = now.toLocaleTimeString([], options);
-            setCurrentTime(time);
-        }, 1000);
-
-        // Cleanup interval on component unmount
-        return () => clearInterval(interval);
-    }, []);
-
-    const [location, setLocation] = useState(null);
-
-    useEffect(() => {
-        (async () => {
-            try {
-                let { status } = await Location.requestForegroundPermissionsAsync();
-                if (status !== 'granted') {
-                    setErrorMsg('Permission to access location was denied');
-                    return;
-                }
-
-                let locationResult = await Location.getCurrentPositionAsync({});
-                const latitude = locationResult.coords.latitude;
-                const longitude = locationResult.coords.longitude;
-
-                // Format latitude and longitude
-                const formattedCoordinates = `${latitude.toFixed(6)}, ${longitude.toFixed(6)}`;
-                setLocation(formattedCoordinates);
-
-                // Reverse geocode to get location name
-                const [reverseGeocodeResult] = await Location.reverseGeocodeAsync({
-                    latitude,
-                    longitude,
-                });
-
-                if (reverseGeocodeResult) {
-                    setLocationName(
-                        `${reverseGeocodeResult.street || ''}, ${reverseGeocodeResult.city || ''}, ${reverseGeocodeResult.region || ''}, ${reverseGeocodeResult.country || ''}`.replace(/^[,\s]+|[,\s]+$/g, '').replace(/,\s*,/g, ',')
-                    );
-                } else {
-                    setLocationName('Unable to retrieve location name');
-                }
-            } catch (error) {
-                setErrorMsg('Error getting location: ' + error.message);
+    const getLocation = async () => {
+        try {
+            let { status } = await Location.requestForegroundPermissionsAsync();
+            if (status !== 'granted') {
+                setErrorMsg('Permission to access location was denied');
+                return;
             }
-        })();
-    }, []);
 
-    const [alert, setAlert] = useState({ show: false, type: 'success', message: '' });
-    const [reasonInput, setReasonInput] = useState('');
+            let locationResult = await Location.getCurrentPositionAsync({});
+            const latitude = locationResult.coords.latitude;
+            const longitude = locationResult.coords.longitude;
+
+            const formattedCoordinates = `${latitude.toFixed(6)}, ${longitude.toFixed(6)}`;
+            setLocation(formattedCoordinates);
+
+            const [reverseGeocodeResult] = await Location.reverseGeocodeAsync({ latitude, longitude });
+
+            if (reverseGeocodeResult) {
+                setLocationName(
+                    `${reverseGeocodeResult.street || ''}, ${reverseGeocodeResult.city || ''}, ${reverseGeocodeResult.region || ''}, ${reverseGeocodeResult.country || ''}`.replace(/^[,\s]+|[,\s]+$/g, '').replace(/,\s*,/g, ',')
+                );
+            } else {
+                setLocationName('Unable to retrieve location name');
+            }
+        } catch (error) {
+            setErrorMsg('Error getting location: ' + error.message);
+            showAlert('Failed to get location', 'error');
+        }
+    };
+
+    const requestCameraPermission = async () => {
+        const { status } = await ImagePicker.requestCameraPermissionsAsync();
+        if (status !== 'granted') {
+            Alert.alert('Permission needed', 'Camera permission is required to take photos.');
+            return false;
+        }
+        triggerCamera();
+        return true;
+    };
+
+    const triggerCamera = async () => {
+        try {
+            const result = await launchCameraAsync({
+                mediaTypes: MediaTypeOptions.Images,
+                allowsEditing: false,
+                quality: 0.7,
+                base64: true,
+            });
+
+            if (!result.canceled && result.assets && result.assets[0].uri) {
+                if (await validateImage(result.assets[0].uri)) {
+                    setCapturedImage(result.assets[0].uri);
+                    setCurrentStep('location');
+                } else {
+                    throw new Error('Invalid image data');
+                }
+            } else {
+                Alert.alert('Camera was canceled or no valid image was captured.');
+                navigation.goBack();
+            }
+        } catch (error) {
+            console.error('Camera error:', error);
+            Alert.alert('Error', `Error when using camera: ${error.message || 'Unknown error'}`);
+            navigation.goBack();
+        }
+    };
+
+    const validateImage = async (uri) => {
+        try {
+            const fileInfo = await FileSystem.getInfoAsync(uri);
+            return fileInfo.exists && fileInfo.size > 0;
+        } catch (error) {
+            console.error('Error validating image:', error);
+            return false;
+        }
+    };
 
     const calculateLateStatus = () => {
         const currentDate = new Date();
@@ -140,87 +200,15 @@ const DetailKehadiran = () => {
     };
 
     const isUserLate = calculateLateStatus();
-    const [capturedImage, setCapturedImage] = useState(null);
-    useEffect(() => {
-        const setupPage = async () => {
-            await getStoredData();
-            if (currentStep === 'camera') {
-                triggerCamera();
-            }
-        };
-
-        setupPage();
-    }, [currentStep]);
-
-    const getStoredData = async () => {
-        try {
-            const storedEmployeeId = await AsyncStorage.getItem('employeeId');
-            const storedCompanyId = await AsyncStorage.getItem('companyId');
-            setEmployeeId(storedEmployeeId);
-            setCompanyId(storedCompanyId);
-        } catch (error) {
-            console.error('Error fetching AsyncStorage data:', error);
-        }
-    };
-
-    const triggerCamera = async () => {
-        try {
-            const result = await launchCameraAsync({
-                mediaTypes: MediaTypeOptions.Images,
-                allowsEditing: false,
-                quality: 1,
-                base64: true,
-            });
-
-            if (!result.canceled && result.assets && result.assets[0].uri) {
-                setCapturedImage(result.assets[0].uri);
-                setCurrentStep('location');
-            } else {
-                Alert.alert('Camera was canceled or no valid image was captured.');
-                navigation.goBack();
-            }
-        } catch (error) {
-            console.error('Camera error:', error);
-            Alert.alert('Error', `Error when using camera: ${error.message || 'Unknown error'}`);
-            navigation.goBack();
-        }
-    };
-
-    const getLocation = async () => {
-        let { status } = await Location.requestForegroundPermissionsAsync();
-        if (status !== 'granted') {
-            Alert.alert('Permission to access location was denied');
-            return;
-        }
-
-        let location = await Location.getCurrentPositionAsync({});
-        setLocation(`${location.coords.latitude}, ${location.coords.longitude}`);
-
-        const [reverseGeocodeResult] = await Location.reverseGeocodeAsync({
-            latitude: location.coords.latitude,
-            longitude: location.coords.longitude,
-        });
-
-        if (reverseGeocodeResult) {
-            setLocationName(
-                `${reverseGeocodeResult.street}, ${reverseGeocodeResult.city}, ${reverseGeocodeResult.region}, ${reverseGeocodeResult.country}`
-            );
-        }
-    };
-
-    useEffect(() => {
-        if (currentStep === 'location') {
-            getLocation();
-        }
-    }, [currentStep]);
 
     const handleClockIn = async () => {
         if (isUserLate && !reasonInput.trim()) {
-            showAlert('Silahkan memberikan Alasan Keterlambatan!', 'Error');
+            showAlert('Silahkan memberikan Alasan Keterlambatan!', 'error');
             return;
         }
 
         try {
+            await ensureDirectoryExists(FileSystem.documentDirectory + 'recents/');
             const response = await checkIn(
                 employeeId,
                 companyId,
@@ -236,7 +224,14 @@ const DetailKehadiran = () => {
             }, 1500);
         } catch (error) {
             console.error('Check-in error:', error.message);
-            showAlert(`Error when checking in: ${error.message || 'Unknown error'}`, 'Error');
+            showAlert(`Error when checking in: ${error.message || 'Unknown error'}`, 'error');
+        }
+    };
+
+    const ensureDirectoryExists = async (directory) => {
+        const dirInfo = await FileSystem.getInfoAsync(directory);
+        if (!dirInfo.exists) {
+            await FileSystem.makeDirectoryAsync(directory, { intermediates: true });
         }
     };
 
@@ -332,6 +327,7 @@ const DetailKehadiran = () => {
         </View>
     );
 };
+
 
 const styles = StyleSheet.create({
     container: {
