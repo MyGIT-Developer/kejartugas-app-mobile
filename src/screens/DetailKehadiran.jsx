@@ -13,20 +13,20 @@ import {
 import React, { useState, useEffect } from 'react';
 import { LinearGradient } from 'expo-linear-gradient';
 import * as Location from 'expo-location';
-import Icon from 'react-native-vector-icons/MaterialIcons';
+import Icon from 'react-native-vector-icons/MaterialIcons'; // Import the icon library
 import { ScrollView } from 'react-native-gesture-handler';
 import { markAbsent, getAttendance, getAttendanceReport, checkOut, checkIn } from '../api/absent';
 import { getParameter } from '../api/parameter';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useNavigation } from '@react-navigation/native';
-import { launchCameraAsync, MediaTypeOptions, requestCameraPermissionsAsync } from 'expo-image-picker';
-import * as FileSystem from 'expo-file-system';
+import { launchCameraAsync, MediaTypeOptions } from 'expo-image-picker';
+import * as FileSystem from 'expo-file-system'; // To convert image to base64
 import MyMap from '../components/Maps';
 import ReusableBottomPopUp from '../components/ReusableBottomPopUp';
 import { Feather } from '@expo/vector-icons';
 import CheckBox from '../components/Checkbox';
-import DraggableOverlayBottom from '../components/DraggableOverlayBottom';
-import DraggableModalTask from '../components/DraggableModalTask';
+import DraggableOverlayBottom from '../components/DraggableOverlayBottom'; // Adjust the import path as needed
+import DraggableModalTask from '../components/DraggableModalTask'; // Adjust the import path as needed
 import ClickableBottomOverlay from '../components/ClickableBottomOverlay';
 
 const DetailKehadiran = () => {
@@ -40,34 +40,14 @@ const DetailKehadiran = () => {
     const [jamTelat, setjamTelat] = useState('');
     const navigation = useNavigation();
     const [isWFH, setIsWFH] = useState(false);
-    const [capturedImage, setCapturedImage] = useState(null);
-    const [alert, setAlert] = useState({ show: false, type: 'success', message: '' });
-    const [reasonInput, setReasonInput] = useState('');
-    const [location, setLocation] = useState(null);
-
-    useEffect(() => {
-        const setupPage = async () => {
-            await getStoredData();
-            await getLocation();
-            await requestCameraPermission();
-        };
-
-        setupPage();
-    }, []);
-
-    const requestCameraPermission = async () => {
-        const { status } = await requestCameraPermissionsAsync();
-        if (status !== 'granted') {
-            Alert.alert('Permission required', 'Camera permission is required to use this feature.');
-        }
-    };
 
     const fetchOfficeHour = async () => {
         try {
             const response = await getParameter(companyId);
+
             setjamTelat(response.data.jam_telat);
         } catch (error) {
-            console.error("Error fetching office hour data:", error);
+            // console.error("Error fetching office hour data:", error);
         }
     };
 
@@ -81,7 +61,7 @@ const DetailKehadiran = () => {
             setAttendanceData(response.attendance);
             setIsCheckedIn(response.isCheckedInToday);
         } catch (error) {
-            console.error("Error fetching attendance data:", error);
+            // console.error("Error fetching attendance data:", error);
         }
     };
 
@@ -90,6 +70,7 @@ const DetailKehadiran = () => {
     }, [employeeId]);
 
     useEffect(() => {
+        // Update time every second
         const interval = setInterval(() => {
             const now = new Date();
             const options = {
@@ -101,7 +82,71 @@ const DetailKehadiran = () => {
             setCurrentTime(time);
         }, 1000);
 
+        // Cleanup interval on component unmount
         return () => clearInterval(interval);
+    }, []);
+
+    const [location, setLocation] = useState(null);
+
+    useEffect(() => {
+        // Get location permissions and device location
+        (async () => {
+            let { status } = await Location.requestForegroundPermissionsAsync();
+            if (status !== 'granted') {
+                setErrorMsg('Permission to access location was denied');
+                return;
+            }
+
+            let location = await Location.getCurrentPositionAsync({});
+            const latitude = location.coords.latitude;
+            const longitude = location.coords.longitude;
+
+            // const latitude = -6.1974472;
+            // const longitude = 106.7610134;
+            // Format latitude and longitude
+            const formattedCoordinates = `${latitude.toFixed(6)}, ${longitude.toFixed(6)}`;
+            setLocation(formattedCoordinates);
+            // Reverse geocode to get location name
+            const [reverseGeocodeResult] = await Location.reverseGeocodeAsync({
+                latitude,
+                longitude,
+            });
+
+            if (reverseGeocodeResult) {
+                setLocationName(
+                    `${reverseGeocodeResult.street}, ${reverseGeocodeResult.city}, ${reverseGeocodeResult.region}, ${reverseGeocodeResult.country}`,
+                );
+            } else {
+                setLocationName('Unable to retrieve location name');
+            }
+        })();
+    }, []);
+
+    const [alert, setAlert] = useState({ show: false, type: 'success', message: '' });
+    const [reasonInput, setReasonInput] = useState('');
+
+    const calculateLateStatus = () => {
+        const currentDate = new Date();
+        const jamTelatParts = jamTelat.split(':');
+        const officeStartTime = new Date();
+        officeStartTime.setHours(parseInt(jamTelatParts[0], 10));
+        officeStartTime.setMinutes(parseInt(jamTelatParts[1], 10));
+        officeStartTime.setSeconds(0);
+
+        return currentDate > officeStartTime;
+    };
+
+    const isUserLate = calculateLateStatus();
+    const [capturedImage, setCapturedImage] = useState(null);
+
+    useEffect(() => {
+        const setupPage = async () => {
+            await getStoredData();
+            await getLocation();
+            triggerCamera();
+        };
+
+        setupPage();
     }, []);
 
     const getStoredData = async () => {
@@ -142,33 +187,20 @@ const DetailKehadiran = () => {
             const result = await launchCameraAsync({
                 mediaTypes: MediaTypeOptions.Images,
                 allowsEditing: false,
-                quality: 0.7,
+                quality: 1,
                 base64: true,
             });
 
             if (!result.canceled && result.assets && result.assets[0].uri) {
                 setCapturedImage(result.assets[0].uri);
             } else {
-                console.log('Camera was canceled or no valid image was captured.');
+                Alert.alert('Camera was canceled or no valid image was captured.');
             }
         } catch (error) {
             console.error('Camera error:', error);
             Alert.alert('Error', `Error when using camera: ${error.message || 'Unknown error'}`);
         }
     };
-
-    const calculateLateStatus = () => {
-        const currentDate = new Date();
-        const jamTelatParts = jamTelat.split(':');
-        const officeStartTime = new Date();
-        officeStartTime.setHours(parseInt(jamTelatParts[0], 10));
-        officeStartTime.setMinutes(parseInt(jamTelatParts[1], 10));
-        officeStartTime.setSeconds(0);
-
-        return currentDate > officeStartTime;
-    };
-
-    const isUserLate = calculateLateStatus();
 
     const handleClockIn = async () => {
         if (!capturedImage) {
@@ -178,6 +210,7 @@ const DetailKehadiran = () => {
 
         if (isUserLate && !reasonInput.trim()) {
             showAlert('Silahkan memberikan Alasan Keterlambatan!', 'Error');
+            // Alert.alert('Error', 'Please provide a reason for being late.');
             return;
         }
 
@@ -197,6 +230,7 @@ const DetailKehadiran = () => {
             }, 1500);
         } catch (error) {
             console.error('Check-in error:', error.message);
+            // Alert.alert('Error', `Error when checking in: ${error.message || 'Unknown error'}`);
             showAlert(`Error when checking in: ${error.message || 'Unknown error'}`, 'Error');
         }
     };
@@ -220,13 +254,16 @@ const DetailKehadiran = () => {
                 />
             </View>
 
+            {/* Container for the back icon and text */}
             <View style={styles.headerContainer}>
                 <Feather name="chevron-left" style={styles.backIcon} onPress={handleGoBack} />
                 <Text style={styles.headerText}>Lokasi Kehadiran</Text>
             </View>
 
+            {/* Map View */}
             <MyMap />
 
+            {/* Time and Location Overlay */}
             <DraggableOverlayBottom>
                 <KeyboardAvoidingView
                     behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
@@ -234,13 +271,15 @@ const DetailKehadiran = () => {
                 >
                     <ScrollView contentContainerStyle={styles.scrollViewContent}>
                         <View style={{ padding: 20, display: 'flex', flexDirection: 'column', gap: 15 }}>
-                            <View style={{
-                                display: 'flex',
-                                flexDirection: 'row',
-                                justifyContent: 'space-between',
-                                alignItems: 'center',
-                                gap: 10,
-                            }}>
+                            <View
+                                style={{
+                                    display: 'flex',
+                                    flexDirection: 'row',
+                                    justifyContent: 'space-between',
+                                    alignItems: 'center',
+                                    gap: 10,
+                                }}
+                            >
                                 <Text style={{ fontWeight: '500', fontSize: 20 }}>Clock In</Text>
                                 {isUserLate && (
                                     <View style={[styles.statusView, { backgroundColor: '#ffbda5' }]}>
@@ -251,22 +290,26 @@ const DetailKehadiran = () => {
                             </View>
 
                             <View style={styles.locationContainer}>
-                                <View style={{
-                                    display: 'flex',
-                                    flexDirection: 'row',
-                                    gap: 3,
-                                    alignItems: 'center',
-                                }}>
+                                <View
+                                    style={{
+                                        display: 'flex',
+                                        flexDirection: 'row',
+                                        gap: 3,
+                                        alignItems: 'center',
+                                    }}
+                                >
                                     <Icon name="location-on" size={24} color="gray" style={{ fontWeight: '500' }} />
                                     <Text style={{ fontWeight: '500', fontSize: 18 }}>Lokasi saat ini</Text>
                                 </View>
 
-                                <View style={{
-                                    display: 'flex',
-                                    flexDirection: 'row',
-                                    gap: 3,
-                                    alignItems: 'center',
-                                }}>
+                                <View
+                                    style={{
+                                        display: 'flex',
+                                        flexDirection: 'row',
+                                        gap: 3,
+                                        alignItems: 'center',
+                                    }}
+                                >
                                     <Text style={{ fontWeight: '400', fontSize: 14 }}>{locationName}</Text>
                                 </View>
                             </View>
@@ -275,15 +318,10 @@ const DetailKehadiran = () => {
                                 title="Sedang berada di luar kantor"
                                 isChecked={isWFH}
                             />
-                            {capturedImage ? (
-                                <Image source={{ uri: capturedImage }} style={styles.previewImage} />
-                            ) : (
-                                <TouchableOpacity style={styles.captureButton} onPress={triggerCamera}>
-                                    <Text style={styles.captureButtonText}>Capture Image</Text>
-                                </TouchableOpacity>
-                            )}
+                            {capturedImage && <Image source={{ uri: capturedImage }} style={styles.previewImage} />}
                             {isUserLate && (
                                 <View style={styles.lateContainer}>
+                                    {/* <Text style={styles.lateText}></Text> */}
                                     <TextInput
                                         style={styles.input}
                                         placeholder="Silahkan berikan alasan keterlambatan"
@@ -298,10 +336,10 @@ const DetailKehadiran = () => {
                                     <TouchableOpacity
                                         style={[
                                             styles.checkInButton,
-                                            reasonInput ? styles.enabledButton : styles.disabledButton,
+                                            reasonInput ? styles.enabledButton : styles.disabledButton, // Apply the disabledButton style conditionally
                                         ]}
                                         onPress={handleClockIn}
-                                        disabled={!reasonInput}
+                                        disabled={!reasonInput} // Disable the button based on reasonInput
                                     >
                                         <Text style={styles.buttonText}>Clock In</Text>
                                     </TouchableOpacity>
@@ -526,18 +564,6 @@ const styles = StyleSheet.create({
         borderRadius: 20,
         marginHorizontal: 20,
         height: 250,
-    },
-    captureButton: {
-        backgroundColor: '#27A0CF',
-        padding: 15,
-        borderRadius: 10,
-        alignItems: 'center',
-        marginBottom: 20,
-    },
-    captureButtonText: {
-        color: 'white',
-        fontSize: 16,
-        fontWeight: 'bold',
     },
 });
 
