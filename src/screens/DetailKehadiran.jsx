@@ -18,7 +18,7 @@ import { ScrollView } from 'react-native-gesture-handler';
 import { markAbsent, getAttendance, getAttendanceReport, checkOut, checkIn } from '../api/absent';
 import { getParameter } from '../api/parameter';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useRoute } from '@react-navigation/native';
 import { launchCameraAsync, MediaTypeOptions } from 'expo-image-picker';
 import * as FileSystem from 'expo-file-system'; // To convert image to base64
 import MyMap from '../components/Maps';
@@ -30,44 +30,14 @@ import DraggableModalTask from '../components/DraggableModalTask'; // Adjust the
 import ClickableBottomOverlay from '../components/ClickableBottomOverlay';
 
 const DetailKehadiran = () => {
+    const route = useRoute();
+    const { location, locationName, jamTelat = [] } = route.params || {};
     const [currentTime, setCurrentTime] = useState('');
-    const [locationName, setLocationName] = useState('Waiting for location...');
     const [errorMsg, setErrorMsg] = useState(null);
     const [employeeId, setEmployeeId] = useState(null);
     const [companyId, setCompanyId] = useState(null);
-    const [attendanceData, setAttendanceData] = useState([]);
-    const [isCheckedIn, setIsCheckedIn] = useState(false);
-    const [jamTelat, setjamTelat] = useState('');
     const navigation = useNavigation();
     const [isWFH, setIsWFH] = useState(false);
-
-    const fetchOfficeHour = async () => {
-        try {
-            const response = await getParameter(companyId);
-
-            setjamTelat(response.data.jam_telat);
-        } catch (error) {
-            // console.error("Error fetching office hour data:", error);
-        }
-    };
-
-    useEffect(() => {
-        fetchOfficeHour();
-    }, [companyId]);
-
-    const fetchAttendanceData = async () => {
-        try {
-            const response = await getAttendance(employeeId);
-            setAttendanceData(response.attendance);
-            setIsCheckedIn(response.isCheckedInToday);
-        } catch (error) {
-            // console.error("Error fetching attendance data:", error);
-        }
-    };
-
-    useEffect(() => {
-        fetchAttendanceData();
-    }, [employeeId]);
 
     useEffect(() => {
         // Update time every second
@@ -84,42 +54,6 @@ const DetailKehadiran = () => {
 
         // Cleanup interval on component unmount
         return () => clearInterval(interval);
-    }, []);
-
-    const [location, setLocation] = useState(null);
-
-    useEffect(() => {
-        // Get location permissions and device location
-        (async () => {
-            let { status } = await Location.requestForegroundPermissionsAsync();
-            if (status !== 'granted') {
-                setErrorMsg('Permission to access location was denied');
-                return;
-            }
-
-            let location = await Location.getCurrentPositionAsync({});
-            const latitude = location.coords.latitude;
-            const longitude = location.coords.longitude;
-
-            // const latitude = -6.1974472;
-            // const longitude = 106.7610134;
-            // Format latitude and longitude
-            const formattedCoordinates = `${latitude.toFixed(6)}, ${longitude.toFixed(6)}`;
-            setLocation(formattedCoordinates);
-            // Reverse geocode to get location name
-            const [reverseGeocodeResult] = await Location.reverseGeocodeAsync({
-                latitude,
-                longitude,
-            });
-
-            if (reverseGeocodeResult) {
-                setLocationName(
-                    `${reverseGeocodeResult.street}, ${reverseGeocodeResult.city}, ${reverseGeocodeResult.region}, ${reverseGeocodeResult.country}`,
-                );
-            } else {
-                setLocationName('Unable to retrieve location name');
-            }
-        })();
     }, []);
 
     const [alert, setAlert] = useState({ show: false, type: 'success', message: '' });
@@ -142,7 +76,6 @@ const DetailKehadiran = () => {
     useEffect(() => {
         const setupPage = async () => {
             await getStoredData();
-            await getLocation();
             triggerCamera();
         };
 
@@ -157,28 +90,6 @@ const DetailKehadiran = () => {
             setCompanyId(storedCompanyId);
         } catch (error) {
             console.error('Error fetching AsyncStorage data:', error);
-        }
-    };
-
-    const getLocation = async () => {
-        let { status } = await Location.requestForegroundPermissionsAsync();
-        if (status !== 'granted') {
-            Alert.alert('Permission to access location was denied');
-            return;
-        }
-
-        let location = await Location.getCurrentPositionAsync({});
-        setLocation(`${location.coords.latitude}, ${location.coords.longitude}`);
-
-        const [reverseGeocodeResult] = await Location.reverseGeocodeAsync({
-            latitude: location.coords.latitude,
-            longitude: location.coords.longitude,
-        });
-
-        if (reverseGeocodeResult) {
-            setLocationName(
-                `${reverseGeocodeResult.street}, ${reverseGeocodeResult.city}, ${reverseGeocodeResult.region}, ${reverseGeocodeResult.country}`,
-            );
         }
     };
 

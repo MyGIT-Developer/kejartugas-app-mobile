@@ -9,7 +9,9 @@ import {
     StyleSheet,
     TextInput,
     TouchableOpacity,
+    FlatList
 } from 'react-native';
+import CheckBox from '@react-native-community/checkbox'; // External CheckBox component
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { Picker } from '@react-native-picker/picker';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
@@ -21,23 +23,24 @@ import { CreateProject } from '../api/projectTask';
 import { getEmployeeByCompany, getTeamsByCompany } from '../api/general';
 import ReusableBottomPopUp from '../components/ReusableBottomPopUp';
 const { height, width: SCREEN_WIDTH } = Dimensions.get('window');
+import Icon from 'react-native-vector-icons/MaterialIcons'; // Or any other icon library
 
 const AddProjectForm = ({ route }) => {
     const [companyId, setCompanyId] = useState('');
     const [employeeId, setEmployeeId] = useState('');
     const navigation = useNavigation();
     const [formState, setFormState] = useState({
-        company_id: "",
-        project_name: "",
-        role_id: "",
-        jobs_id: "",
-        team_id: "",
-        assign_by: "",
+        company_id: '',
+        project_name: '',
+        role_id: '',
+        jobs_id: '',
+        team_id: '',
+        assign_by: '',
         assign_to: [],
         start_date: new Date(),
         end_date: new Date(),
-        project_desc: "",
-        project_type: "",
+        project_desc: '',
+        project_type: '',
     });
     const [employees, setEmployees] = useState([]);
     const [teams, setTeams] = useState([]);
@@ -59,7 +62,13 @@ const AddProjectForm = ({ route }) => {
                 const roleId = await AsyncStorage.getItem('userRole');
                 setCompanyId(companyId);
                 setEmployeeId(employeeId);
-                setFormState(prev => ({ ...prev, company_id: companyId, role_id: roleId, jobs_id: jobsId, assign_by: employeeId }));
+                setFormState((prev) => ({
+                    ...prev,
+                    company_id: companyId,
+                    role_id: roleId,
+                    jobs_id: jobsId,
+                    assign_by: employeeId,
+                }));
             } catch (error) {
                 console.error('Error fetching AsyncStorage data:', error);
             }
@@ -104,91 +113,106 @@ const AddProjectForm = ({ route }) => {
     const renderDatePicker = useCallback(
         (field, showPicker, setShowPicker) => (
             <View style={styles.fieldGroup}>
-                <Text style={styles.labelText}>{field === 'start_date' ? 'Mulai' : 'Selesai'}</Text>
-                <TouchableOpacity onPress={() => setShowPicker(true)} style={styles.datePickerButton}>
-                    <TextInput
-                        style={styles.dateInput}
-                        placeholder="Pilih Tanggal"
-                        value={formState[field].toLocaleDateString()}
-                        editable={false}
-                    />
-                    <Feather name="calendar" size={24} color="#27A0CF" />
-                </TouchableOpacity>
-                {showPicker && (
-                    <DateTimePicker
-                        value={formState[field]}
-                        mode="date"
-                        display="default"
-                        onChange={(event, selectedDate) => handleDateChange(field, event, selectedDate)}
-                    />
-                )}
-            </View>
+            <Text style={styles.labelText}>{field === 'start_date' ? 'Mulai' : 'Selesai'}</Text>
+            <TouchableOpacity onPress={() => setShowPicker(true)} style={styles.datePickerButton}>
+              <TextInput
+                style={styles.dateInput}
+                placeholder="Pilih Tanggal"
+                value={formState[field] ? formState[field].toLocaleDateString('id-ID', {
+                  year: 'numeric',
+                  month: 'long',
+                  day: 'numeric'
+                }) : ''}
+                editable={false}
+              />
+              <Feather name="calendar" size={24} color="#27A0CF" />
+            </TouchableOpacity>
+            {showPicker && (
+              <DateTimePicker
+                value={formState[field] || new Date()}
+                mode="date"
+                display="default"
+                onChange={(event, selectedDate) => handleDateChange(field, event, selectedDate)}
+              />
+            )}
+          </View>   
         ),
         [formState, handleDateChange],
     );
 
     const renderPicker = useCallback(
         (field, label, options, isMulti = false) => (
-            <View style={styles.fieldGroup}>
-                <Text style={styles.labelText}>{label}</Text>
-                {isMulti ? (
-                    <View style={styles.multiSelectContainer}>
-                        {options.map((option) => (
-                            <TouchableOpacity
-                                key={option.value}
-                                style={[
-                                    styles.multiSelectItem,
-                                    formState[field].includes(option.value) && styles.multiSelectItemSelected
-                                ]}
-                                onPress={() => handleAssignToChange(option.value)}
-                            >
-                                <Text style={formState[field].includes(option.value) ? styles.multiSelectTextSelected : styles.multiSelectText}>
-                                    {option.label}
-                                </Text>
-                            </TouchableOpacity>
-                        ))}
-                    </View>
-                ) : (
-                    <View style={styles.pickerContainer}>
-                        <Picker
-                            selectedValue={formState[field]}
-                            style={styles.picker}
-                            onValueChange={(itemValue) => field === 'assign_by' ? handleAssignByChange(itemValue) : updateFormField(field, itemValue)}
-                        >
-                            <Picker.Item label={`Pilih ${label}`} value="" />
-                            {options.map((option) => (
-                                <Picker.Item key={option.value} label={option.label} value={option.value} />
-                            ))}
-                        </Picker>
-                    </View>
+          <View>
+            <Text>{label}</Text>
+            {isMulti ? (
+              <FlatList
+                data={options}
+                keyExtractor={(item) => item.value.toString()}
+                renderItem={({ item }) => (
+                  <TouchableOpacity
+                    key={item.value}
+                    onPress={() => handleAssignToChange(item.value)}
+                    style={{ flexDirection: 'row', alignItems: 'center', padding: 10 }}
+                  >
+                    <Icon
+                      name={formState.assign_to.includes(item.value) ? 'check-box' : 'check-box-outline-blank'}
+                      size={24}
+                      color={formState.assign_to.includes(item.value) ? 'blue' : 'gray'}
+                    />
+                    <Text style={{ marginLeft: 8 }}>{item.label}</Text>
+                  </TouchableOpacity>
                 )}
-            </View>
+              />
+            ) : (
+              <Picker
+                selectedValue={formState[field]}
+                onValueChange={(itemValue) => {
+                  field === 'assign_by'
+                    ? handleAssignByChange(itemValue)
+                    : updateFormField(field, itemValue);
+                }}
+              >
+                <Picker.Item label="Select an option" value="" />
+                {options.map((option) => (
+                  <Picker.Item key={option.value} label={option.label} value={option.value} />
+                ))}
+              </Picker>
+            )}
+          </View>
         ),
-        [formState, updateFormField],
+        [formState, updateFormField]
+      );
+
+    const handleAssignByChange = useCallback(
+        (value) => {
+            updateFormField('assign_by', value);
+            updateFormField('assign_to', []);
+        },
+        [updateFormField],
     );
 
-    const handleAssignByChange = useCallback((value) => {
-        updateFormField('assign_by', value);
-        updateFormField('assign_to', []);
-    }, [updateFormField]);
-
-    const handleAssignToChange = useCallback((value) => {
-        const assignTo = formState.assign_to.includes(value)
+    const handleAssignToChange = useCallback(
+        (value) => {
+          const updatedAssignTo = formState.assign_to.includes(value)
             ? formState.assign_to.filter((item) => item !== value)
             : [...formState.assign_to, value];
-        updateFormField('assign_to', assignTo);
-    }, [formState, updateFormField]);
-
+          updateFormField('assign_to', updatedAssignTo);
+        },
+        [formState, updateFormField]
+      );
+      
     const handleSubmit = useCallback(async () => {
-        // try {
-        //     const response = await CreateProject(formState);
-        //     setAlert({ show: true, type: 'success', message: response.message });
-        //     // setFormState({
-        //     //     company_id: companyId
-        //     // });
-        // } catch (error) {
-        //     setAlert({ show: true, type: 'error', message: error.message });
-        // }
+        try {
+            const response = await CreateProject(formState);
+            setAlert({ show: true, type: 'success', message: response.message });
+
+            setTimeout(() => {
+                navigation.goBack();
+            }, 2000);
+        } catch (error) {
+            console.log('Error creating project:', error);
+            setAlert({ show: true, type: 'error', message: error.message });
+        }
         console.log(formState);
     }, [formState, companyId]);
 
@@ -215,7 +239,11 @@ const AddProjectForm = ({ route }) => {
                     />
                 </View>
 
-                {renderPicker('team_id', 'Divisi', teams.map(team => ({ label: team.team_name, value: team.id })))}
+                {renderPicker(
+                    'team_id',
+                    'Divisi',
+                    teams.map((team) => ({ label: team.team_name, value: team.id })),
+                )}
 
                 <View style={styles.dateContainer}>
                     {renderDatePicker('start_date', showStartPicker, setShowStartPicker)}
@@ -223,7 +251,14 @@ const AddProjectForm = ({ route }) => {
                 </View>
 
                 {/* {renderPicker('assign_by', 'Ditugaskan oleh', employees.map(emp => ({ label: emp.employee_name, value: emp.id })))} */}
-                {renderPicker('assign_to', 'Ditugaskan Kepada', employees.filter(emp => (emp.id != employeeId)).map(emp => ({ label: emp.employee_name, value: emp.id })), true)}
+                {renderPicker(
+  'assign_to',
+  'Ditugaskan Kepada',
+  employees
+    .filter((emp) => emp.id !== employeeId)
+    .map((emp) => ({ label: emp.employee_name, value: emp.id })),
+  true // Set isMulti to true for multi-select
+)}
                 {renderPicker('project_type', 'Tipe Proyek', [
                     { label: 'General', value: 'general' },
                     { label: 'Maintenance', value: 'maintenance' },
@@ -383,7 +418,6 @@ const styles = StyleSheet.create({
         fontWeight: 'bold',
         fontSize: 18,
     },
-
 });
 
 export default AddProjectForm;

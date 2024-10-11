@@ -29,7 +29,10 @@ export const getProjectById = async (projectId) => {
 
 export const CreateProject = async (formdata) => {
     try {
-        const response = await apiService.get(`/projects/`, formdata, {
+        const response = await apiService.post(`/projects/`, {
+            ...formdata,
+            project_status: "onPending",
+          }, {
             headers: {
                 Authorization: `Bearer ${await AsyncStorage.getItem('token')}`
             }

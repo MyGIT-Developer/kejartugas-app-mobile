@@ -309,8 +309,8 @@ const Kehadiran = () => {
         })();
     }, []);
 
-    const handleClockIn = async () => {
-        navigation.navigate('DetailKehadiran');
+    const handleClockIn = () => {
+        navigation.navigate('DetailKehadiran', { location, locationName, jamTelat });
     };
 
     const handleClockOut = async () => {

@@ -1,7 +1,10 @@
-import React, { useState, useCallback, useMemo } from 'react';
+import React, { useState, useCallback, useMemo, useEffect } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Dimensions, ScrollView, Button } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import FloatingButtonProject from '../components/FloatingButtonProject';
+import DraggableModalTask from '../components/DraggableModalTask';
+import ReusableModalSuccess from '../components/TaskModalSuccess';
+import { fetchTaskById } from '../api/task'; // Import the fetchTaskById function
 
 const { height } = Dimensions.get('window');
 
@@ -23,7 +26,74 @@ const formatDate = (date) => {
     return new Date(date).toLocaleDateString('id-ID', options);
 };
 
-const TableRow = React.memo(({ item, index }) => {
+const calculateRemainingDays = (endDate) => {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const end = new Date(endDate);
+    end.setHours(0, 0, 0, 0);
+    return Math.ceil((end - today) / (1000 * 3600 * 24));
+};
+
+const getDurationBadge = (remainingDays) => {
+    if (remainingDays === 0) {
+        return { color: '#F69292', textColor: '#811616', label: 'Deadline Tugas Hari Ini' };
+    } else if (remainingDays < 0) {
+        return { color: '#F69292', textColor: '#811616', label: `Terlambat selama ${Math.abs(remainingDays)} hari` };
+    } else if (remainingDays > 0) {
+        return { color: '#FFE9CB', textColor: '#E07706', label: `Tersisa ${remainingDays} hari` };
+    }
+};
+
+const getCollectionStatusBadgeColor = (status) => {
+  switch (status) {
+      case 'finish':
+          return { color: '#A7C8E5', textColor: '#092D58', label: 'Selesai' };
+      case 'earlyFinish':
+          return { color: '#9ADFAD', textColor: '#0A642E', label: 'Selesai Lebih Awal' };
+      case 'finish in delay':
+          return { color: '#F0E089', textColor: '#80490A', label: 'Selesai Terlambat' };
+      case 'overdue':
+          return { color: '#F69292', textColor: '#811616', label: 'Terlambat' };
+      default:
+          return { color: '#E0E0E0', textColor: '#000000', label: status || 'Belum Dikumpulkan' };
+  }
+};
+
+const getStatusBadgeColor = (status, endDate) => {
+  if (status === 'Completed') {
+      return { color: '#C9F8C1', textColor: '#333333', label: 'Selesai' };
+  }
+
+  const remainingDays = calculateRemainingDays(endDate, status);
+
+  if (remainingDays === 0) {
+      return { color: '#F69292', textColor: '#811616', label: 'Deadline Tugas Hari Ini' };
+  } else if (remainingDays < 0) {
+      return { color: '#F69292', textColor: '#811616', label: `Terlambat selama ${Math.abs(remainingDays)} hari` };
+  } else if (remainingDays > 0) {
+      return { color: '#FFE9CB', textColor: '#E07706', label: `Tersisa ${remainingDays} hari` };
+  }
+
+  // Existing status handling logic
+  switch (status) {
+      case 'workingOnIt':
+          return { color: '#CCC8C8', textColor: '#333333', label: 'Dalam Pengerjaan' };
+      case 'onReview':
+          return { color: '#9AE1EA', textColor: '#333333', label: 'Dalam Peninjauan' };
+      case 'rejected':
+          return { color: '#050404FF', textColor: '#811616', label: 'Ditolak' };
+      case 'onHold':
+          return { color: '#F69292', textColor: '#811616', label: 'Ditunda' };
+      case 'Completed':
+          return { color: '#C9F8C1', textColor: '#333333', label: 'Selesai' }; // Updated label
+      case 'onPending':
+          return { color: '#F0E08A', textColor: '#333333', label: 'Tersedia' };
+      default:
+          return { color: '#E0E0E0', textColor: '#333333', label: status };
+  }
+};
+
+const TableRow = React.memo(({ item, index, onTaskPress }) => {
     const [expanded, setExpanded] = useState(false);
     const toggleExpanded = useCallback(() => setExpanded((prev) => !prev), []);
 
@@ -56,22 +126,17 @@ const TableRow = React.memo(({ item, index }) => {
                     </Text>
                     <Text style={styles.expandedLabel}>Description:</Text>
                     <Text style={styles.expandedText}>{item.task_desc || '-'}</Text>
-                    <Text style={styles.expandedLabel}>PIC:</Text>
+                    <View style={styles.expandedColumnText}>
+                        <View>
+                        <Text style={styles.expandedLabel}>PIC:</Text>
                     <Text style={styles.expandedText}>
                         {item.assigned_employees?.map((employee) => employee.employee_name).join(', ') || '-'}
                     </Text>
-                    <View style={styles.expandedColumnText}>
-                        <View>
-                            <Text style={styles.expandedLabel}>Tanggal Mulai:</Text>
-                            <Text style={styles.expandedText}>{formatDate(item.start_date)}</Text>
                         </View>
                         <View>
-                            <Text style={styles.expandedLabel}>Tanggal Selesai:</Text>
-                            <Text style={styles.expandedText}>{formatDate(item.end_date)}</Text>
-                        </View>
-                    </View>
-                    <View style={styles.expandedButtonContainer}>
-                        <TouchableOpacity style={[styles.buttonAction, {backgroundColor: "none"}]}>
+                            <Text style={styles.expandedLabel}>Aksi</Text>
+                            <View style={styles.expandedButtonContainer}>
+                        <TouchableOpacity onPress={() => onTaskPress(item)} style={[styles.buttonAction, {backgroundColor: "none"}]}>
                             {/* <Text style={[styles.expandedText, { color: '#0E509E' }]}>Edit</Text> */}
                             <Feather name={"eye"} color="blue"/>
                         </TouchableOpacity>
@@ -87,6 +152,19 @@ const TableRow = React.memo(({ item, index }) => {
                             <Text style={[styles.expandedText, { color: '#0E509E' }]}>Reject</Text>
                         </TouchableOpacity> */}
                     </View>
+                        </View>
+                    </View>
+                    <View style={styles.expandedColumnText}>
+                        <View>
+                            <Text style={styles.expandedLabel}>Tanggal Mulai:</Text>
+                            <Text style={styles.expandedText}>{formatDate(item.start_date)}</Text>
+                        </View>
+                        <View>
+                            <Text style={styles.expandedLabel}>Tanggal Selesai:</Text>
+                            <Text style={styles.expandedText}>{formatDate(item.end_date)}</Text>
+                        </View>
+                    </View>
+                    
                 </View>
             )}
         </ScrollView>
@@ -95,6 +173,87 @@ const TableRow = React.memo(({ item, index }) => {
 
 const DetailProjekDua = ({ data }) => {
     const taskData = useMemo(() => data.tasks, [data.tasks]);
+    const [modalType, setModalType] = useState('default'); // Initialize modalType state
+    const [selectedTask, setSelectedTask] = useState(null);
+    const [draggableModalVisible, setDraggableModalVisible] = useState(false);
+
+    const fetchTasks = useCallback(async () => {
+        try {
+            const companyId = await AsyncStorage.getItem('companyId');
+            if (companyId) {
+                const response = await getTask(companyId);
+                setTaskData(response);
+            } else {
+                throw new Error('Company ID not found');
+            }
+        } catch (err) {
+            console.error('Error fetching tasks:', err);
+            setError(err.message);
+        } finally {
+            setLoading(false);
+        }
+    }, []);
+
+    useEffect(() => {
+        fetchTasks();
+    }, [fetchTasks]);
+
+    const handleTaskDetailPress = async (task) => {
+        const baseUrl = 'http://202.10.36.103:8000/';
+        try {
+            const response = await fetchTaskById(task.id); // Fetch task details by ID
+            const taskDetails = response.data; // Access the data field from the response
+            const collectionStatus = getCollectionStatusBadgeColor(taskDetails.task_submit_status || 'N/A');
+            // Transform the task details to match the structure expected by DraggableModalTask
+            const transformedTaskDetails = {
+                id: taskDetails.id,
+                title: taskDetails.task_name,
+                startDate: taskDetails.start_date,
+                endDate: taskDetails.end_date,
+                assignedBy: taskDetails.assign_by ? taskDetails.assign_by.name : 'N/A', // Accessing nested object
+                description: taskDetails.task_desc || 'N/A',
+                progress: taskDetails.percentage_task || 0,
+                status: taskDetails.task_status,
+                statusColor: getStatusBadgeColor(taskDetails.task_status, taskDetails.end_date).color,
+                collectionDate: task.task_submit_date || 'N/A',
+                collectionStatus: collectionStatus.label,
+                collectionStatusColor: collectionStatus.color,
+                collectionStatusTextColor: collectionStatus.textColor,
+                collectionDescription: taskDetails.task_desc || 'N/A',
+                task_image: taskDetails.task_image ? `${baseUrl}${taskDetails.task_image}` : null,
+
+                // Additional fields based on your previous structure
+                baselineWeight: taskDetails.baseline_weight || '0',
+                actualWeight: taskDetails.actual_weight || '0',
+                durationTask: taskDetails.duration_task || 0,
+                assignedEmployees:
+                    taskDetails.assignedEmployees.map((emp) => ({
+                        employeeId: emp.employee_id,
+                        employeeName: emp.employee_name,
+                    })) || [],
+                taskProgress:
+                    taskDetails.taskProgress.map((progress) => ({
+                        tasksId: progress.tasks_id,
+                        updateDate: progress.update_date,
+                        percentage: progress.percentage,
+                    })) || [],
+            };
+
+            setSelectedTask(transformedTaskDetails);
+
+            // Optionally check task status for modal type
+            if (taskDetails.task_status === 'Completed') {
+                setModalType('success');
+            } else {
+                setModalType('default');
+            }
+
+            setDraggableModalVisible(true);
+        } catch (error) {
+            console.error('Error fetching task details:', error);
+            // Optionally, show an alert or a message to the user
+        }
+    };
 
     return (
         <>
@@ -106,9 +265,26 @@ const DetailProjekDua = ({ data }) => {
                         <Text style={[styles.headerCell, styles.statusHeaderCell]}>Status</Text>
                     </View>
                     {taskData.map((item, index) => (
-                        <TableRow key={item.id || index} item={item} index={index} />
+                        <TableRow key={item.id || index} item={item} index={index} onTaskPress={handleTaskDetailPress}/>
                     ))}
                 </ScrollView>
+
+                {modalType === 'default' ? (
+                <DraggableModalTask
+                    visible={draggableModalVisible}
+                    onClose={() => {
+                        setDraggableModalVisible(false);
+                        setSelectedTask(null); // Optional: Reset selectedTask on close
+                    }}
+                    taskDetails={selectedTask || {}}
+                />
+            ) : (
+                <ReusableModalSuccess
+                    visible={draggableModalVisible}
+                    onClose={() => setDraggableModalVisible(false)}
+                    taskDetails={selectedTask || {}}
+                />
+            )}
             </ScrollView>
         </>
     );
@@ -237,6 +413,7 @@ const styles = StyleSheet.create({
     expandedColumnText: {
         flexDirection: 'row',
         justifyContent: 'space-between',
+        marginBottom: 8,
     },
     buttonAction: {
         padding: 8,
@@ -249,7 +426,6 @@ const styles = StyleSheet.create({
         position: "flex-start",
         flexDirection: 'row',
         justifyContent: 'center',
-        marginTop: 10,
         gap: 10,
     }
 });

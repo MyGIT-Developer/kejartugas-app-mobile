@@ -83,3 +83,17 @@ export const sendChatMessage = async (employeeId, taskId, message, companyId) =>
         throw new Error(error.response?.data?.message || 'Sending chat message failed');
     }
 };
+
+export const deleteTask = async (taskId) => {
+    try {
+        const token = await AsyncStorage.getItem('token');
+        const response = await apiService.delete(`/tasks/${taskId}`, {
+            headers: {
+                Authorization: `Bearer ${token}`,
+            },
+        });
+        return response.data; // Return the data field directly
+    } catch (error) {
+        throw new Error(error.response?.data?.message || 'Deleting task failed');
+    }
+}
