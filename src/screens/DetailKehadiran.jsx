@@ -156,8 +156,9 @@ const DetailKehadiran = () => {
                 <Text style={styles.locationName}>{locationName}</Text>
 
                 <View style={styles.mapContainer}>
-                    <MyMap />
+                    <MyMap location={location} radius={radius} />
                 </View>
+
 
                 <CheckBox
                     onPress={() => setIsWFH(!isWFH)}
