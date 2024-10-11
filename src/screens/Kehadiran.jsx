@@ -309,9 +309,27 @@ const Kehadiran = () => {
         })();
     }, []);
 
-    const handleClockIn = () => {
-        navigation.navigate('DetailKehadiran', { location, locationName, jamTelat });
-    };
+    const handleClockIn = useCallback(() => {
+        console.log('handleClockIn called');
+        if (!location || !locationName) {
+            console.log('Location data not available');
+            showAlert('Location data not available. Please try again.', 'error');
+            return;
+        }
+        
+        console.log('Navigating to DetailKehadiran');
+        console.log('Location:', location);
+        console.log('Location Name:', locationName);
+        console.log('Jam Telat:', jamTelat);
+        
+        try {
+            navigation.navigate('DetailKehadiran', { location, locationName, jamTelat });
+        } catch (error) {
+            console.error('Navigation error:', error);
+            showAlert('An error occurred while navigating. Please try again.', 'error');
+        }
+    }, [location, locationName, jamTelat, navigation]);
+
 
     const handleClockOut = async () => {
         // setIsCheckedInToday(false);
