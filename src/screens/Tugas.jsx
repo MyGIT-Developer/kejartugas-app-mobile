@@ -78,12 +78,11 @@ const getCollectionStatusBadgeColor = (status) => {
 };
 
 
-const TaskCard = React.memo(({ task, onProjectDetailPress, onTaskDetailPress }) => {
-    // Provide default values directly in the function parameters
-    task = task || {};
-    onProjectDetailPress = onProjectDetailPress || (() => {});
-    onTaskDetailPress = onTaskDetailPress || (() => {});
-
+const TaskCard = React.memo(({ 
+    task = {}, 
+    onProjectDetailPress = () => {}, 
+    onTaskDetailPress = () => {} 
+}) => {
     const {
         color: badgeColor,
         textColor: badgeTextColor,
