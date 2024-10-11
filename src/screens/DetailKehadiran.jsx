@@ -1,85 +1,47 @@
+import React, { useState, useEffect } from 'react';
 import {
     View,
     Text,
     StyleSheet,
-    Button,
+    TouchableOpacity,
+    Image,
+    ScrollView,
     Alert,
     TextInput,
-    TouchableOpacity,
-    KeyboardAvoidingView,
-    Platform,
-    Image,
 } from 'react-native';
-import React, { useState, useEffect } from 'react';
 import { LinearGradient } from 'expo-linear-gradient';
-import * as Location from 'expo-location';
-import Icon from 'react-native-vector-icons/MaterialIcons'; // Import the icon library
-import { ScrollView } from 'react-native-gesture-handler';
-import { markAbsent, getAttendance, getAttendanceReport, checkOut, checkIn } from '../api/absent';
-import { getParameter } from '../api/parameter';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import Icon from 'react-native-vector-icons/MaterialIcons';
+import { Feather } from '@expo/vector-icons';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { launchCameraAsync, MediaTypeOptions } from 'expo-image-picker';
-import * as FileSystem from 'expo-file-system'; // To convert image to base64
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { checkIn } from '../api/absent';
 import MyMap from '../components/Maps';
 import ReusableBottomPopUp from '../components/ReusableBottomPopUp';
-import { Feather } from '@expo/vector-icons';
 import CheckBox from '../components/Checkbox';
-import DraggableOverlayBottom from '../components/DraggableOverlayBottom'; // Adjust the import path as needed
-import DraggableModalTask from '../components/DraggableModalTask'; // Adjust the import path as needed
-import ClickableBottomOverlay from '../components/ClickableBottomOverlay';
 
 const DetailKehadiran = () => {
     const route = useRoute();
     const { location, locationName, jamTelat = [] } = route.params || {};
     const [currentTime, setCurrentTime] = useState('');
-    const [errorMsg, setErrorMsg] = useState(null);
     const [employeeId, setEmployeeId] = useState(null);
     const [companyId, setCompanyId] = useState(null);
     const navigation = useNavigation();
     const [isWFH, setIsWFH] = useState(false);
-
-    useEffect(() => {
-        // Update time every second
-        const interval = setInterval(() => {
-            const now = new Date();
-            const options = {
-                hour: '2-digit',
-                minute: '2-digit',
-                hour12: true,
-            };
-            const time = now.toLocaleTimeString([], options);
-            setCurrentTime(time);
-        }, 1000);
-
-        // Cleanup interval on component unmount
-        return () => clearInterval(interval);
-    }, []);
-
+    const [capturedImage, setCapturedImage] = useState(null);
     const [alert, setAlert] = useState({ show: false, type: 'success', message: '' });
     const [reasonInput, setReasonInput] = useState('');
 
-    const calculateLateStatus = () => {
-        const currentDate = new Date();
-        const jamTelatParts = jamTelat.split(':');
-        const officeStartTime = new Date();
-        officeStartTime.setHours(parseInt(jamTelatParts[0], 10));
-        officeStartTime.setMinutes(parseInt(jamTelatParts[1], 10));
-        officeStartTime.setSeconds(0);
-
-        return currentDate > officeStartTime;
-    };
-
-    const isUserLate = calculateLateStatus();
-    const [capturedImage, setCapturedImage] = useState(null);
-
     useEffect(() => {
-        const setupPage = async () => {
-            await getStoredData();
-            triggerCamera();
-        };
+        const interval = setInterval(() => {
+            const now = new Date();
+            const options = { hour: '2-digit', minute: '2-digit', hour12: true };
+            setCurrentTime(now.toLocaleTimeString([], options));
+        }, 1000);
 
-        setupPage();
+        getStoredData();
+
+        return () => clearInterval(interval);
     }, []);
 
     const getStoredData = async () => {
@@ -92,6 +54,16 @@ const DetailKehadiran = () => {
             console.error('Error fetching AsyncStorage data:', error);
         }
     };
+
+    const calculateLateStatus = () => {
+        const currentDate = new Date();
+        const [hours, minutes] = jamTelat.split(':');
+        const officeStartTime = new Date();
+        officeStartTime.setHours(parseInt(hours, 10), parseInt(minutes, 10), 0);
+        return currentDate > officeStartTime;
+    };
+
+    const isUserLate = calculateLateStatus();
 
     const triggerCamera = async () => {
         try {
@@ -121,12 +93,11 @@ const DetailKehadiran = () => {
 
         if (isUserLate && !reasonInput.trim()) {
             showAlert('Silahkan memberikan Alasan Keterlambatan!', 'Error');
-            // Alert.alert('Error', 'Please provide a reason for being late.');
             return;
         }
 
         try {
-            const response = await checkIn(
+            await checkIn(
                 employeeId,
                 companyId,
                 isUserLate ? reasonInput : null,
@@ -141,7 +112,6 @@ const DetailKehadiran = () => {
             }, 1500);
         } catch (error) {
             console.error('Check-in error:', error.message);
-            // Alert.alert('Error', `Error when checking in: ${error.message || 'Unknown error'}`);
             showAlert(`Error when checking in: ${error.message || 'Unknown error'}`, 'Error');
         }
     };
@@ -155,326 +125,209 @@ const DetailKehadiran = () => {
     };
 
     return (
-        <View style={{ flex: 1 }}>
-            <View style={styles.backgroundBox}>
-                <LinearGradient
-                    colors={['#0E509E', '#5FA0DC', '#9FD2FF']}
-                    style={styles.linearGradient}
-                    start={{ x: 0, y: 0 }}
-                    end={{ x: 1, y: 1 }}
-                />
-            </View>
+        <ScrollView style={styles.container}>
+            <LinearGradient
+                colors={['#0E509E', '#5FA0DC', '#9FD2FF']}
+                style={styles.linearGradient}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 1 }}
+            >
+                <View style={styles.headerContainer}>
+                    <Feather name="chevron-left" style={styles.backIcon} onPress={handleGoBack} />
+                    <Text style={styles.headerText}>Lokasi Kehadiran</Text>
+                </View>
+            </LinearGradient>
 
-            {/* Container for the back icon and text */}
-            <View style={styles.headerContainer}>
-                <Feather name="chevron-left" style={styles.backIcon} onPress={handleGoBack} />
-                <Text style={styles.headerText}>Lokasi Kehadiran</Text>
-            </View>
-
-            {/* Map View */}
-            <MyMap />
-
-            {/* Time and Location Overlay */}
-            <DraggableOverlayBottom>
-                <KeyboardAvoidingView
-                    behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-                    style={styles.keyboardAvoidingView}
-                >
-                    <ScrollView contentContainerStyle={styles.scrollViewContent}>
-                        <View style={{ padding: 20, display: 'flex', flexDirection: 'column', gap: 15 }}>
-                            <View
-                                style={{
-                                    display: 'flex',
-                                    flexDirection: 'row',
-                                    justifyContent: 'space-between',
-                                    alignItems: 'center',
-                                    gap: 10,
-                                }}
-                            >
-                                <Text style={{ fontWeight: '500', fontSize: 20 }}>Clock In</Text>
-                                {isUserLate && (
-                                    <View style={[styles.statusView, { backgroundColor: '#ffbda5' }]}>
-                                        <View style={{ padding: 4, borderRadius: 50, backgroundColor: '#ff0002' }} />
-                                        <Text style={{ color: '#000' }}>Late</Text>
-                                    </View>
-                                )}
-                            </View>
-
-                            <View style={styles.locationContainer}>
-                                <View
-                                    style={{
-                                        display: 'flex',
-                                        flexDirection: 'row',
-                                        gap: 3,
-                                        alignItems: 'center',
-                                    }}
-                                >
-                                    <Icon name="location-on" size={24} color="gray" style={{ fontWeight: '500' }} />
-                                    <Text style={{ fontWeight: '500', fontSize: 18 }}>Lokasi saat ini</Text>
-                                </View>
-
-                                <View
-                                    style={{
-                                        display: 'flex',
-                                        flexDirection: 'row',
-                                        gap: 3,
-                                        alignItems: 'center',
-                                    }}
-                                >
-                                    <Text style={{ fontWeight: '400', fontSize: 14 }}>{locationName}</Text>
-                                </View>
-                            </View>
-                            <CheckBox
-                                onPress={() => setIsWFH(!isWFH)}
-                                title="Sedang berada di luar kantor"
-                                isChecked={isWFH}
-                            />
-                            {capturedImage && <Image source={{ uri: capturedImage }} style={styles.previewImage} />}
-                            {isUserLate && (
-                                <View style={styles.lateContainer}>
-                                    {/* <Text style={styles.lateText}></Text> */}
-                                    <TextInput
-                                        style={styles.input}
-                                        placeholder="Silahkan berikan alasan keterlambatan"
-                                        value={reasonInput}
-                                        onChangeText={setReasonInput}
-                                        multiline
-                                    />
-                                </View>
-                            )}
-                            <View style={styles.buttonContainer}>
-                                {isUserLate ? (
-                                    <TouchableOpacity
-                                        style={[
-                                            styles.checkInButton,
-                                            reasonInput ? styles.enabledButton : styles.disabledButton, // Apply the disabledButton style conditionally
-                                        ]}
-                                        onPress={handleClockIn}
-                                        disabled={!reasonInput} // Disable the button based on reasonInput
-                                    >
-                                        <Text style={styles.buttonText}>Clock In</Text>
-                                    </TouchableOpacity>
-                                ) : (
-                                    <TouchableOpacity style={[styles.checkInButton]} onPress={handleClockIn}>
-                                        <Text style={styles.buttonText}>Clock In</Text>
-                                    </TouchableOpacity>
-                                )}
-                            </View>
+            <View style={styles.content}>
+                <View style={styles.timeContainer}>
+                    <Text style={styles.timeText}>{currentTime}</Text>
+                    {isUserLate && (
+                        <View style={styles.lateStatusContainer}>
+                            <View style={styles.lateStatusDot} />
+                            <Text style={styles.lateStatusText}>Late</Text>
                         </View>
-                    </ScrollView>
-                </KeyboardAvoidingView>
-            </DraggableOverlayBottom>
+                    )}
+                </View>
+
+                <View style={styles.locationContainer}>
+                    <Icon name="location-on" size={24} color="gray" />
+                    <Text style={styles.locationTitle}>Lokasi saat ini</Text>
+                </View>
+                <Text style={styles.locationName}>{locationName}</Text>
+
+                <View style={styles.mapContainer}>
+                    <MyMap />
+                </View>
+
+                <CheckBox
+                    onPress={() => setIsWFH(!isWFH)}
+                    title="Sedang berada di luar kantor"
+                    isChecked={isWFH}
+                />
+
+                <TouchableOpacity style={styles.cameraButton} onPress={triggerCamera}>
+                    <Icon name="camera-alt" size={24} color="white" />
+                    <Text style={styles.cameraButtonText}>Ambil Foto</Text>
+                </TouchableOpacity>
+
+                {capturedImage && (
+                    <Image source={{ uri: capturedImage }} style={styles.previewImage} />
+                )}
+
+                {isUserLate && (
+                    <TextInput
+                        style={styles.input}
+                        placeholder="Silahkan berikan alasan keterlambatan"
+                        value={reasonInput}
+                        onChangeText={setReasonInput}
+                        multiline
+                    />
+                )}
+
+                <TouchableOpacity
+                    style={[
+                        styles.checkInButton,
+                        (!capturedImage || (isUserLate && !reasonInput)) && styles.disabledButton,
+                    ]}
+                    onPress={handleClockIn}
+                    disabled={!capturedImage || (isUserLate && !reasonInput)}
+                >
+                    <Text style={styles.buttonText}>Clock In</Text>
+                </TouchableOpacity>
+            </View>
+
             <ReusableBottomPopUp
                 show={alert.show}
                 alertType={alert.type}
                 message={alert.message}
                 onConfirm={() => setAlert((prev) => ({ ...prev, show: false }))}
             />
-        </View>
+        </ScrollView>
     );
 };
 
 const styles = StyleSheet.create({
     container: {
         flex: 1,
-    },
-    backgroundBox: {
-        height: 110,
-        width: '100%',
-        position: 'absolute',
-        top: 0,
-        left: 0,
-        opacity: 0.9,
-        zIndex: 1,
+        backgroundColor: '#F5F5F5',
     },
     linearGradient: {
-        flex: 1,
-        height: 150,
+        height: 110,
         borderBottomLeftRadius: 25,
         borderBottomRightRadius: 25,
     },
     headerContainer: {
-        flexDirection: 'row', // Align elements horizontally
-        alignItems: 'center', // Vertically center both icon and text
-        justifyContent: 'center', // Center them horizontally in the container
-        position: 'absolute',
-        top: 60, // Adjust the top margin based on your needs
-        width: '100%', // Ensure the header takes the full width
-        zIndex: 11, // Ensure it stays above other elements
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+        marginTop: 60,
     },
     backIcon: {
         position: 'absolute',
-        left: 20, // Adjust left padding if necessary
+        left: 20,
         color: 'white',
-        fontSize: 24, // Ensure icon size matches the text size
-        zIndex: 11,
+        fontSize: 24,
     },
     headerText: {
         fontSize: 18,
         fontWeight: '600',
         color: 'white',
     },
-    overlayBottom: {
-        position: 'absolute',
-        bottom: 0,
-        height: '40%',
-        width: '100%',
-        backgroundColor: 'white',
-        borderTopLeftRadius: 30,
-        borderTopRightRadius: 30,
+    content: {
         padding: 20,
-        justifyContent: 'flex-start',
+    },
+    timeContainer: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
         alignItems: 'center',
-
-        // iOS Shadow
-        shadowColor: '#000',
-        shadowOffset: {
-            width: 5,
-            height: 5, // Positive value to cast shadow upwards
-        },
-        shadowOpacity: 0.9,
-        shadowRadius: 6,
-
-        // Android Shadow (Elevation)
-        elevation: 15,
+        marginBottom: 20,
+    },
+    timeText: {
+        fontSize: 24,
+        fontWeight: 'bold',
+    },
+    lateStatusContainer: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        backgroundColor: '#ffbda5',
+        paddingVertical: 5,
+        paddingHorizontal: 10,
+        borderRadius: 20,
+    },
+    lateStatusDot: {
+        width: 8,
+        height: 8,
+        borderRadius: 4,
+        backgroundColor: '#ff0002',
+        marginRight: 5,
+    },
+    lateStatusText: {
+        color: '#000',
+        fontWeight: '500',
+    },
+    locationContainer: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        marginBottom: 5,
+    },
+    locationTitle: {
+        fontSize: 18,
+        fontWeight: '500',
+        marginLeft: 5,
+    },
+    locationName: {
+        fontSize: 14,
+        color: 'gray',
+        marginBottom: 15,
+    },
+    mapContainer: {
+        height: 200,
+        marginBottom: 20,
+        borderRadius: 10,
+        overflow: 'hidden',
+    },
+    cameraButton: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+        backgroundColor: '#27A0CF',
+        padding: 15,
+        borderRadius: 10,
+        marginVertical: 20,
+    },
+    cameraButtonText: {
+        color: 'white',
+        marginLeft: 10,
+        fontSize: 16,
     },
     previewImage: {
         width: '100%',
-        height: 250,
+        height: 200,
         resizeMode: 'cover',
-        marginBottom: 20,
         borderRadius: 10,
-    },
-    lateContainer: {
-        marginBottom: 0,
-    },
-    statusView: {
-        backgroundColor: '#ddd',
-        paddingVertical: 5,
-        paddingHorizontal: 10,
-        borderRadius: 50,
-        display: 'flex',
-        flexDirection: 'row',
-        alignItems: 'center',
-        gap: 5,
-    },
-    keyboardAvoidingView: {
-        flex: 1, // Make sure it covers the full area
-    },
-    checkboxContainer: {
-        flexDirection: 'row',
         marginBottom: 20,
-    },
-    checkbox: {
-        alignSelf: 'center',
-    },
-    label: {
-        margin: 8,
-    },
-    scrollViewContent: {
-        flexGrow: 1,
-        justifyContent: 'center',
-    },
-    buttonContainer: {
-        display: 'flex',
-        flexDirection: 'row',
-        justifyContent: 'center',
-        alignItems: 'center',
-        width: '100%',
-        gap: 10,
-    },
-    retakeButton: { backgroundColor: '#27A0CF', padding: 15, borderRadius: 10, alignItems: 'center', marginBottom: 10 },
-    checkInButton: {
-        backgroundColor: '#27A0CF',
-        borderRadius: 30,
-        padding: 15,
-        width: '100%', // Adjust the width as needed
-        alignItems: 'center', // Center the text horizontally
-        justifyContent: 'center', // Center the text vertically
-    },
-    enabledButton: {
-        backgroundColor: '#27A0CF', // Button color when enabled
-    },
-    disabledButton: {
-        backgroundColor: 'gray', // Button color when disabled
-    },
-    buttonText: {
-        color: 'white', // Text color
-        fontSize: 16,
-        textAlign: 'center',
-    },
-    locationContainer: {
-        display: 'flex',
-        flexDirection: 'column',
-        marginTop: 10,
-        gap: 10,
     },
     input: {
         borderColor: '#ccc',
         borderWidth: 1,
         borderRadius: 5,
         padding: 10,
-        width: '100%',
         marginBottom: 20,
         height: 100,
         textAlignVertical: 'top',
     },
-    header: {
-        fontSize: 20,
-        fontWeight: 'bold',
-        color: 'white',
-        textAlign: 'center',
-        marginTop: 50,
-    },
-    upperContainer: {
-        backgroundColor: 'white',
-        flex: 1,
-        borderRadius: 20,
-        marginHorizontal: 20,
-        marginTop: 20,
-        // height: 200,
-        display: 'flex',
-        justifyContent: 'center',
-        flexDirection: 'column',
-        gap: 10,
-        padding: 20,
-    },
-    locationText: {
-        fontSize: 14,
-        textAlign: 'center',
-        color: 'gray',
-        marginBottom: 10,
-    },
-    icon: {
-        marginRight: 10, // Space between the icon and text
-    },
-    textArea: {
-        height: 100,
-        width: '100%',
-        borderColor: 'gray',
-        borderWidth: 1,
-        marginTop: 10,
-        padding: 10,
-        borderRadius: 10,
-        textAlignVertical: 'top', // Ensures text starts at the top of the area
-    },
-    midContainer: {
-        backgroundColor: 'white',
-        flex: 1,
-        borderRadius: 20,
-        marginHorizontal: 20,
-        marginTop: 20,
-        maxHeight: 75,
-        display: 'flex',
-        flexDirection: 'row',
-        justifyContent: 'space-between',
+    checkInButton: {
+        backgroundColor: '#27A0CF',
+        borderRadius: 30,
+        padding: 15,
         alignItems: 'center',
     },
-    lowerContainer: {
-        flex: 1,
-        borderRadius: 20,
-        marginHorizontal: 20,
-        height: 250,
+    disabledButton: {
+        backgroundColor: 'gray',
+    },
+    buttonText: {
+        color: 'white',
+        fontSize: 16,
     },
 });
 
