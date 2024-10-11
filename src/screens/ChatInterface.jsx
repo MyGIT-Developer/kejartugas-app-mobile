@@ -106,7 +106,7 @@ const ChatInterface = ({ route, navigation }) => {
             return;
         }
 
-        if (inputText.toLowerCase() === 'gemini' && !isGeminiMode) {
+        if (inputText.toLowerCase() === '/gemini' && !isGeminiMode) {
             setIsGeminiMode(true);
             const geminiMessage = {
                 id: Date.now().toString(),
@@ -121,7 +121,7 @@ const ChatInterface = ({ route, navigation }) => {
             return;
         }
 
-        if (inputText.toLowerCase() === 'quit' && isGeminiMode) {
+        if (inputText.toLowerCase() === '/quit' && isGeminiMode) {
             setIsGeminiMode(false);
             const quitMessage = {
                 id: Date.now().toString(),
@@ -326,26 +326,48 @@ const ChatInterface = ({ route, navigation }) => {
     return (
         <SafeAreaView style={styles.container}>
             <View style={styles.header}>
-                <LinearGradient
-                    colors={isGeminiMode ? ['#4285F4', '#34A853', '#FBBC05', '#EA4335'] : ['#0E509E', '#5FA0DC', '#9FD2FF']}
-                    style={styles.headerGradient}
-                    start={{ x: 0, y: 0 }}
-                    end={{ x: 1, y: 1 }}
-                >
-                    <View style={styles.headerContent}>
+                {isGeminiMode ? (
+                    <View style={styles.geminiHeader}>
                         <TouchableOpacity style={styles.backButton} onPress={handleBackPress}>
-                            <Ionicons name="arrow-back" color="#fff" size={24} />
+                            <Ionicons name="arrow-back" color="#5F6368" size={24} />
                         </TouchableOpacity>
                         <View style={styles.headerTextContainer}>
-                            <Text style={styles.headerTitle} numberOfLines={1} ellipsizeMode="tail">
-                                {isGeminiMode ? 'Gemini AI Chat' : (taskDetails.title || 'Task Title')}
+                            <Text style={styles.geminiHeaderTitle} numberOfLines={1} ellipsizeMode="tail">
+                                Gemini AI Chat
                             </Text>
-                            <Text style={styles.headerSubtitle} numberOfLines={1} ellipsizeMode="tail">
-                                {isGeminiMode ? 'Ask me anything!' : (taskDetails.subtitle || 'Task Subtitle')}
+                            <Text style={styles.geminiHeaderSubtitle} numberOfLines={1} ellipsizeMode="tail">
+                                Ask me anything!
                             </Text>
                         </View>
+                        <View style={styles.geminiLogo}>
+                            <View style={styles.geminiLogoCircle} />
+                            <View style={[styles.geminiLogoCircle, { backgroundColor: '#EA4335' }]} />
+                            <View style={[styles.geminiLogoCircle, { backgroundColor: '#FBBC05' }]} />
+                            <View style={[styles.geminiLogoCircle, { backgroundColor: '#34A853' }]} />
+                        </View>
                     </View>
-                </LinearGradient>
+                ) : (
+                    <LinearGradient
+                        colors={['#0E509E', '#5FA0DC', '#9FD2FF']}
+                        style={styles.headerGradient}
+                        start={{ x: 0, y: 0 }}
+                        end={{ x: 1, y: 1 }}
+                    >
+                        <View style={styles.headerContent}>
+                            <TouchableOpacity style={styles.backButton} onPress={handleBackPress}>
+                                <Ionicons name="arrow-back" color="#fff" size={24} />
+                            </TouchableOpacity>
+                            <View style={styles.headerTextContainer}>
+                                <Text style={styles.headerTitle} numberOfLines={1} ellipsizeMode="tail">
+                                    {taskDetails.title || 'Task Title'}
+                                </Text>
+                                <Text style={styles.headerSubtitle} numberOfLines={1} ellipsizeMode="tail">
+                                    {taskDetails.subtitle || 'Task Subtitle'}
+                                </Text>
+                            </View>
+                        </View>
+                    </LinearGradient>
+                )}
             </View>
 
             {isLoading ? (
@@ -379,7 +401,6 @@ const ChatInterface = ({ route, navigation }) => {
         </SafeAreaView>
     );
 };
-
 const styles = StyleSheet.create({
     container: {
         flex: 1,
@@ -395,20 +416,6 @@ const styles = StyleSheet.create({
         paddingTop: 40,
         paddingHorizontal: 20,
         elevation: 5,
-    },
-    headerContent: {
-        flexDirection: 'row',
-        alignItems: 'center',
-    },
-    backButton: {
-        marginRight: 15,
-        padding: 10,
-    },
-    headerTextContainer: {
-        flex: 1,
-        alignItems: 'flex-start',
-        alignSelf: 'center',
-        marginBottom: 5,
     },
     header: {
         height: 100, // Reduced height
@@ -490,6 +497,35 @@ const styles = StyleSheet.create({
     },
     otherUserSender: {
         color: '#555',
+    },
+    geminiHeader: {
+        flex: 1,
+        flexDirection: 'row',
+        alignItems: 'center',
+        paddingTop: 40,
+        paddingHorizontal: 15,
+        backgroundColor: '#F1F3F4',
+    },
+    geminiHeaderTitle: {
+        fontSize: 18,
+        fontWeight: 'bold',
+        color: '#202124',
+        marginBottom: 2,
+    },
+    geminiHeaderSubtitle: {
+        fontSize: 12,
+        color: '#5F6368',
+    },
+    geminiLogo: {
+        flexDirection: 'row',
+        marginLeft: 10,
+    },
+    geminiLogoCircle: {
+        width: 8,
+        height: 8,
+        borderRadius: 4,
+        backgroundColor: '#4285F4',
+        marginHorizontal: 2,
     },
     geminiSender: {
         color: '#4285F4',
