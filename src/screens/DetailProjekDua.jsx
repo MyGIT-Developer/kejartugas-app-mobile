@@ -5,7 +5,7 @@ import FloatingButtonProject from '../components/FloatingButtonProject';
 import DraggableModalTask from '../components/DraggableModalTask';
 import ReusableModalSuccess from '../components/TaskModalSuccess';
 import { fetchTaskById } from '../api/task'; // Import the fetchTaskById function
-
+import AsyncStorage from '@react-native-async-storage/async-storage';
 const { height } = Dimensions.get('window');
 
 const STATUS_MAPPING = {
@@ -45,52 +45,52 @@ const getDurationBadge = (remainingDays) => {
 };
 
 const getCollectionStatusBadgeColor = (status) => {
-  switch (status) {
-      case 'finish':
-          return { color: '#A7C8E5', textColor: '#092D58', label: 'Selesai' };
-      case 'earlyFinish':
-          return { color: '#9ADFAD', textColor: '#0A642E', label: 'Selesai Lebih Awal' };
-      case 'finish in delay':
-          return { color: '#F0E089', textColor: '#80490A', label: 'Selesai Terlambat' };
-      case 'overdue':
-          return { color: '#F69292', textColor: '#811616', label: 'Terlambat' };
-      default:
-          return { color: '#E0E0E0', textColor: '#000000', label: status || 'Belum Dikumpulkan' };
-  }
+    switch (status) {
+        case 'finish':
+            return { color: '#A7C8E5', textColor: '#092D58', label: 'Selesai' };
+        case 'earlyFinish':
+            return { color: '#9ADFAD', textColor: '#0A642E', label: 'Selesai Lebih Awal' };
+        case 'finish in delay':
+            return { color: '#F0E089', textColor: '#80490A', label: 'Selesai Terlambat' };
+        case 'overdue':
+            return { color: '#F69292', textColor: '#811616', label: 'Terlambat' };
+        default:
+            return { color: '#E0E0E0', textColor: '#000000', label: status || 'Belum Dikumpulkan' };
+    }
 };
 
 const getStatusBadgeColor = (status, endDate) => {
-  if (status === 'Completed') {
-      return { color: '#C9F8C1', textColor: '#333333', label: 'Selesai' };
-  }
+    if (status === 'Completed') {
+        return { color: '#C9F8C1', textColor: '#333333', label: 'Selesai' };
+    }
 
-  const remainingDays = calculateRemainingDays(endDate, status);
+    const remainingDays = calculateRemainingDays(endDate, status);
 
-  if (remainingDays === 0) {
-      return { color: '#F69292', textColor: '#811616', label: 'Deadline Tugas Hari Ini' };
-  } else if (remainingDays < 0) {
-      return { color: '#F69292', textColor: '#811616', label: `Terlambat selama ${Math.abs(remainingDays)} hari` };
-  } else if (remainingDays > 0) {
-      return { color: '#FFE9CB', textColor: '#E07706', label: `Tersisa ${remainingDays} hari` };
-  }
+    if (remainingDays === 0) {
+        return { color: '#F69292', textColor: '#811616', label: 'Deadline Tugas Hari Ini' };
+    } else if (remainingDays < 0) {
+        return { color: '#F69292', textColor: '#811616', label: `Terlambat selama ${Math.abs(remainingDays)} hari` };
+    } else if (remainingDays > 0) {
+        return { color: '#FFE9CB', textColor: '#E07706', label: `Tersisa ${remainingDays} hari` };
+    }
 
-  // Existing status handling logic
-  switch (status) {
-      case 'workingOnIt':
-          return { color: '#CCC8C8', textColor: '#333333', label: 'Dalam Pengerjaan' };
-      case 'onReview':
-          return { color: '#9AE1EA', textColor: '#333333', label: 'Dalam Peninjauan' };
-      case 'rejected':
-          return { color: '#050404FF', textColor: '#811616', label: 'Ditolak' };
-      case 'onHold':
-          return { color: '#F69292', textColor: '#811616', label: 'Ditunda' };
-      case 'Completed':
-          return { color: '#C9F8C1', textColor: '#333333', label: 'Selesai' }; // Updated label
-      case 'onPending':
-          return { color: '#F0E08A', textColor: '#333333', label: 'Tersedia' };
-      default:
-          return { color: '#E0E0E0', textColor: '#333333', label: status };
-  }
+    // Existing status handling logic
+    switch (status) {
+        case 'workingOnIt':
+            return { color: '#CCC8C8', textColor: '#333333', label: 'Dalam Pengerjaan' };
+        case 'onReview':
+            return { color: '#9AE1EA', textColor: '#333333', label: 'Dalam Peninjauan' };
+        case 'rejected':
+            return { color: '#050404FF', textColor: '#811616', label: 'Ditolak' };
+        case 'onHold':
+            return { color: '#F69292', textColor: '#811616', label: 'Ditunda' };
+        case 'Completed':
+            return { color: '#C9F8C1', textColor: '#333333', label: 'Selesai' }; // Updated label
+        case 'onPending':
+            return { color: '#F0E08A', textColor: '#333333', label: 'Tersedia' };
+        default:
+            return { color: '#E0E0E0', textColor: '#333333', label: status };
+    }
 };
 
 const TableRow = React.memo(({ item, index, onTaskPress }) => {
@@ -102,70 +102,82 @@ const TableRow = React.memo(({ item, index, onTaskPress }) => {
         bgColor: '#9E9E9E',
         textColor: 'black',
     };
-    console.log(item);
+
     return (
         <ScrollView contentContainerStyle={styles.rowContainer}>
-            <TouchableOpacity onPress={toggleExpanded} style={styles.row}>
-                <View style={styles.indexCell}>
-                    <Feather name={expanded ? 'chevron-down' : 'chevron-right'} size={18} color="#0E509E" />
-                    <Text style={styles.indexText}>{index + 1}</Text>
+            {item.task_name == 'No data available' ? (
+                <View style={styles.row}>
+                    <Text style={styles.taskNameText}>No data available</Text>
                 </View>
-                <View style={styles.taskNameCell}>
-                    <Text style={styles.taskNameText} numberOfLines={1} ellipsizeMode="tail">
-                        {item.task_name}
-                    </Text>
-                </View>
-                <View style={[styles.statusCell, { backgroundColor: statusInfo.bgColor }]}>
-                    <Text style={[styles.statusText, { color: statusInfo.textColor }]}>{statusInfo.text}</Text>
-                </View>
-            </TouchableOpacity>
-            {expanded && (
-                <View style={styles.expandedContent}>
-                    <Text style={[styles.expandedText, { fontSize: 16, fontWeight: 600 }]}>
-                        {item.task_name || '-'}
-                    </Text>
-                    <Text style={styles.expandedLabel}>Description:</Text>
-                    <Text style={styles.expandedText}>{item.task_desc || '-'}</Text>
-                    <View style={styles.expandedColumnText}>
-                        <View>
-                        <Text style={styles.expandedLabel}>PIC:</Text>
-                    <Text style={styles.expandedText}>
-                        {item.assigned_employees?.map((employee) => employee.employee_name).join(', ') || '-'}
-                    </Text>
+            ) : (
+                <>
+                    <TouchableOpacity onPress={toggleExpanded} style={styles.row}>
+                        <View style={styles.indexCell}>
+                            <Feather name={expanded ? 'chevron-down' : 'chevron-right'} size={18} color="#0E509E" />
+                            <Text style={styles.indexText}>{index + 1}</Text>
                         </View>
-                        <View>
-                            <Text style={styles.expandedLabel}>Aksi</Text>
-                            <View style={styles.expandedButtonContainer}>
-                        <TouchableOpacity onPress={() => onTaskPress(item)} style={[styles.buttonAction, {backgroundColor: "none"}]}>
-                            {/* <Text style={[styles.expandedText, { color: '#0E509E' }]}>Edit</Text> */}
-                            <Feather name={"eye"} color="blue"/>
-                        </TouchableOpacity>
-                        <TouchableOpacity style={[styles.buttonAction, {backgroundColor: "none"}]}>
-                            {/* <Text style={[styles.expandedText, { color: '#0E509E' }]}>Delete</Text> */}
-                            <Feather name={"edit"} color="black"/>
-                        </TouchableOpacity>
-                        <TouchableOpacity style={[styles.buttonAction, {backgroundColor: "none"}]}>
-                            {/* <Text style={[styles.expandedText, { color: '#0E509E' }]}>Approve</Text> */}
-                            <Feather name={"trash"} color={"red"}/>
-                        </TouchableOpacity>
-                        {/* <TouchableOpacity style={[styles.buttonAction, {backgroundColor: "#d7d7d7"}]}>
+                        <View style={styles.taskNameCell}>
+                            <Text style={styles.taskNameText} numberOfLines={1} ellipsizeMode="tail">
+                                {item.task_name}
+                            </Text>
+                        </View>
+                        <View style={[styles.statusCell, { backgroundColor: statusInfo.bgColor }]}>
+                            <Text style={[styles.statusText, { color: statusInfo.textColor }]}>{statusInfo.text}</Text>
+                        </View>
+                    </TouchableOpacity>
+                    {expanded && (
+                        <View style={styles.expandedContent}>
+                            <Text style={[styles.expandedText, { fontSize: 16, fontWeight: 600 }]}>
+                                {item.task_name || '-'}
+                            </Text>
+                            <Text style={styles.expandedLabel}>Description:</Text>
+                            <Text style={styles.expandedText}>{item.task_desc || '-'}</Text>
+                            <View style={styles.expandedColumnText}>
+                                <View>
+                                    <Text style={styles.expandedLabel}>PIC:</Text>
+                                    <Text style={styles.expandedText}>
+                                        {item.assigned_employees
+                                            ?.map((employee) => employee.employee_name)
+                                            .join(', ') || '-'}
+                                    </Text>
+                                </View>
+                                <View>
+                                    {/* <Text style={styles.expandedLabel}>Aksi</Text> */}
+                                    <View style={styles.expandedButtonContainer}>
+                                        {/* <TouchableOpacity
+                                            onPress={() => onTaskPress(item)}
+                                            style={[styles.buttonAction, { backgroundColor: 'none' }]}
+                                        >
+                                            <Text style={[styles.expandedText, { color: '#0E509E' }]}>Edit</Text>
+                                            <Feather name={'eye'} color="blue" />
+                                        </TouchableOpacity> */}
+                                        {/* <TouchableOpacity style={[styles.buttonAction, { backgroundColor: 'none' }]}>
+                                            <Text style={[styles.expandedText, { color: '#0E509E' }]}>Delete</Text>
+                                            <Feather name={'edit'} color="black" />
+                                        </TouchableOpacity> */}
+                                        {/* <TouchableOpacity style={[styles.buttonAction, { backgroundColor: 'none' }]}>
+                                            <Text style={[styles.expandedText, { color: '#0E509E' }]}>Approve</Text>
+                                            <Feather name={'trash'} color={'red'} />
+                                        </TouchableOpacity> */}
+                                        {/* <TouchableOpacity style={[styles.buttonAction, {backgroundColor: "#d7d7d7"}]}>
                             <Text style={[styles.expandedText, { color: '#0E509E' }]}>Reject</Text>
                         </TouchableOpacity> */}
-                    </View>
+                                    </View>
+                                </View>
+                            </View>
+                            <View style={styles.expandedColumnText}>
+                                <View>
+                                    <Text style={styles.expandedLabel}>Tanggal Mulai:</Text>
+                                    <Text style={styles.expandedText}>{formatDate(item.start_date)}</Text>
+                                </View>
+                                <View>
+                                    <Text style={styles.expandedLabel}>Tanggal Selesai:</Text>
+                                    <Text style={styles.expandedText}>{formatDate(item.end_date)}</Text>
+                                </View>
+                            </View>
                         </View>
-                    </View>
-                    <View style={styles.expandedColumnText}>
-                        <View>
-                            <Text style={styles.expandedLabel}>Tanggal Mulai:</Text>
-                            <Text style={styles.expandedText}>{formatDate(item.start_date)}</Text>
-                        </View>
-                        <View>
-                            <Text style={styles.expandedLabel}>Tanggal Selesai:</Text>
-                            <Text style={styles.expandedText}>{formatDate(item.end_date)}</Text>
-                        </View>
-                    </View>
-                    
-                </View>
+                    )}
+                </>
             )}
         </ScrollView>
     );
@@ -176,27 +188,29 @@ const DetailProjekDua = ({ data }) => {
     const [modalType, setModalType] = useState('default'); // Initialize modalType state
     const [selectedTask, setSelectedTask] = useState(null);
     const [draggableModalVisible, setDraggableModalVisible] = useState(false);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState(null);
+    
+    // const fetchTasks = useCallback(async () => {
+    //     try {
+    //         const companyId = await AsyncStorage.getItem('companyId');
+    //         if (companyId) {
+    //             const response = await getTask(companyId);
+    //             setTaskData(response);
+    //         } else {
+    //             throw new Error('Company ID not found');
+    //         }
+    //     } catch (err) {
+    //         console.error('Error fetching tasks:', err);
+    //         setError(err.message);
+    //     } finally {
+    //         setLoading(false);
+    //     }
+    // }, []);
 
-    const fetchTasks = useCallback(async () => {
-        try {
-            const companyId = await AsyncStorage.getItem('companyId');
-            if (companyId) {
-                const response = await getTask(companyId);
-                setTaskData(response);
-            } else {
-                throw new Error('Company ID not found');
-            }
-        } catch (err) {
-            console.error('Error fetching tasks:', err);
-            setError(err.message);
-        } finally {
-            setLoading(false);
-        }
-    }, []);
-
-    useEffect(() => {
-        fetchTasks();
-    }, [fetchTasks]);
+    // useEffect(() => {
+    //     fetchTasks();
+    // }, [fetchTasks]);
 
     const handleTaskDetailPress = async (task) => {
         const baseUrl = 'http://202.10.36.103:8000/';
@@ -264,27 +278,36 @@ const DetailProjekDua = ({ data }) => {
                         <Text style={[styles.headerCell, styles.taskNameHeaderCell]}>Nama Tugas</Text>
                         <Text style={[styles.headerCell, styles.statusHeaderCell]}>Status</Text>
                     </View>
-                    {taskData.map((item, index) => (
-                        <TableRow key={item.id || index} item={item} index={index} onTaskPress={handleTaskDetailPress}/>
-                    ))}
+                    {taskData && taskData.length > 0 ? (
+                        taskData.map((item, index) => (
+                            <TableRow
+                                key={item.id || index}
+                                item={item}
+                                index={index}
+                                onTaskPress={handleTaskDetailPress}
+                            />
+                        ))
+                    ) : (
+                        <TableRow item={{ task_name: 'No data available' }} index={0} />
+                    )}
                 </ScrollView>
 
                 {modalType === 'default' ? (
-                <DraggableModalTask
-                    visible={draggableModalVisible}
-                    onClose={() => {
-                        setDraggableModalVisible(false);
-                        setSelectedTask(null); // Optional: Reset selectedTask on close
-                    }}
-                    taskDetails={selectedTask || {}}
-                />
-            ) : (
-                <ReusableModalSuccess
-                    visible={draggableModalVisible}
-                    onClose={() => setDraggableModalVisible(false)}
-                    taskDetails={selectedTask || {}}
-                />
-            )}
+                    <DraggableModalTask
+                        visible={draggableModalVisible}
+                        onClose={() => {
+                            setDraggableModalVisible(false);
+                            setSelectedTask(null); // Optional: Reset selectedTask on close
+                        }}
+                        taskDetails={selectedTask || {}}
+                    />
+                ) : (
+                    <ReusableModalSuccess
+                        visible={draggableModalVisible}
+                        onClose={() => setDraggableModalVisible(false)}
+                        taskDetails={selectedTask || {}}
+                    />
+                )}
             </ScrollView>
         </>
     );
@@ -422,12 +445,12 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         justifyContent: 'center',
     },
-    expandedButtonContainer : {
-        position: "flex-start",
+    expandedButtonContainer: {
+        position: 'flex-start',
         flexDirection: 'row',
         justifyContent: 'center',
         gap: 10,
-    }
+    },
 });
 
 export default DetailProjekDua;

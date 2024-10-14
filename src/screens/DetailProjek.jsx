@@ -18,7 +18,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import * as Progress from 'react-native-progress';
 import { Feather } from '@expo/vector-icons';
 
-import { getProjectById } from '../api/projectTask';
+import { getProjectById, deleteProject } from '../api/projectTask';
 import SlidingButton from '../components/SlidingButton';
 import SlidingFragment from '../components/SlidingFragment';
 import DetailProjekSatu from './DetailProjekSatu';
@@ -35,6 +35,7 @@ const DetailProjek = ({ route }) => {
     const [activeFragment, setActiveFragment] = useState(0);
     const [visible, setVisible] = useState(false);
     const [isExpanded, setIsExpanded] = useState(false);
+    const [jobsId, setJobsId] = useState(null);
 
     const toggleExpand = () => {
         setIsExpanded(!isExpanded);
@@ -67,6 +68,19 @@ const DetailProjek = ({ route }) => {
             fetchProjectById();
         }, [fetchProjectById]),
     );
+
+    const deleteProjectHandler = async () => {
+        const jobsId = AsyncStorage.getItem('userJob');
+        try {
+            const response = await deleteProject(projectId, jobsId);
+
+            if (response.status === 200) {
+                navigation.navigate('ProjectList');
+            }
+        } catch (err) {
+            console.error('Error deleting project:', err);
+        }
+    };
 
     const onRefresh = useCallback(async () => {
         setRefreshing(true);
@@ -180,9 +194,9 @@ const DetailProjek = ({ route }) => {
                             placement="bottom"
                         >
                             <View style={styles.menuContainer}>
-                                <Pressable
+                                {/* <Pressable
                                     onPress={() => {
-                                        /* Handle action 1 */ togglePopover();
+                                        togglePopover();
                                     }}
                                     style={styles.menuItem}
                                 >
@@ -194,7 +208,7 @@ const DetailProjek = ({ route }) => {
                                 </Pressable>
                                 <Pressable
                                     onPress={() => {
-                                        /* Handle action 2 */ togglePopover();
+                                        togglePopover();
                                     }}
                                     style={styles.menuItem}
                                 >
@@ -203,10 +217,10 @@ const DetailProjek = ({ route }) => {
                                     </View>
 
                                     <Text style={[styles.optionText, { color: 'black' }]}>Selesai</Text>
-                                </Pressable>
-                                <Pressable
+                                </Pressable> */}
+                                {/* <Pressable
                                     onPress={() => {
-                                        /* Handle action 3 */ togglePopover();
+                                        togglePopover();
                                     }}
                                     style={styles.menuItem}
                                 >
@@ -215,11 +229,9 @@ const DetailProjek = ({ route }) => {
                                     </View>
 
                                     <Text style={[styles.optionText, { color: 'black' }]}>Bagikan</Text>
-                                </Pressable>
+                                </Pressable> */}
                                 <Pressable
-                                    onPress={() => {
-                                        /* Handle action 4 */ togglePopover();
-                                    }}
+                                    onPress={() => deleteProjectHandler()}
                                     style={styles.menuItem}
                                 >
                                     <View style={[styles.optionIcon, { backgroundColor: '#DF4E6E' }]}>

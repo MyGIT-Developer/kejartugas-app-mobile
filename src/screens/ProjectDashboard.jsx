@@ -40,7 +40,12 @@ const ProjectCard = ({ item, handleGoToDetail }) => (
 const ProjectSection = ({ title, projects, status, handleGoTo, handleGoToDetail }) => (
     <View style={styles.sectionContainer}>
         <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>{title}</Text>
+            {status === 'all' ? (
+                 <Text style={styles.sectionTitle}>{title} ({projects.length})</Text>
+            ) : (
+                <Text style={styles.sectionTitle}>{title}</Text>
+            )}
+           
             <TouchableOpacity onPress={() => handleGoTo(status)}>
                 <Text style={styles.seeAllText}>Lihat semua</Text>
             </TouchableOpacity>
@@ -49,6 +54,7 @@ const ProjectSection = ({ title, projects, status, handleGoTo, handleGoToDetail 
             <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ flex: 1, flexDirection: 'row' }}>
                 {projects && Array.isArray(projects) ? (
                     projects
+                    .sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
                         .slice(0, 5)
                         .map((item, index) => (
                             <ProjectCard key={index} item={item} handleGoToDetail={handleGoToDetail} />

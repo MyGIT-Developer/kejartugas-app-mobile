@@ -58,3 +58,17 @@ export const getTask = async (companyId) => {
         throw new Error(error.response?.data?.message || 'Fetching parameter failed');
     }
 }
+
+export const deleteProject = async (projectId, jobsId) => {
+    try {
+        const response = await apiService.delete(`/projects/${projectId}`, {
+            headers: {
+                Authorization: `Bearer ${await AsyncStorage.getItem('token')}`
+            },
+            params: { jobs_id: jobsId },
+        });
+        return response.data;
+    } catch (error) {
+        throw new Error(error.response?.data?.message || 'Fetching parameter failed');
+    }
+}
