@@ -16,7 +16,7 @@ import { useNavigation, useRoute } from '@react-navigation/native';
 import { launchCameraAsync, MediaTypeOptions } from 'expo-image-picker';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { checkIn } from '../api/absent';
-import MyMap from '../components/Maps';
+// import MyMap from '../components/Maps';
 import ReusableBottomPopUp from '../components/ReusableBottomPopUp';
 import CheckBox from '../components/Checkbox';
 
@@ -34,11 +34,12 @@ const DetailKehadiran = () => {
     const [reasonInput, setReasonInput] = useState('');
 
     const [latitude, longitude] = location.split(',').map(coord => parseFloat(coord.trim()));
+    
     const parsedLocation = {
         latitude: isNaN(latitude) ? 0 : latitude,
         longitude: isNaN(longitude) ? 0 : longitude
     };
-
+    console.log('nasigoreng',parsedLocation);
     useEffect(() => {
         const interval = setInterval(updateCurrentTime, 1000);
         getStoredData();
@@ -162,9 +163,9 @@ const DetailKehadiran = () => {
                 </View>
                 <Text style={styles.locationName}>{locationName}</Text>
 
-                <View style={styles.mapContainer}>
+                {/* <View style={styles.mapContainer}>
                     <MyMap location={parsedLocation} radius={radius} />
-                </View>
+                </View> */}
 
                 <CheckBox
                     onPress={() => setIsWFH(!isWFH)}
