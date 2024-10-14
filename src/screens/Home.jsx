@@ -8,6 +8,7 @@ import { getHomeData } from '../api/general';
 const { width } = Dimensions.get('window');
 const cardWidth = (width - 60) / 2;
 import { fetchTaskById, fetchTotalTasksForEmployee } from '../api/task'; // Import the fetchTaskById function
+import ReusableBottomPopUp from '../components/ReusableBottomPopUp';
 
 const formatDate = (date) => {
     const options = { year: 'numeric', month: 'long', day: 'numeric' };
@@ -174,10 +175,16 @@ const Home = () => {
     const [refreshing, setRefreshing] = useState(false);
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState(null);
-    const [showAlert, setShowAlert] = useState(false);
+    const [alert, setAlert] = useState({ show: false, type: 'success', message: '' });
     const [projects, setProjects] = useState([]);
     const [tasks, setTasks] = useState([]);
     const groupedTasks = groupTasksByProject(tasks);
+
+    const showAlert = (message, type) => {
+        setAlert({ show: true, type, message });
+        setTimeout(() => setAlert(prev => ({ ...prev, show: false })), 3000);
+    };
+
 
     const fetchTasks = async () => {
         setRefreshing(true);
@@ -221,7 +228,8 @@ const Home = () => {
             }
         } catch (error) {
             setError('Gagal mengambil tugas. Silakan coba lagi nanti.');
-            setShowAlert(true);
+            // setShowAlert(true);
+            showAlert(`${error.response.data.message}`, 'error');
         } finally {
             setIsLoading(false);
             setRefreshing(false);
@@ -346,24 +354,39 @@ const Home = () => {
               </View>
 
               <View style={styles.tasksContainer}>
-                  {Object.keys(groupedTasks)
-                      .slice(0, 3)
-                      .map((projectName, index) => (
-                          <TaskCard key={index} projectName={projectName} tasks={groupedTasks[projectName]} />
-                      ))}
-                  {Object.keys(groupedTasks).length > 3 && (
-                      <TouchableOpacity
-                          style={styles.moreInfoContainer}
-                          onPress={() => navigation.navigate('Tugas')}
-                      >
-                          <Text style={styles.moreInfoText}>
-                              {`Lihat ${Object.keys(groupedTasks).length - 3} proyek lainnya`}
-                          </Text>
-                      </TouchableOpacity>
-                  )}
+              {groupedTasks && Object.keys(groupedTasks).length > 0 ? (
+    <>
+      {Object.keys(groupedTasks)
+        .slice(0, 3)
+        .map((projectName, index) => (
+          <TaskCard key={index} projectName={projectName} tasks={groupedTasks[projectName]} />
+        ))}
+      {Object.keys(groupedTasks).length > 3 && (
+        <TouchableOpacity
+          style={styles.moreInfoContainer}
+          onPress={() => navigation.navigate('Tugas')}
+        >
+          <Text style={styles.moreInfoText}>
+            {`Lihat ${Object.keys(groupedTasks).length - 3} proyek lainnya`}
+          </Text>
+        </TouchableOpacity>
+      )}
+    </>
+  ) : (
+    <View style={styles.noTasksBox}>
+         <Text style={styles.noTasksText}>Tidak ada tugas saat ini.</Text>
+    </View>
+   
+  )}
               </View>
           </View>
       </ScrollView>
+      <ReusableBottomPopUp
+                show={alert.show}
+                alertType={alert.type}
+                message={alert.message}
+                onConfirm={() => setAlert(prev => ({ ...prev, show: false }))}  
+            />
   </View>
     );
 };
@@ -584,6 +607,22 @@ const styles = StyleSheet.create({
         color: 'white',
         fontFamily: 'Poppins-Medium',
     },
+    noTasksBox: {
+        backgroundColor: 'white',
+        padding: 16,
+        borderRadius: 10,
+        elevation: 3,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.1,
+        shadowRadius: 4,
+      },
+        noTasksText: {
+            fontSize: 12,
+            color: '#1C1C1E',
+            fontFamily: 'Poppins-Medium',
+            textAlign: 'center',
+        },
 });
 
 export default Home;

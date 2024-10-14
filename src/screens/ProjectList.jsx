@@ -107,7 +107,9 @@ const ProjectList = () => {
         >
             {project && Array.isArray(project) ? (
                 project &&
-                project.filter((item) => item.project_type === filterType || !filterType).map(renderProjectItem)
+                project
+                .sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
+                .filter((item) => item.project_type === filterType || !filterType).map(renderProjectItem)
             ) : (
                 <View>
                     <Text style={{ fontFamily: 'Poppins-Regular', letterSpacing: -0.3 }}>Tidak ada Projek</Text>

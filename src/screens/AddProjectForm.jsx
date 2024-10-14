@@ -9,7 +9,7 @@ import {
     StyleSheet,
     TextInput,
     TouchableOpacity,
-    FlatList
+    FlatList,
 } from 'react-native';
 import CheckBox from '@react-native-community/checkbox'; // External CheckBox component
 import DateTimePicker from '@react-native-community/datetimepicker';
@@ -113,75 +113,92 @@ const AddProjectForm = ({ route }) => {
     const renderDatePicker = useCallback(
         (field, showPicker, setShowPicker) => (
             <View style={styles.fieldGroup}>
-            <Text style={styles.labelText}>{field === 'start_date' ? 'Mulai' : 'Selesai'}</Text>
-            <TouchableOpacity onPress={() => setShowPicker(true)} style={styles.datePickerButton}>
-              <TextInput
-                style={styles.dateInput}
-                placeholder="Pilih Tanggal"
-                value={formState[field] ? formState[field].toLocaleDateString('id-ID', {
-                  year: 'numeric',
-                  month: 'long',
-                  day: 'numeric'
-                }) : ''}
-                editable={false}
-              />
-              <Feather name="calendar" size={24} color="#27A0CF" />
-            </TouchableOpacity>
-            {showPicker && (
-              <DateTimePicker
-                value={formState[field] || new Date()}
-                mode="date"
-                display="default"
-                onChange={(event, selectedDate) => handleDateChange(field, event, selectedDate)}
-              />
-            )}
-          </View>   
+                <Text style={styles.labelText}>{field === 'start_date' ? 'Mulai' : 'Selesai'}</Text>
+                <View>
+                    <TouchableOpacity onPress={() => setShowPicker(true)} style={styles.datePickerButton}>
+                        <TextInput
+                            style={styles.dateInput}
+                            placeholder="Pilih Tanggal"
+                            value={
+                                formState[field]
+                                    ? formState[field].toLocaleDateString('id-ID', {
+                                          year: 'numeric',
+                                          month: 'long',
+                                          day: 'numeric',
+                                      })
+                                    : ''
+                            }
+                            editable={false}
+                        />
+                        <Feather name="calendar" size={24} color="#27A0CF" />
+                    </TouchableOpacity>
+                    {showPicker && (
+                        <DateTimePicker
+                            value={formState[field] || new Date()}
+                            mode="date"
+                            display="default"
+                            borderRadius={25}
+                            onChange={(event, selectedDate) => handleDateChange(field, event, selectedDate)}
+                        />
+                    )}
+                </View>
+            </View>
         ),
         [formState, handleDateChange],
     );
 
     const renderPicker = useCallback(
         (field, label, options, isMulti = false) => (
-          <View>
-            <Text>{label}</Text>
-            {isMulti ? (
-              <FlatList
-                data={options}
-                keyExtractor={(item) => item.value.toString()}
-                renderItem={({ item }) => (
-                  <TouchableOpacity
-                    key={item.value}
-                    onPress={() => handleAssignToChange(item.value)}
-                    style={{ flexDirection: 'row', alignItems: 'center', padding: 10 }}
-                  >
-                    <Icon
-                      name={formState.assign_to.includes(item.value) ? 'check-box' : 'check-box-outline-blank'}
-                      size={24}
-                      color={formState.assign_to.includes(item.value) ? 'blue' : 'gray'}
-                    />
-                    <Text style={{ marginLeft: 8 }}>{item.label}</Text>
-                  </TouchableOpacity>
-                )}
-              />
-            ) : (
-              <Picker
-                selectedValue={formState[field]}
-                onValueChange={(itemValue) => {
-                  field === 'assign_by'
-                    ? handleAssignByChange(itemValue)
-                    : updateFormField(field, itemValue);
-                }}
-              >
-                <Picker.Item label="Select an option" value="" />
-                {options.map((option) => (
-                  <Picker.Item key={option.value} label={option.label} value={option.value} />
-                ))}
-              </Picker>
-            )}
-          </View>
+            <View style={styles.fieldGroup}>
+                <Text style={styles.labelText}>{label}</Text>
+                <View style={styles.pickerContainer}>
+                    {isMulti ? (
+                        <FlatList
+                            data={options}
+                            keyExtractor={(item) => item.value.toString()}
+                            renderItem={({ item }) => (
+                                <TouchableOpacity
+                                    key={item.value}
+                                    onPress={() => handleAssignToChange(item.value)}
+                                    style={[
+                                        styles.multiSelectItem,
+                                        formState.assign_to.includes(item.value) && styles.multiSelectItemSelected,
+                                    ]}
+                                >
+                                    <Text
+                                        style={[
+                                            styles.multiSelectText,
+                                            formState.assign_to.includes(item.value) && styles.multiSelectTextSelected,
+                                        ]}
+                                    >
+                                        {item.label}
+                                    </Text>
+                                </TouchableOpacity>
+                            )}
+                            horizontal={false}
+                            numColumns={2}
+                        />
+                    ) : (
+                        <Picker
+                            selectedValue={formState[field]}
+                            onValueChange={(itemValue) => {
+                                field === 'assign_by'
+                                    ? handleAssignByChange(itemValue)
+                                    : updateFormField(field, itemValue);
+                            }}
+                            style={styles.picker}
+                        >
+                            <Picker.Item label="Select an option" value="" />
+                            {options.map((option) => (
+                                <Picker.Item key={option.value} label={option.label} value={option.value} />
+                            ))}
+                        </Picker>
+                    )}
+                </View>
+            </View>
         ),
-        [formState, updateFormField]
-      );
+        [formState, updateFormField],
+    );
 
     const handleAssignByChange = useCallback(
         (value) => {
@@ -193,14 +210,14 @@ const AddProjectForm = ({ route }) => {
 
     const handleAssignToChange = useCallback(
         (value) => {
-          const updatedAssignTo = formState.assign_to.includes(value)
-            ? formState.assign_to.filter((item) => item !== value)
-            : [...formState.assign_to, value];
-          updateFormField('assign_to', updatedAssignTo);
+            const updatedAssignTo = formState.assign_to.includes(value)
+                ? formState.assign_to.filter((item) => item !== value)
+                : [...formState.assign_to, value];
+            updateFormField('assign_to', updatedAssignTo);
         },
-        [formState, updateFormField]
-      );
-      
+        [formState, updateFormField],
+    );
+
     const handleSubmit = useCallback(async () => {
         try {
             const response = await CreateProject(formState);
@@ -225,7 +242,9 @@ const AddProjectForm = ({ route }) => {
                 end={{ x: 1, y: 1 }}
             />
             <View style={styles.headerSection}>
-                <Feather name="chevron-left" style={styles.backIcon} onPress={() => navigation.goBack()} />
+                <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
+                    <Feather name="chevron-left" size={28} color="white" />
+                </TouchableOpacity>
                 <Text style={styles.header}>Projek Baru</Text>
             </View>
             <View style={styles.formContainer}>
@@ -252,13 +271,13 @@ const AddProjectForm = ({ route }) => {
 
                 {/* {renderPicker('assign_by', 'Ditugaskan oleh', employees.map(emp => ({ label: emp.employee_name, value: emp.id })))} */}
                 {renderPicker(
-  'assign_to',
-  'Ditugaskan Kepada',
-  employees
-    .filter((emp) => emp.id !== employeeId)
-    .map((emp) => ({ label: emp.employee_name, value: emp.id })),
-  true // Set isMulti to true for multi-select
-)}
+                    'assign_to',
+                    'Ditugaskan Kepada',
+                    employees
+                        .filter((emp) => emp.id !== employeeId)
+                        .map((emp) => ({ label: emp.employee_name, value: emp.id })),
+                    true, // Set isMulti to true for multi-select
+                )}
                 {renderPicker('project_type', 'Tipe Proyek', [
                     { label: 'General', value: 'general' },
                     { label: 'Maintenance', value: 'maintenance' },
@@ -301,24 +320,22 @@ const styles = StyleSheet.create({
         left: 0,
         right: 0,
         top: 0,
-        height: 200,
+        height: '35%', // Increased slightly
     },
     headerSection: {
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'center',
-        paddingTop: 50,
-        paddingBottom: 20,
+        paddingTop: 60,
+        paddingBottom: 30,
     },
-    backIcon: {
+    backButton: {
         position: 'absolute',
         left: 20,
-        top: 50,
-        color: 'white',
-        fontSize: 24,
+        top: 60,
     },
     header: {
-        fontSize: 22,
+        fontSize: 24,
         fontWeight: 'bold',
         color: 'white',
         textAlign: 'center',
@@ -328,95 +345,118 @@ const styles = StyleSheet.create({
         borderTopLeftRadius: 30,
         borderTopRightRadius: 30,
         paddingHorizontal: 20,
-        paddingTop: 30,
-        paddingBottom: 50,
+        paddingTop: 36,
+        paddingBottom: 60,
+        width: '100%',
     },
     fieldGroup: {
-        marginBottom: 20,
+        width: '100%',
+        marginBottom: 24,
     },
     labelText: {
         fontSize: 16,
         fontWeight: '600',
-        marginBottom: 8,
+        marginBottom: 10,
         color: '#333',
     },
     input: {
-        height: 50,
+        height: 54,
         borderColor: '#ddd',
         borderWidth: 1,
-        borderRadius: 10,
-        paddingHorizontal: 15,
+        borderRadius: 12,
+        paddingHorizontal: 16,
         fontSize: 16,
         backgroundColor: '#f9f9f9',
+        width: '100%',
     },
     dateContainer: {
-        flexDirection: 'row',
-        justifyContent: 'space-between',
+        flexDirection: 'column', // Changed to column for better layout
+    },
+    dateFieldContainer: {
+        width: '100%',
+        marginBottom: 16, // Added space between date fields
     },
     datePickerButton: {
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'space-between',
-        height: 50,
+        height: 54,
         borderColor: '#ddd',
         borderWidth: 1,
-        borderRadius: 10,
-        paddingHorizontal: 15,
+        borderRadius: 12,
+        paddingHorizontal: 16,
         backgroundColor: '#f9f9f9',
+        width: '100%',
+    },
+    dateText: {
+        fontSize: 16,
+        color: '#333',
+    },
+    buttonContainer: {
+        alignItems: 'center',
+        marginTop: 36,
+        width: '100%',
+    },
+    button: {
+        backgroundColor: '#27A0CF',
+        borderRadius: 28,
+        paddingVertical: 16,
+        paddingHorizontal: 48,
+        elevation: 3,
+        width: '100%', // Changed to full width
+    },
+    buttonText: {
+        color: 'white',
+        fontWeight: 'bold',
+        fontSize: 18,
+        textAlign: 'center',
     },
     dateInput: {
         flex: 1,
         fontSize: 16,
     },
     pickerContainer: {
-        borderColor: '#ddd',
-        borderWidth: 1,
-        borderRadius: 10,
-        backgroundColor: '#f9f9f9',
+      borderColor: '#ddd',
+      borderWidth: 1,
+      borderRadius: 12,
+      paddingHorizontal: 16,
+      fontSize: 16,
+      backgroundColor: '#f9f9f9',
+      width: '100%',
     },
     picker: {
-        height: 50,
+        height: 54,
+        width: '100%', // Ensure full width
     },
     multiSelectContainer: {
         flexDirection: 'row',
         flexWrap: 'wrap',
+        marginBottom: 16,
+        width: '100%', // Ensure full width
     },
     multiSelectItem: {
         backgroundColor: '#f0f0f0',
         borderRadius: 20,
-        paddingVertical: 8,
-        paddingHorizontal: 15,
-        margin: 5,
+        paddingVertical: 10,
+        paddingHorizontal: 16,
+        margin: 6,
+        flexBasis: '45%', // Adjust for two columns with some margin
     },
     multiSelectItemSelected: {
         backgroundColor: '#27A0CF',
     },
     multiSelectText: {
         color: '#333',
+        fontSize: 15,
     },
     multiSelectTextSelected: {
         color: 'white',
     },
     textArea: {
-        height: 100,
+        height: 120,
         textAlignVertical: 'top',
-        paddingTop: 15,
-    },
-    buttonContainer: {
-        alignItems: 'center',
-        marginTop: 30,
-    },
-    button: {
-        backgroundColor: '#27A0CF',
-        borderRadius: 25,
-        paddingVertical: 15,
-        paddingHorizontal: 40,
-        elevation: 3,
-    },
-    buttonText: {
-        color: 'white',
-        fontWeight: 'bold',
-        fontSize: 18,
+        paddingTop: 16,
+        width: '100%', // Ensure full width
     },
 });
 
