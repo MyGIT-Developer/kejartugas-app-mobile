@@ -16,7 +16,8 @@ import { useNavigation, useRoute } from '@react-navigation/native';
 import { launchCameraAsync, MediaTypeOptions } from 'expo-image-picker';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { checkIn } from '../api/absent';
-// import MyMap from '../components/Maps';
+import Shimmer from '../components/Shimmer'; // Sesuaikan path jika diperlukan
+import MyMap from '../components/Maps';
 import ReusableBottomPopUp from '../components/ReusableBottomPopUp';
 import CheckBox from '../components/Checkbox';
 
@@ -39,7 +40,7 @@ const DetailKehadiran = () => {
         latitude: isNaN(latitude) ? 0 : latitude,
         longitude: isNaN(longitude) ? 0 : longitude
     };
-    console.log('nasigoreng',parsedLocation);
+
     useEffect(() => {
         const interval = setInterval(updateCurrentTime, 1000);
         getStoredData();
@@ -133,67 +134,71 @@ const DetailKehadiran = () => {
     };
 
     return (
-        <ScrollView style={styles.container}>
-            <LinearGradient
-                colors={['#0E509E', '#5FA0DC', '#9FD2FF']}
-                style={styles.linearGradient}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 1 }}
-            >
-                <View style={styles.headerContainer}>
-                    <Feather name="chevron-left" style={styles.backIcon} onPress={handleGoBack} />
-                    <Text style={styles.headerText}>Lokasi Kehadiran</Text>
-                </View>
-            </LinearGradient>
+        <View style={styles.container}>
+            <ScrollView contentContainerStyle={styles.scrollContent}>
+                <LinearGradient
+                    colors={['#0E509E', '#5FA0DC', '#9FD2FF']}
+                    style={styles.linearGradient}
+                    start={{ x: 0, y: 0 }}
+                    end={{ x: 1, y: 1 }}
+                >
+                    <View style={styles.headerContainer}>
+                        <Feather name="chevron-left" style={styles.backIcon} onPress={handleGoBack} />
+                        <Text style={styles.headerText}>Lokasi Kehadiran</Text>
+                    </View>
+                </LinearGradient>
 
-            <View style={styles.content}>
-                <View style={styles.timeContainer}>
-                    <Text style={styles.timeText}>{currentTime}</Text>
+                <View style={styles.content}>
+                    <View style={styles.timeContainer}>
+                        <Text style={styles.timeText}>{currentTime}</Text>
+                        {isUserLate && (
+                            <View style={styles.lateStatusContainer}>
+                                <View style={styles.lateStatusDot} />
+                                <Text style={styles.lateStatusText}>Late</Text>
+                            </View>
+                        )}
+                    </View>
+
+                    <View style={styles.locationContainer}>
+                        <Icon name="location-on" size={24} color="gray" />
+                        <Text style={styles.locationTitle}>Lokasi saat ini</Text>
+                    </View>
+                    <Text style={styles.locationName}>{locationName}</Text>
+
+                    {/* <View style={styles.mapContainer}>
+                        <MyMap location={parsedLocation} radius={radius} />
+                    </View> */}
+
+                    <CheckBox
+                        onPress={() => setIsWFH(!isWFH)}
+                        title="Sedang berada di luar kantor"
+                        isChecked={isWFH}
+                    />
+
+                    {!capturedImage && (
+                        <TouchableOpacity style={styles.cameraButton} onPress={triggerCamera}>
+                            <Icon name="camera-alt" size={24} color="white" />
+                            <Text style={styles.cameraButtonText}>Ambil Foto</Text>
+                        </TouchableOpacity>
+                    )}
+
+                    {capturedImage && (
+                        <Image source={{ uri: capturedImage }} style={styles.previewImage} />
+                    )}
+
                     {isUserLate && (
-                        <View style={styles.lateStatusContainer}>
-                            <View style={styles.lateStatusDot} />
-                            <Text style={styles.lateStatusText}>Late</Text>
-                        </View>
+                        <TextInput
+                            style={styles.input}
+                            placeholder="Silahkan berikan alasan keterlambatan"
+                            value={reasonInput}
+                            onChangeText={setReasonInput}
+                            multiline
+                        />
                     )}
                 </View>
+            </ScrollView>
 
-                <View style={styles.locationContainer}>
-                    <Icon name="location-on" size={24} color="gray" />
-                    <Text style={styles.locationTitle}>Lokasi saat ini</Text>
-                </View>
-                <Text style={styles.locationName}>{locationName}</Text>
-
-                {/* <View style={styles.mapContainer}>
-                    <MyMap location={parsedLocation} radius={radius} />
-                </View> */}
-
-                <CheckBox
-                    onPress={() => setIsWFH(!isWFH)}
-                    title="Sedang berada di luar kantor"
-                    isChecked={isWFH}
-                />
-
-                {!capturedImage && (
-                    <TouchableOpacity style={styles.cameraButton} onPress={triggerCamera}>
-                        <Icon name="camera-alt" size={24} color="white" />
-                        <Text style={styles.cameraButtonText}>Ambil Foto</Text>
-                    </TouchableOpacity>
-                )}
-
-                {capturedImage && (
-                    <Image source={{ uri: capturedImage }} style={styles.previewImage} />
-                )}
-
-                {isUserLate && (
-                    <TextInput
-                        style={styles.input}
-                        placeholder="Silahkan berikan alasan keterlambatan"
-                        value={reasonInput}
-                        onChangeText={setReasonInput}
-                        multiline
-                    />
-                )}
-
+            <View style={styles.bottomButtonContainer}>
                 <TouchableOpacity
                     style={[
                         styles.checkInButton,
@@ -212,7 +217,7 @@ const DetailKehadiran = () => {
                 message={alert.message}
                 onConfirm={() => setAlert((prev) => ({ ...prev, show: false }))}
             />
-        </ScrollView>
+        </View>
     );
 };
 
@@ -220,6 +225,9 @@ const styles = StyleSheet.create({
     container: {
         flex: 1,
         backgroundColor: '#F5F5F5',
+    },
+    scrollContent: {
+        paddingBottom: 100, // Provide space for the button at the bottom
     },
     linearGradient: {
         height: 110,
@@ -326,6 +334,14 @@ const styles = StyleSheet.create({
         marginBottom: 20,
         height: 100,
         textAlignVertical: 'top',
+    },
+    bottomButtonContainer: {
+        position: 'absolute',
+        bottom: 0,
+        left: 0,
+        right: 0,
+        padding: 20,
+        backgroundColor: '#F5F5F5',
     },
     checkInButton: {
         backgroundColor: '#27A0CF',

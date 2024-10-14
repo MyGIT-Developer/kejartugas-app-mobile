@@ -20,6 +20,7 @@ import ReusableBottomPopUp from '../components/ReusableBottomPopUp';
 import { markAbsent, getAttendance, getAttendanceReport, checkOut, checkIn } from '../api/absent';
 import { getParameter } from '../api/parameter';
 
+
 const { height } = Dimensions.get('window');
 
 const Kehadiran = () => {
