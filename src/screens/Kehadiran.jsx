@@ -1,25 +1,25 @@
+import React, { useState, useEffect, useCallback } from 'react';
 import {
     View,
     Text,
     StyleSheet,
-    Button,
     Alert,
-    TextInput,
     TouchableOpacity,
     RefreshControl,
     Dimensions,
 } from 'react-native';
-import React, { useState, useEffect, useCallback } from 'react';
 import { LinearGradient } from 'expo-linear-gradient';
 import * as Location from 'expo-location';
-import CircularButton from '../components/CircularButton';
 import { ScrollView } from 'react-native-gesture-handler';
-import { markAbsent, getAttendance, getAttendanceReport, checkOut, checkIn } from '../api/absent';
-import { getParameter } from '../api/parameter';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { Feather } from '@expo/vector-icons';
+
+import CircularButton from '../components/CircularButton';
 import ReusableBottomPopUp from '../components/ReusableBottomPopUp';
+import { markAbsent, getAttendance, getAttendanceReport, checkOut, checkIn } from '../api/absent';
+import { getParameter } from '../api/parameter';
+
 const { height } = Dimensions.get('window');
 
 const Kehadiran = () => {
@@ -30,43 +30,51 @@ const Kehadiran = () => {
     const [companyId, setCompanyId] = useState(null);
     const [attendanceData, setAttendanceData] = useState([]);
     const [isCheckedIn, setIsCheckedIn] = useState(false);
-    const [jamTelat, setjamTelat] = useState('');
-    const navigation = useNavigation();
+    const [jamTelat, setJamTelat] = useState('');
+    const [radius, setRadius] = useState(null);
     const [refreshing, setRefreshing] = useState(false);
     const [alert, setAlert] = useState({ show: false, type: 'success', message: '' });
+    const [location, setLocation] = useState(null);
+    const [currentPage, setCurrentPage] = useState(0);
+
+    const navigation = useNavigation();
+
+    const itemsPerPage = 7;
+    const startDate = new Date('2024-09-01');
+    const today = new Date();
+    const daysDiff = Math.floor((today - startDate) / (1000 * 60 * 60 * 24));
 
     useEffect(() => {
         const getData = async () => {
             try {
-                const employeeId = await AsyncStorage.getItem('employeeId');
-                const companyId = await AsyncStorage.getItem('companyId');
+                const storedEmployeeId = await AsyncStorage.getItem('employeeId');
+                const storedCompanyId = await AsyncStorage.getItem('companyId');
 
-                setEmployeeId(employeeId);
-                setCompanyId(companyId);
+                setEmployeeId(storedEmployeeId);
+                setCompanyId(storedCompanyId);
             } catch (error) {
                 console.error('Error fetching AsyncStorage data:', error);
             }
         };
 
-        getData(); // Call the async function
-    }, []); // Empty array ensures this effect runs only once after the component mounts
+        getData();
+    }, []);
 
-    const startDate = new Date('2024-09-01'); // 1st September 2024
-    const today = new Date(); // Today's date
+    const fetchOfficeHour = useCallback(async () => {
+        if (!companyId) return;
 
-    const fetchOfficeHour = async () => {
         try {
             const response = await getParameter(companyId);
-
-            setjamTelat(response.data.jam_telat);
+            setJamTelat(response.data.jam_telat);
+            setRadius(response.data.radius);
         } catch (error) {
-            // console.error("Error fetching office hour data:", error);
+            console.error("Error fetching office hour data:", error);
         }
-    };
+    }, [companyId]);
 
     useEffect(() => {
         fetchOfficeHour();
-    }, [companyId]);
+    }, [fetchOfficeHour]);
 
     const fetchAttendanceData = useCallback(async () => {
         if (!employeeId) return;
@@ -74,7 +82,6 @@ const Kehadiran = () => {
         try {
             const response = await getAttendance(employeeId);
             setAttendanceData(response.attendance);
-            // Assuming the API returns an isCheckedInToday property
             setIsCheckedIn(response.isCheckedInToday);
         } catch (error) {
             console.error('Error fetching attendance data:', error);
@@ -91,11 +98,10 @@ const Kehadiran = () => {
     useFocusEffect(
         useCallback(() => {
             fetchAttendanceData();
-        }, [fetchAttendanceData]),
+        }, [fetchAttendanceData])
     );
 
     const onRefresh = useCallback(async () => {
-        console.log('onRefresh called');
         setRefreshing(true);
         try {
             await fetchAttendanceData();
@@ -106,46 +112,119 @@ const Kehadiran = () => {
         }
     }, [fetchAttendanceData]);
 
-    const getBackgroundColor = (absenStatus) => {
-        switch (absenStatus) {
-            case 'On Time':
-                return '#a5dbff';
-            case 'Early':
-                return '#c8ffca';
-            case 'Late':
-                return '#ffbda5';
-            case 'Holiday':
-                return '#dedede';
-            default:
-                return '#dedede';
+    useEffect(() => {
+        const interval = setInterval(() => {
+            const now = new Date();
+            const time = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true });
+            setCurrentTime(time);
+        }, 1000);
+
+        return () => clearInterval(interval);
+    }, []);
+
+    useEffect(() => {
+        (async () => {
+            let { status } = await Location.requestForegroundPermissionsAsync();
+            if (status !== 'granted') {
+                setErrorMsg('Permission to access location was denied');
+                return;
+            }
+
+            let location = await Location.getCurrentPositionAsync({});
+            const { latitude, longitude } = location.coords;
+
+            const formattedCoordinates = `${latitude.toFixed(6)}, ${longitude.toFixed(6)}`;
+            setLocation(formattedCoordinates);
+
+            const [reverseGeocodeResult] = await Location.reverseGeocodeAsync({ latitude, longitude });
+
+            if (reverseGeocodeResult) {
+                setLocationName(
+                    `${reverseGeocodeResult.street}, ${reverseGeocodeResult.city}, ${reverseGeocodeResult.region}, ${reverseGeocodeResult.country}`
+                );
+            } else {
+                setLocationName('Unable to retrieve location name');
+            }
+        })();
+    }, []);
+
+    const handleClockIn = useCallback(() => {
+        if (!location || !locationName) {
+            showAlert('Location data not available. Please try again.', 'error');
+            return;
         }
+        
+        try {
+            navigation.navigate('DetailKehadiran', { location, locationName, jamTelat, radius });
+        } catch (error) {
+            console.error('Navigation error:', error);
+            showAlert('An error occurred while navigating. Please try again.', 'error');
+        }
+    }, [location, locationName, jamTelat, radius, navigation]);
+
+    const handleClockOut = async () => {
+        try {
+            const updateResponse = await checkOut(employeeId, companyId);
+            showAlert(`${updateResponse}`, 'success');
+            fetchAttendanceData();
+        } catch (error) {
+            const errorMessage = error.message || 'Unknown error';
+            showAlert(`${errorMessage}`, 'error');
+        }
+    };
+
+    const showAlert = (message, type) => {
+        setAlert({ show: true, type, message });
+        setTimeout(() => setAlert(prev => ({ ...prev, show: false })), 3000);
+    };
+
+    const handleNextPage = () => {
+        if (currentPage < totalPages - 1) {
+            setCurrentPage(currentPage + 1);
+        }
+    };
+
+    const handlePreviousPage = () => {
+        if (currentPage > 0) {
+            setCurrentPage(currentPage - 1);
+        }
+    };
+
+    const getBackgroundColor = (absenStatus) => {
+        const colors = {
+            'On Time': '#a5dbff',
+            'Early': '#c8ffca',
+            'Late': '#ffbda5',
+            'Holiday': '#dedede'
+        };
+        return colors[absenStatus] || '#dedede';
     };
 
     const getIndicatorDotColor = (absenStatus) => {
-        switch (absenStatus) {
-            case 'On Time':
-                return '#4491c5';
-            case 'Early':
-                return '#00ff24';
-            case 'Late':
-                return '#ff0002';
-            case 'Holiday':
-                return '#aaaaaa';
-            default:
-                return '#aaaaaa';
-        }
+        const colors = {
+            'On Time': '#4491c5',
+            'Early': '#00ff24',
+            'Late': '#ff0002',
+            'Holiday': '#aaaaaa'
+        };
+        return colors[absenStatus] || '#aaaaaa';
     };
 
-    // Calculate the number of days between startDate and today
-    const daysDiff = Math.floor((today - startDate) / (1000 * 60 * 60 * 24));
+    const calculateDuration = (checkinTime, checkoutTime) => {
+        if (!checkinTime || !checkoutTime) return '-';
 
-    const [currentPage, setCurrentPage] = useState(0);
-    const itemsPerPage = 7;
+        const timeDifference = checkoutTime - checkinTime;
+        if (isNaN(timeDifference) || timeDifference < 0) return '-';
 
-    const dateViews = [];
-    for (let i = 0; i <= daysDiff; i++) {
+        const hours = Math.floor(timeDifference / (1000 * 60 * 60));
+        const minutes = Math.floor((timeDifference % (1000 * 60 * 60)) / (1000 * 60));
+
+        return `${hours}h ${minutes}m`;
+    };
+
+    const renderDateView = (date, index) => {
         const currentDate = new Date(startDate);
-        currentDate.setDate(startDate.getDate() + i);
+        currentDate.setDate(startDate.getDate() + index);
 
         const formattedDateForUpper = currentDate.toLocaleDateString('en-US', {
             weekday: 'short',
@@ -154,35 +233,16 @@ const Kehadiran = () => {
             year: 'numeric',
         });
 
-        // Format the date to match the format in your attendance data
-        const formattedDate = currentDate.toISOString().split('T')[0]; // Format as 'YYYY-MM-DD'
+        const formattedDate = currentDate.toISOString().split('T')[0];
 
-        // Find attendance data for the current date
-        const attendanceForDate = attendanceData.find((attendance) => {
+        const attendanceForDate = attendanceData.find(attendance => {
             const checkinDate = new Date(attendance.checkin).toISOString().split('T')[0];
             return checkinDate === formattedDate;
         });
 
-        const calculateDuration = (checkinTime, checkoutTime) => {
-            if (!checkinTime || !checkoutTime) {
-                return '-';
-            }
-
-            const timeDifference = checkoutTime - checkinTime;
-
-            if (isNaN(timeDifference) || timeDifference < 0) {
-                return '-';
-            }
-
-            const hours = Math.floor(timeDifference / (1000 * 60 * 60));
-            const minutes = Math.floor((timeDifference % (1000 * 60 * 60)) / (1000 * 60));
-
-            return `${hours}h ${minutes}m`;
-        };
-
         const status = attendanceForDate ? attendanceForDate.status : 'Not Absent';
         const checkIn = attendanceForDate?.checkin
-            ? new Date(attendanceForDate?.checkin).toLocaleTimeString('id-ID', {
+            ? new Date(attendanceForDate.checkin).toLocaleTimeString('id-ID', {
                   hour: '2-digit',
                   minute: '2-digit',
                   hour12: false,
@@ -202,9 +262,8 @@ const Kehadiran = () => {
             : '-';
         const notes = attendanceForDate ? attendanceForDate.note : 'No notes';
 
-        // Insert the views at the start of the array to sort by the newest date first
-        dateViews.unshift(
-            <View key={i} style={styles.containerPerDate}>
+        return (
+            <View key={index} style={styles.containerPerDate}>
                 <View style={styles.upperAbsent}>
                     <Text>{formattedDateForUpper}</Text>
                     <View style={[styles.statusView, { backgroundColor: getBackgroundColor(status) }]}>
@@ -234,143 +293,13 @@ const Kehadiran = () => {
                         <Text>{notes}</Text>
                     </View>
                 </View>
-            </View>,
+            </View>
         );
-    }
+    };
 
-    // Calculate the current page's date views
+    const dateViews = Array.from({ length: daysDiff + 1 }, (_, index) => renderDateView(startDate, index)).reverse();
     const paginatedDateViews = dateViews.slice(currentPage * itemsPerPage, (currentPage + 1) * itemsPerPage);
-
-    // Calculate the total number of pages
     const totalPages = Math.ceil(dateViews.length / itemsPerPage);
-
-    // Handle "Next" and "Previous" page navigation
-    const handleNextPage = () => {
-        if (currentPage < totalPages - 1) {
-            setCurrentPage(currentPage + 1);
-        }
-    };
-
-    const handlePreviousPage = () => {
-        if (currentPage > 0) {
-            setCurrentPage(currentPage - 1);
-        }
-    };
-
-    useEffect(() => {
-        // Update time every second
-        const interval = setInterval(() => {
-            const now = new Date();
-            const options = {
-                hour: '2-digit',
-                minute: '2-digit',
-                hour12: true,
-            };
-            const time = now.toLocaleTimeString([], options);
-            setCurrentTime(time);
-        }, 1000);
-
-        // Cleanup interval on component unmount
-        return () => clearInterval(interval);
-    }, []);
-
-    const [location, setLocation] = useState(null);
-
-    useEffect(() => {
-        // Get location permissions and device location
-        (async () => {
-            let { status } = await Location.requestForegroundPermissionsAsync();
-            if (status !== 'granted') {
-                setErrorMsg('Permission to access location was denied');
-                return;
-            }
-
-            let location = await Location.getCurrentPositionAsync({});
-            const latitude = location.coords.latitude;
-            const longitude = location.coords.longitude;
-
-            // Format latitude and longitude
-            const formattedCoordinates = `${latitude.toFixed(6)}, ${longitude.toFixed(6)}`;
-            setLocation(formattedCoordinates);
-
-            // Reverse geocode to get location name
-            const [reverseGeocodeResult] = await Location.reverseGeocodeAsync({
-                latitude,
-                longitude,
-            });
-
-            if (reverseGeocodeResult) {
-                setLocationName(
-                    `${reverseGeocodeResult.street}, ${reverseGeocodeResult.city}, ${reverseGeocodeResult.region}, ${reverseGeocodeResult.country}`,
-                );
-            } else {
-                setLocationName('Unable to retrieve location name');
-            }
-        })();
-    }, []);
-
-    const handleClockIn = useCallback(() => {
-        console.log('handleClockIn called');
-        if (!location || !locationName) {
-            console.log('Location data not available');
-            showAlert('Location data not available. Please try again.', 'error');
-            return;
-        }
-        
-        console.log('Navigating to DetailKehadiran');
-        console.log('Location:', location);
-        console.log('Location Name:', locationName);
-        console.log('Jam Telat:', jamTelat);
-        
-        try {
-            navigation.navigate('DetailKehadiran', { location, locationName, jamTelat });
-        } catch (error) {
-            console.error('Navigation error:', error);
-            showAlert('An error occurred while navigating. Please try again.', 'error');
-        }
-    }, [location, locationName, jamTelat, navigation]);
-
-
-    const handleClockOut = async () => {
-        // setIsCheckedInToday(false);
-        try {
-            const updateResponse = await checkOut(employeeId, companyId);
-
-            showAlert(`${updateResponse}`, 'success');
-            setTimeout(() => {
-                setAlert((prev) => ({ ...prev, show: false }));
-            }, 3000);
-
-            fetchAttendanceData();
-        } catch (error) {
-            // console.error("Error when checking out:", error);
-            const errorMessage = error.message || 'Unknown error';
-
-            showAlert(`${errorMessage}`, 'error');
-            setTimeout(() => {
-                setAlert((prev) => ({ ...prev, show: false }));
-            }, 3000);
-        }
-    };
-
-    const [date, setDate] = useState(new Date()); // State to hold the selected date
-    const [show, setShow] = useState(false); // State to control visibility of the date picker
-
-    // Function to handle date change
-    const onChange = (event, selectedDate) => {
-        const currentDate = selectedDate || date;
-        setShow(Platform.OS === 'ios'); // Keep the picker open on iOS
-        setDate(currentDate);
-    };
-
-    // Function to show the date picker
-    const showDatePicker = () => {
-        setShow(true);
-    };
-
-    const showAlert = (message, type) => {
-        setAlert({ show: true, type, message });
-    };
 
     return (
         <View style={styles.container}>
@@ -383,9 +312,8 @@ const Kehadiran = () => {
                 />
             </View>
     
-            {/* ScrollView wrapping only scrollable content */}
             <ScrollView
-                contentContainerStyle={[styles.scrollViewContent, { flexGrow: 1 }]}  // Ensure flexGrow is applied
+                contentContainerStyle={styles.scrollViewContent}
                 refreshControl={
                     <RefreshControl
                         refreshing={refreshing}
@@ -395,39 +323,33 @@ const Kehadiran = () => {
                     />
                 }
             >
-                {/* Static Header */}
                 <Text style={styles.header}>Kehadiran</Text>
     
-                {/* Main scrollable container */}
                 <View style={styles.mainContainer}>
-                    {/* Top Section */}
                     <View style={styles.upperContainer}>
                         <Text style={styles.timeText}>{currentTime}</Text>
                         <Text style={styles.locationText}>{errorMsg || locationName}</Text>
     
                         <View style={styles.buttonContainer}>
-                        {isCheckedIn ? (
-    <CircularButton
-        title="Clock Out"
-        onPress={handleClockOut}
-        colors={['#E11414', '#EA4545', '#EA8F8F']}
-        disabled={!!attendanceData.checkout} // Disable if user has already checked out
-    />
-) : (
-    <CircularButton
-        title="Clock In"
-        onPress={handleClockIn}
-        colors={['#0E509E', '#5FA0DC', '#9FD2FF']}
-    />
-)}
-
+                            {isCheckedIn ? (
+                                <CircularButton
+                                    title="Clock Out"
+                                    onPress={handleClockOut}
+                                    colors={['#E11414', '#EA4545', '#EA8F8F']}
+                                    disabled={!!attendanceData.checkout}
+                                />
+                            ) : (
+                                <CircularButton
+                                    title="Clock In"
+                                    onPress={handleClockIn}
+                                    colors={['#0E509E', '#5FA0DC', '#9FD2FF']}
+                                />
+                            )}
                         </View>
                     </View>
     
-                    {/* Scrollable Section */}
                     <View style={styles.lowerContainer}>{paginatedDateViews}</View>
     
-                    {/* Pagination */}
                     <View style={styles.paginationControls}>
                         <TouchableOpacity onPress={handlePreviousPage} disabled={currentPage === 0}>
                             <Feather
@@ -454,18 +376,15 @@ const Kehadiran = () => {
                 </View>
             </ScrollView>
     
-            {/* Alert Popup */}
             <ReusableBottomPopUp
                 show={alert.show}
                 alertType={alert.type}
                 message={alert.message}
-                onConfirm={() => setAlert((prev) => ({ ...prev, show: false }))}  
+                onConfirm={() => setAlert(prev => ({ ...prev, show: false }))}  
             />
         </View>
     );
-    
 };
-
 const styles = StyleSheet.create({
     container: {
         minHeight: height, // Ensure the content is at least as tall as the screen

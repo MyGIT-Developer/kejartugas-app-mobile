@@ -22,7 +22,7 @@ import CheckBox from '../components/Checkbox';
 
 const DetailKehadiran = () => {
     const route = useRoute();
-    const { location, locationName, jamTelat = [] } = route.params || {};
+    const { location, locationName, jamTelat = [], radius } = route.params || {};
     const [currentTime, setCurrentTime] = useState('');
     const [employeeId, setEmployeeId] = useState(null);
     const [companyId, setCompanyId] = useState(null);
@@ -31,7 +31,12 @@ const DetailKehadiran = () => {
     const [capturedImage, setCapturedImage] = useState(null);
     const [alert, setAlert] = useState({ show: false, type: 'success', message: '' });
     const [reasonInput, setReasonInput] = useState('');
-
+    // Parse location (latitude, longitude) from the string
+    const [latitude, longitude] = location.split(',').map(coord => parseFloat(coord.trim()));
+    const parsedLocation = {
+        latitude: isNaN(latitude) ? 0 : latitude,  // Provide a default if parsing fails
+        longitude: isNaN(longitude) ? 0 : longitude  // Provide a default if parsing fails
+    };
     useEffect(() => {
         const interval = setInterval(() => {
             const now = new Date();
@@ -156,7 +161,7 @@ const DetailKehadiran = () => {
                 <Text style={styles.locationName}>{locationName}</Text>
 
                 <View style={styles.mapContainer}>
-                    <MyMap location={location} radius={radius} />
+                <MyMap location={parsedLocation} radius={radius} />
                 </View>
 
 
