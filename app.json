@@ -16,7 +16,12 @@
         "ios": {
             "supportsTablet": true,
             "bundleIdentifier": "com.innovation.kejartugas",
-            "jsEngine": "hermes"
+            "jsEngine": "hermes",
+            "infoPlist": {
+                "NSLocationWhenInUseUsageDescription": "This app needs access to location when open.",
+                "NSLocationAlwaysUsageDescription": "This app needs access to location when in the background.",
+                "NSLocationAlwaysAndWhenInUseUsageDescription": "This app needs access to location when open and in the background."
+            }
         },
         "android": {
             "adaptiveIcon": {
@@ -42,7 +47,15 @@
         "web": {
             "favicon": "./assets/images/favicon.png"
         },
-        "plugins": ["expo-font"],
+        "plugins": [
+            "expo-font",
+            [
+                "expo-location",
+                {
+                    "locationAlwaysAndWhenInUsePermission": "Allow $(PRODUCT_NAME) to use your location."
+                }
+            ]
+        ],
         "extra": {
             "eas": {
                 "projectId": "e1ce8215-b7b5-4f6e-93e9-395c28377593"
