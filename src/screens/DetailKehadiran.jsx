@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
     View,
     Text,
@@ -21,33 +21,35 @@ import ReusableBottomPopUp from '../components/ReusableBottomPopUp';
 import CheckBox from '../components/Checkbox';
 
 const DetailKehadiran = () => {
+    const navigation = useNavigation();
     const route = useRoute();
     const { location, locationName, jamTelat = [], radius } = route.params || {};
+
     const [currentTime, setCurrentTime] = useState('');
     const [employeeId, setEmployeeId] = useState(null);
     const [companyId, setCompanyId] = useState(null);
-    const navigation = useNavigation();
     const [isWFH, setIsWFH] = useState(false);
     const [capturedImage, setCapturedImage] = useState(null);
     const [alert, setAlert] = useState({ show: false, type: 'success', message: '' });
     const [reasonInput, setReasonInput] = useState('');
-    // Parse location (latitude, longitude) from the string
+
     const [latitude, longitude] = location.split(',').map(coord => parseFloat(coord.trim()));
     const parsedLocation = {
-        latitude: isNaN(latitude) ? 0 : latitude,  // Provide a default if parsing fails
-        longitude: isNaN(longitude) ? 0 : longitude  // Provide a default if parsing fails
+        latitude: isNaN(latitude) ? 0 : latitude,
+        longitude: isNaN(longitude) ? 0 : longitude
     };
+
     useEffect(() => {
-        const interval = setInterval(() => {
-            const now = new Date();
-            const options = { hour: '2-digit', minute: '2-digit', hour12: true };
-            setCurrentTime(now.toLocaleTimeString([], options));
-        }, 1000);
-
+        const interval = setInterval(updateCurrentTime, 1000);
         getStoredData();
-
         return () => clearInterval(interval);
     }, []);
+
+    const updateCurrentTime = () => {
+        const now = new Date();
+        const options = { hour: '2-digit', minute: '2-digit', hour12: true };
+        setCurrentTime(now.toLocaleTimeString([], options));
+    };
 
     const getStoredData = async () => {
         try {
@@ -60,13 +62,13 @@ const DetailKehadiran = () => {
         }
     };
 
-    const calculateLateStatus = () => {
+    const calculateLateStatus = useCallback(() => {
         const currentDate = new Date();
         const [hours, minutes] = jamTelat.split(':');
         const officeStartTime = new Date();
         officeStartTime.setHours(parseInt(hours, 10), parseInt(minutes, 10), 0);
         return currentDate > officeStartTime;
-    };
+    }, [jamTelat]);
 
     const isUserLate = calculateLateStatus();
 
@@ -92,12 +94,12 @@ const DetailKehadiran = () => {
 
     const handleClockIn = async () => {
         if (!capturedImage) {
-            showAlert('Silahkan mengambil foto terlebih dahulu!', 'Error');
+            showAlert('Silahkan mengambil foto terlebih dahulu!', 'error');
             return;
         }
 
         if (isUserLate && !reasonInput.trim()) {
-            showAlert('Silahkan memberikan Alasan Keterlambatan!', 'Error');
+            showAlert('Silahkan memberikan Alasan Keterlambatan!', 'error');
             return;
         }
 
@@ -117,7 +119,7 @@ const DetailKehadiran = () => {
             }, 1500);
         } catch (error) {
             console.error('Check-in error:', error.message);
-            showAlert(`Error when checking in: ${error.message || 'Unknown error'}`, 'Error');
+            showAlert(`Error when checking in: ${error.message || 'Unknown error'}`, 'error');
         }
     };
 
@@ -161,9 +163,8 @@ const DetailKehadiran = () => {
                 <Text style={styles.locationName}>{locationName}</Text>
 
                 <View style={styles.mapContainer}>
-                <MyMap location={parsedLocation} radius={radius} />
+                    <MyMap location={parsedLocation} radius={radius} />
                 </View>
-
 
                 <CheckBox
                     onPress={() => setIsWFH(!isWFH)}
@@ -171,10 +172,12 @@ const DetailKehadiran = () => {
                     isChecked={isWFH}
                 />
 
-                <TouchableOpacity style={styles.cameraButton} onPress={triggerCamera}>
-                    <Icon name="camera-alt" size={24} color="white" />
-                    <Text style={styles.cameraButtonText}>Ambil Foto</Text>
-                </TouchableOpacity>
+                {!capturedImage && (
+                    <TouchableOpacity style={styles.cameraButton} onPress={triggerCamera}>
+                        <Icon name="camera-alt" size={24} color="white" />
+                        <Text style={styles.cameraButtonText}>Ambil Foto</Text>
+                    </TouchableOpacity>
+                )}
 
                 {capturedImage && (
                     <Image source={{ uri: capturedImage }} style={styles.previewImage} />
@@ -311,6 +314,7 @@ const styles = StyleSheet.create({
         height: 200,
         resizeMode: 'cover',
         borderRadius: 10,
+        marginTop:20,
         marginBottom: 20,
     },
     input: {
