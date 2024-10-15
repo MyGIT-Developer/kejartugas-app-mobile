@@ -75,9 +75,10 @@ const Login = () => {
                     AsyncStorage.setItem('employeeId', id.toString()),
                     AsyncStorage.setItem('companyId', company_id.toString()),
                     AsyncStorage.setItem('employee_name', username),
+                    AsyncStorage.setItem('access_permissions', data.access_permissions.toString()),
                 ]);
             }
-
+            console.log('Access Permissions:', data.access_permissions);
             showAlert('Login Berhasil! Anda akan diarahkan ke halaman utama.', 'success');
             setTimeout(() => {
                 setAlert((prev) => ({ ...prev, show: false }));

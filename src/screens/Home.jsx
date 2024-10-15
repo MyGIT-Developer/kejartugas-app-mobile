@@ -108,8 +108,8 @@ const TaskCard = ({ projectName, tasks, onTaskPress }) => {
         <View style={styles.taskCard}>
             <Text style={styles.projectTitle}>{projectName}</Text>
             {tasks.slice(0, 3).map((task, index) => (
-                <View style={styles.taskSection}>
-                    <View key={index} style={styles.taskItem}>
+                <View style={styles.taskSection} key={task.id || index}>
+                    <View style={styles.taskItem}>
                         <View style={styles.taskInfo}>
                             <Text style={styles.taskName}>{truncateText(task.task_name, 50)}</Text>
                             <Text style={styles.taskDueDate}>Due: {formatDate(task.end_date)}</Text>
