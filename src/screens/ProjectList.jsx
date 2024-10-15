@@ -14,6 +14,16 @@ import { getProject } from '../api/projectTask';
 
 const { height, width: SCREEN_WIDTH } = Dimensions.get('window');
 
+// Skeleton component for project item
+const SkeletonItem = () => (
+    <View style={[styles.projectItem, { backgroundColor: '#f0f0f0' }]}>
+      <View style={[styles.skeletonText, { width: '80%', height: 20, marginBottom: 10 }]} />
+      <View style={[styles.skeletonText, { width: '100%', height: 10, marginBottom: 10 }]} />
+      <View style={[styles.skeletonText, { width: '40%', height: 20 }]} />
+    </View>
+  );
+
+  
 const ProjectList = () => {
     const navigation = useNavigation();
     const [project, setProject] = useState(null);
@@ -86,8 +96,7 @@ const ProjectList = () => {
                 </Text>
             </View>
             <TouchableOpacity style={styles.detailButton} onPress={() => handleGoToDetail(item.id)}>
-                <Text style={{  fontFamily: 'Poppins-Medium',
-        letterSpacing: -0.3,}}>Lihat Detail</Text>
+                <Text style={{ fontFamily: 'Poppins-Medium', letterSpacing: -0.3 }}>Lihat Detail</Text>
                 <Feather name="chevron-right" size={24} color="black" />
             </TouchableOpacity>
         </View>
@@ -105,11 +114,14 @@ const ProjectList = () => {
             }
             contentContainerStyle={styles.projectList}
         >
-            {project && Array.isArray(project) ? (
-                project &&
+            {loading ? (
+                // Render skeleton items while loading
+                [...Array(5)].map((_, index) => <SkeletonItem key={index} />)
+            ) : project && Array.isArray(project) ? (
                 project
-                .sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
-                .filter((item) => item.project_type === filterType || !filterType).map(renderProjectItem)
+                    .sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
+                    .filter((item) => item.project_type === filterType || !filterType)
+                    .map(renderProjectItem)
             ) : (
                 <View>
                     <Text style={{ fontFamily: 'Poppins-Regular', letterSpacing: -0.3 }}>Tidak ada Projek</Text>
@@ -132,22 +144,6 @@ const ProjectList = () => {
             screen: () => <ProjectListView filterType="maintenance" />,
         },
     ];
-
-    if (loading) {
-        return (
-            <View style={styles.centered}>
-                <ActivityIndicator size="large" color="#0000ff" />
-            </View>
-        );
-    }
-
-    if (error) {
-        return (
-            <View style={styles.centered}>
-                <Text>Error: {error}</Text>
-            </View>
-        );
-    }
 
     return (
         <>

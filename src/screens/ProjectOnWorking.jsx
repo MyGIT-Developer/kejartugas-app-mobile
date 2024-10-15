@@ -18,6 +18,7 @@ import { Feather, Ionicons } from '@expo/vector-icons';
 import DraggableModalTask from '../components/DraggableModalTask';
 import ReusableModalSuccess from '../components/TaskModalSuccess';
 import { fetchTaskById } from '../api/task'; // Import the fetchTaskById function
+import { ScrollView } from 'react-native-gesture-handler';
 
 const calculateRemainingDays = (endDate) => {
     const today = new Date();
@@ -302,7 +303,8 @@ const ProjectOnWorking = () => {
     };
 
     return (
-        <SafeAreaView style={styles.container}>
+  <SafeAreaView style={styles.container}>
+            <ScrollView contentContainerStyle={styles.mainContainer}>      
             <View style={styles.backgroundBox}>
                 <LinearGradient
                     colors={['#0E509E', '#5FA0DC', '#9FD2FF']}
@@ -311,7 +313,6 @@ const ProjectOnWorking = () => {
                     end={{ x: 1, y: 1 }}
                 />
             </View>
-
             <View style={styles.headerSection}>
                 <Feather name="chevron-left" style={styles.backIcon} onPress={() => navigation.goBack()} />
                 <Text style={styles.header}>Dalam Pengerjaan</Text>
@@ -328,6 +329,7 @@ const ProjectOnWorking = () => {
                         onTaskPress={handleTaskDetailPress}
                     />
                 )}
+                showsVerticalScrollIndicator={false}
             />
 
             {modalType === 'default' ? (
@@ -335,7 +337,7 @@ const ProjectOnWorking = () => {
                     visible={draggableModalVisible}
                     onClose={() => {
                         setDraggableModalVisible(false);
-                        setSelectedTask(null); // Optional: Reset selectedTask on close
+                        setSelectedTask(null);
                     }}
                     taskDetails={selectedTask || {}}
                 />
@@ -346,6 +348,7 @@ const ProjectOnWorking = () => {
                     taskDetails={selectedTask || {}}
                 />
             )}
+            </ScrollView>
         </SafeAreaView>
     );
 };
@@ -355,7 +358,7 @@ const styles = StyleSheet.create({
         flexGrow: 1,
     },
     backgroundBox: {
-        height: 80,
+        height: 120,
         width: '100%',
         position: 'absolute',
         top: 0,
@@ -370,36 +373,37 @@ const styles = StyleSheet.create({
         justifyContent: 'center',
         alignItems: 'center',
         width: SCREEN_WIDTH,
+        marginTop: 20,
         gap: 20,
     },
     header: {
-        fontSize: 22,
+        fontSize: 24,
         fontWeight: 'bold',
         color: 'white',
-        textAlign: 'center',
+        alignSelf: 'center',
+        fontFamily: 'Poppins-Bold',
+        marginTop: 30,
         letterSpacing: -1,
-        marginTop: 25,
     },
     backIcon: {
         position: 'absolute',
-        top: 30,
+        top: 35,
         left: 20,
         color: 'white',
         fontSize: 24,
     },
     contentContainer: {
-        marginTop: 40,
         paddingHorizontal: 16,
-        flexGrow: 1,
+        paddingTop: 20,
+        paddingBottom: 20,
     },
     safeArea: {
         flex: 1,
         backgroundColor: '#F2F2F7',
     },
     mainContainer: {
-        height: '200vh',
+        // height: '200vh',
         borderRadius: 20,
-        margin: 20,
         display: 'flex',
         flexDirection: 'column',
         gap: 20,
@@ -409,6 +413,7 @@ const styles = StyleSheet.create({
         display: 'flex',
         flexDirection: 'column',
         gap: 20,
+        marginBottom:10,
     },
     subHeader: {
         display: 'flex',

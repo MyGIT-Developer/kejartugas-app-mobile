@@ -8,6 +8,7 @@ import {
     StyleSheet,
     SafeAreaView,
     TouchableOpacity,
+    ScrollView,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -303,6 +304,7 @@ const TaskOnReview = () => {
 
     return (
         <SafeAreaView style={styles.container}>
+            <ScrollView contentContainerStyle={styles.mainContainer}>
             <View style={styles.backgroundBox}>
                 <LinearGradient
                     colors={['#0E509E', '#5FA0DC', '#9FD2FF']}
@@ -311,7 +313,6 @@ const TaskOnReview = () => {
                     end={{ x: 1, y: 1 }}
                 />
             </View>
-
             <View style={styles.headerSection}>
                 <Feather name="chevron-left" style={styles.backIcon} onPress={() => navigation.goBack()} />
                 <Text style={styles.header}>Dalam Peninjauan</Text>
@@ -346,6 +347,7 @@ const TaskOnReview = () => {
                     taskDetails={selectedTask || {}}
                 />
             )}
+            </ScrollView>
         </SafeAreaView>
     );
 };
@@ -355,7 +357,7 @@ const styles = StyleSheet.create({
         flexGrow: 1,
     },
     backgroundBox: {
-        height: 80,
+        height: 120,
         width: '100%',
         position: 'absolute',
         top: 0,
@@ -370,36 +372,38 @@ const styles = StyleSheet.create({
         justifyContent: 'center',
         alignItems: 'center',
         width: SCREEN_WIDTH,
+        marginTop: 20,
         gap: 20,
     },
     header: {
-        fontSize: 22,
+        fontSize: 24,
         fontWeight: 'bold',
         color: 'white',
-        textAlign: 'center',
+        alignSelf: 'center',
+        fontFamily: 'Poppins-Bold',
+        marginTop: 30,
         letterSpacing: -1,
-        marginTop: 25,
     },
     backIcon: {
         position: 'absolute',
-        top: 30,
+        top: 35,
         left: 20,
         color: 'white',
         fontSize: 24,
     },
     contentContainer: {
-        marginTop: 40,
+        marginTop: 10,
         paddingHorizontal: 16,
-        flexGrow: 1,
+        paddingTop: 20,
+        paddingBottom: 20,
     },
     safeArea: {
         flex: 1,
         backgroundColor: '#F2F2F7',
     },
     mainContainer: {
-        height: '200vh',
+        // height: '200vh',
         borderRadius: 20,
-        margin: 20,
         display: 'flex',
         flexDirection: 'column',
         gap: 20,

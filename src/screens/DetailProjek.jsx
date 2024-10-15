@@ -281,7 +281,9 @@ const DetailProjek = ({ route }) => {
                         />
                     </View>
                 </View>
+
                 <SlidingFragment fragments={fragments} activeFragment={activeFragment} data={projectData} />
+                
             </ScrollView>
         </View>
     );
@@ -411,6 +413,11 @@ const styles = StyleSheet.create({
     },
     optionText: {
         fontWeight: 'bold',
+    },
+    lowerContainer: {
+        flexGrow: 1,
+        width: '100%',
+        paddingHorizontal: 20,
     },
 });
 

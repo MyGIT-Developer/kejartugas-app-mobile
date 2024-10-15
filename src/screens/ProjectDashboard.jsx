@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useCallback } from 'react';
-import { View, Text, ActivityIndicator, Dimensions, StyleSheet, RefreshControl } from 'react-native';
+import { View, Text, SafeAreaView, Dimensions, StyleSheet, RefreshControl } from 'react-native';
 import FloatingButton from '../components/FloatingButtonProject';
 import { getProject } from '../api/projectTask';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -12,6 +12,33 @@ import { TouchableOpacity } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import ProjectScrollView from '../components/ProjectScrollView';
+
+// Skeleton component for project card
+const SkeletonCard = () => (
+    <View style={[styles.cardContainer, { backgroundColor: '#f0f0f0' }]}>
+        <View style={styles.card}>
+            <View style={[styles.skeletonText, { width: '80%', height: 20, marginBottom: 10 }]} />
+            <View style={[styles.skeletonText, { width: '60%', height: 15, marginBottom: 15 }]} />
+            <View style={[styles.skeletonText, { width: '100%', height: 10, marginBottom: 10 }]} />
+            <View style={[styles.skeletonText, { width: '40%', height: 20 }]} />
+        </View>
+    </View>
+);
+
+// Skeleton component for project section
+const SkeletonSection = () => (
+    <View style={styles.sectionContainer}>
+        <View style={styles.sectionHeader}>
+            <View style={[styles.skeletonText, { width: '40%', height: 20 }]} />
+            <View style={[styles.skeletonText, { width: '20%', height: 20 }]} />
+        </View>
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ flex: 1, flexDirection: 'row' }}>
+            {[...Array(3)].map((_, index) => (
+                <SkeletonCard key={index} />
+            ))}
+        </ScrollView>
+    </View>
+);
 
 const ProjectCard = ({ item, handleGoToDetail }) => (
     <View style={styles.cardContainer}>
@@ -26,8 +53,9 @@ const ProjectCard = ({ item, handleGoToDetail }) => (
                     width={null}
                     style={styles.progressBar}
                 />
-                <Text style={{  fontFamily: 'Poppins-Medium',
-        letterSpacing: -0.3,}}>{item.percentage ? Math.round(item.percentage).toFixed(1) : '0'}%</Text>
+                <Text style={{ fontFamily: 'Poppins-Medium', letterSpacing: -0.3 }}>
+                    {item.percentage ? Math.round(item.percentage).toFixed(1) : '0'}%
+                </Text>
             </View>
             <TouchableOpacity style={styles.detailButton} onPress={() => handleGoToDetail(item.id)}>
                 <Text style={{ fontFamily: 'Poppins-Medium', letterSpacing: -0.3 }}>Lihat Detail</Text>
@@ -41,11 +69,13 @@ const ProjectSection = ({ title, projects, status, handleGoTo, handleGoToDetail 
     <View style={styles.sectionContainer}>
         <View style={styles.sectionHeader}>
             {status === 'all' ? (
-                 <Text style={styles.sectionTitle}>{title} ({projects.length})</Text>
+                <Text style={styles.sectionTitle}>
+                    {title} ({projects.length})
+                </Text>
             ) : (
                 <Text style={styles.sectionTitle}>{title}</Text>
             )}
-           
+
             <TouchableOpacity onPress={() => handleGoTo(status)}>
                 <Text style={styles.seeAllText}>Lihat semua</Text>
             </TouchableOpacity>
@@ -54,7 +84,7 @@ const ProjectSection = ({ title, projects, status, handleGoTo, handleGoToDetail 
             <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ flex: 1, flexDirection: 'row' }}>
                 {projects && Array.isArray(projects) ? (
                     projects
-                    .sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
+                        .sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
                         .slice(0, 5)
                         .map((item, index) => (
                             <ProjectCard key={index} item={item} handleGoToDetail={handleGoToDetail} />
@@ -111,14 +141,17 @@ const ProjectDashboard = () => {
     }, []);
 
     const fetchProject = async () => {
+        setRefreshing(true);
+        setLoading(true);
         try {
             const response = await getProject(companyId);
             setProject(response.data); // Assuming response contains the project data
             setTaskCount(response.data.task_status_counts);
-            setLoading(false);
         } catch (err) {
             setError(err.message);
+        } finally {
             setLoading(false);
+            setRefreshing(false);
         }
     };
 
@@ -128,33 +161,49 @@ const ProjectDashboard = () => {
         }
     }, [companyId]);
 
-    const onRefresh = useCallback(async () => {
-        console.log('onRefresh called');
-        setRefreshing(true);
-        try {
-            await fetchProject();
-        } catch (error) {
-            console.error('Error during refresh:', error);
-        } finally {
-            setRefreshing(false);
+    const renderContent = () => {
+        if (loading) {
+            return (
+                <>
+                    <SkeletonSection />
+                    <SkeletonSection />
+                    <SkeletonSection />
+                </>
+            );
         }
-    }, [fetchProject]);
 
-    if (loading) {
-        return (
-            <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
-                <ActivityIndicator size="large" color="#0000ff" />
-            </View>
-        );
-    }
+        if (error) {
+            return (
+                <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+                    <Text>Error: {error}</Text>
+                </View>
+            );
+        }
 
-    if (error) {
         return (
-            <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
-                <Text>Error: {error}</Text>
-            </View>
+            <>
+                <ProjectSection
+                    title="Semua Proyek"
+                    projects={project}
+                    status="all"
+                    handleGoTo={handleGoTo}
+                    handleGoToDetail={handleGoToDetail}
+                />
+                <ProjectSection
+                    title="Dalam Pengerjaan"
+                    projects={project}
+                    status="workingOnIt"
+                    handleGoTo={() => handleGoTo('onProgress')}
+                />
+                <ProjectSection
+                    title="Dalam Peninjauan"
+                    projects={project}
+                    status="onReview"
+                    handleGoTo={() => handleGoTo('onReview')}
+                />
+            </>
         );
-    }
+    };
 
     const handleGoTo = (projectType) => {
         switch (projectType) {
@@ -177,8 +226,12 @@ const ProjectDashboard = () => {
     };
 
     return (
-        <>
-            <ScrollView contentContainerStyle={styles.container}>
+        <SafeAreaView style={styles.safeArea}>
+            <ScrollView
+                style={styles.container}
+                contentContainerStyle={styles.contentContainer}
+                refreshControl={<RefreshControl refreshing={refreshing} onRefresh={fetchProject} />}
+            >
                 <View style={styles.backgroundBox}>
                     <LinearGradient
                         colors={['#0E509E', '#5FA0DC', '#9FD2FF']}
@@ -195,44 +248,18 @@ const ProjectDashboard = () => {
                     </View>
                 </View>
 
-                <ScrollView
-                    refreshControl={
-                        <RefreshControl
-                            refreshing={refreshing}
-                            onRefresh={onRefresh}
-                            colors={['#0E509E']}
-                            tintColor="#0E509E"
-                        />
-                    }
-                    contentContainerStyle={{ marginBottom: 100 }}
-                >
-                    <ProjectSection
-                        title="Semua Proyek"
-                        projects={project}
-                        status="all"
-                        handleGoTo={handleGoTo}
-                        handleGoToDetail={handleGoToDetail}
-                    />
-                    <ProjectSection
-                        title="Dalam Pengerjaan"
-                        projects={project}
-                        status="workingOnIt"
-                        handleGoTo={() => handleGoTo('onProgress')}
-                    />
-                    <ProjectSection
-                        title="Dalam Peninjauan"
-                        projects={project}
-                        status="onReview"
-                        handleGoTo={() => handleGoTo('onReview')}
-                    />
-                </ScrollView>
+                <ScrollView contentContainerStyle={{ marginBottom: 100 }}>{renderContent()}</ScrollView>
             </ScrollView>
             <FloatingButton />
-        </>
+        </SafeAreaView>
     );
 };
 
 const styles = StyleSheet.create({
+    safeArea: {
+        flex: 1,
+        backgroundColor: '#F0F0F0',
+    },
     container: {
         flexGrow: 1,
     },
@@ -352,6 +379,10 @@ const styles = StyleSheet.create({
         color: '#0E509E',
         fontFamily: 'Poppins-Regular',
         lineHeight: 30,
+    },
+    skeletonText: {
+        backgroundColor: '#e0e0e0',
+        borderRadius: 4,
     },
 });
 

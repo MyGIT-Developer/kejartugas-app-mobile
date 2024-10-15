@@ -72,6 +72,7 @@ const styles = StyleSheet.create({
         flexGrow: 1,
         paddingHorizontal: 20,
         flexDirection: 'column',
+        height: height - 100,
         width: SCREEN_WIDTH,
     },
     infoContainer: {
