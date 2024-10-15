@@ -9,6 +9,15 @@ export const login = async (username, password) => {
     }
 };
 
+export const loginMobile = async (username, password) => {
+    try {
+        const response = await apiService.post('/loginMobile', { username, password });
+        return response.data;
+    } catch (error) {
+        throw new Error(error.response?.data?.message || 'Login failed');
+    }
+};
+
 // Function for generating a password reset code
 export const generateResetCode = async (email) => {
     try {

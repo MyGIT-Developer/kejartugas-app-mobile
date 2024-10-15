@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { View, Text, StyleSheet, Dimensions, TouchableOpacity, ScrollView } from 'react-native';
+import { View, Text, StyleSheet, Dimensions, TouchableOpacity, ScrollView, RefreshControl } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -58,7 +58,7 @@ const getStatusBadgeColor = (status, endDate) => {
 
     // Existing status handling logic
     switch (status) {
-       case 'workingOnIt':
+        case 'workingOnIt':
             return { color: '#CCC8C8', textColor: '#333333', label: 'Dalam Pengerjaan' };
         case 'onReview':
             return { color: '#ffd000', textColor: '#333333', label: 'Dalam Peninjauan' };
@@ -108,20 +108,22 @@ const TaskCard = ({ projectName, tasks, onTaskPress }) => {
         <View style={styles.taskCard}>
             <Text style={styles.projectTitle}>{projectName}</Text>
             {tasks.slice(0, 3).map((task, index) => (
-              <View style={styles.taskSection}>
-                <View key={index} style={styles.taskItem}>
-                    <View style={styles.taskInfo}>
-                        <Text style={styles.taskName}>{truncateText(task.task_name, 50)}</Text>
-                        <Text style={styles.taskDueDate}>Due: {formatDate(task.end_date)}</Text>
+                <View style={styles.taskSection}>
+                    <View key={index} style={styles.taskItem}>
+                        <View style={styles.taskInfo}>
+                            <Text style={styles.taskName}>{truncateText(task.task_name, 50)}</Text>
+                            <Text style={styles.taskDueDate}>Due: {formatDate(task.end_date)}</Text>
+                        </View>
+                        <View style={[styles.badge, { backgroundColor: getStatusAppearance(task.task_status).color }]}>
+                            <Text
+                                style={[styles.badgeText, { color: getStatusAppearance(task.task_status).textColor }]}
+                            >
+                                {getStatusAppearance(task.task_status).label}
+                            </Text>
+                        </View>
                     </View>
-                    <View style={[styles.badge, { backgroundColor: getStatusAppearance(task.task_status).color }]}>
-                        <Text style={[styles.badgeText, { color: getStatusAppearance(task.task_status).textColor }]}>
-                            {getStatusAppearance(task.task_status).label}
-                        </Text>
-                    </View>
+                    {task.task_status === 'workingOnIt' && renderStatusOrDays(task)}
                 </View>
-                {task.task_status === 'workingOnIt' && renderStatusOrDays(task)}
-              </View>
             ))}
         </View>
     );
@@ -168,26 +170,48 @@ const Home = () => {
         token: '',
     });
     const [dashboardData, setDashboardData] = useState(null);
-    const [employeeTasks, setEmployeeTasks] = useState([]);
+    const [tasks, setTasks] = useState([]);
     const [greeting, setGreeting] = useState(getGreeting());
     const navigation = useNavigation();
-    const route = useRoute();
     const [refreshing, setRefreshing] = useState(false);
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState(null);
     const [alert, setAlert] = useState({ show: false, type: 'success', message: '' });
     const [projects, setProjects] = useState([]);
-    const [tasks, setTasks] = useState([]);
-    const groupedTasks = groupTasksByProject(tasks);
 
     const showAlert = (message, type) => {
         setAlert({ show: true, type, message });
-        setTimeout(() => setAlert(prev => ({ ...prev, show: false })), 3000);
+        setTimeout(() => setAlert((prev) => ({ ...prev, show: false })), 3000);
     };
 
+    const checkTokenExpiration = async () => {
+        try {
+            const expiredToken = await AsyncStorage.getItem('expiredToken');
+            if (expiredToken) {
+                const tokenExpiration = new Date(expiredToken);
+                const now = new Date();
+                if (now > tokenExpiration) {
+                    // Token has expired, logout and navigate to login screen
+                    await AsyncStorage.multiRemove([
+                        'employee_name',
+                        'employeeId',
+                        'companyId',
+                        'userRole',
+                        'token',
+                        'expiredToken',
+                    ]);
+                    navigation.reset({
+                        index: 0,
+                        routes: [{ name: 'Login' }],
+                    });
+                }
+            }
+        } catch (error) {
+            console.error('Error checking token expiration:', error);
+        }
+    };
 
     const fetchTasks = async () => {
-        setRefreshing(true);
         setIsLoading(true);
         setError(null);
         try {
@@ -200,9 +224,7 @@ const Home = () => {
 
             const sortedTasks = data.employeeTasks
                 .filter((task) => task.task_status === 'onReview' || task.task_status === 'workingOnIt')
-                .sort((a, b) => {
-                    return new Date(b.start_date) - new Date(a.start_date);
-                });
+                .sort((a, b) => new Date(b.start_date) - new Date(a.start_date));
 
             setTasks(sortedTasks);
 
@@ -219,26 +241,40 @@ const Home = () => {
             });
             setProjects(Array.from(projectsMap.values()));
 
-            for (const status in tasksByStatus) {
-                tasksByStatus[status].forEach(async (task) => {
-                    if (task.id) {
-                        await AsyncStorage.setItem(`task_${task.id}`, JSON.stringify(task.id));
-                    }
-                });
-            }
+            // Store task IDs in AsyncStorage
+            await Promise.all(
+                sortedTasks.map((task) => AsyncStorage.setItem(`task_${task.id}`, JSON.stringify(task.id))),
+            );
         } catch (error) {
             setError('Gagal mengambil tugas. Silakan coba lagi nanti.');
-            // setShowAlert(true);
-            showAlert(`${error.response.data.message}`, 'error');
+            showAlert(error.response?.data?.message || 'An error occurred', 'error');
         } finally {
             setIsLoading(false);
-            setRefreshing(false);
         }
     };
 
-    useEffect(() => {
-        fetchTasks();
-    }, []);
+    const fetchHomeData = useCallback(async () => {
+        if (!employeeData.companyId || !employeeData.id || !employeeData.roleId || !employeeData.token) return;
+        try {
+            const response = await getHomeData(
+                employeeData.companyId,
+                employeeData.id,
+                employeeData.roleId,
+                employeeData.token,
+            );
+            setDashboardData(response);
+        } catch (error) {
+            console.error('Error fetching home data:', error);
+            showAlert('Failed to fetch home data', 'error');
+        }
+    }, [employeeData]);
+
+    const onRefresh = useCallback(async () => {
+        setRefreshing(true);
+        await checkTokenExpiration();
+        await Promise.all([fetchTasks(), fetchHomeData()]);
+        setRefreshing(false);
+    }, [fetchHomeData]);
 
     useEffect(() => {
         const fetchEmployeeData = async () => {
@@ -255,10 +291,12 @@ const Home = () => {
                 });
             } catch (error) {
                 console.error('Error fetching data from AsyncStorage:', error);
+                showAlert('Failed to fetch employee data', 'error');
             }
         };
 
         fetchEmployeeData();
+        checkTokenExpiration();
 
         // Update greeting every minute
         const intervalId = setInterval(() => {
@@ -268,25 +306,12 @@ const Home = () => {
         return () => clearInterval(intervalId);
     }, []);
 
-    const fetchHomeData = useCallback(async () => {
-        if (!employeeData.companyId || !employeeData.id || !employeeData.roleId || !employeeData.token) return;
-        try {
-            const response = await getHomeData(
-                employeeData.companyId,
-                employeeData.id,
-                employeeData.roleId,
-                employeeData.token,
-            );
-            setDashboardData(response);
-            setEmployeeTasks(response.employee_tasks);
-        } catch (error) {
-            console.error('Error fetching home data:', error);
-        }
-    }, [employeeData]);
-
     useEffect(() => {
+        fetchTasks();
         fetchHomeData();
     }, [fetchHomeData]);
+
+    const groupedTasks = groupTasksByProject(tasks);
 
     const ButtonList = [
         { id: 1, icon: 'users', description: 'Tugas Ad Hoc' },
@@ -324,70 +349,107 @@ const Home = () => {
         : [];
 
     return (
-      <View style={styles.container}>
-      <View style={styles.backgroundBox}>
-          <LinearGradient
-              colors={['#0E509E', '#5FA0DC', '#9FD2FF']}
-              style={styles.linearGradient}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 1 }}
-          />
-      </View>
+        <View style={styles.container}>
+            <View style={styles.backgroundBox}>
+                <LinearGradient
+                    colors={['#0E509E', '#5FA0DC', '#9FD2FF']}
+                    style={styles.linearGradient}
+                    start={{ x: 0, y: 0 }}
+                    end={{ x: 1, y: 1 }}
+                />
+            </View>
 
-      <Text style={styles.header}>
-          {greeting}, {employeeData.name}
-      </Text>
+            <Text style={styles.header}>
+                {greeting}, {employeeData.name}
+            </Text>
 
-      <ScrollView contentContainerStyle={styles.scrollViewContent}>
-          <View style={styles.upperGridContainer}>
-              {statistics.map((stat, index) => (
-                  <StatisticCard key={index} {...stat} />
-              ))}
-          </View>
+            <ScrollView
+                contentContainerStyle={styles.scrollViewContent}
+                refreshControl={
+                    <RefreshControl
+                        refreshing={refreshing}
+                        onRefresh={onRefresh}
+                        colors={['#0E509E']}
+                        tintColor="#0E509E"
+                    />
+                }
+            >
+                <View style={styles.upperGridContainer}>
+                    {dashboardData &&
+                        [
+                            {
+                                description: 'Projek Dalam Pengerjaan',
+                                value: dashboardData.total_projects_working_on_it,
+                                color: '#FAA1A7',
+                                icon: 'monitor',
+                            },
+                            {
+                                description: 'Total Projek Selesai',
+                                value: dashboardData.total_projects_complete,
+                                color: '#3E84CF',
+                                icon: 'check-circle',
+                            },
+                            {
+                                description: 'Total Dalam Pengerjaan',
+                                value: dashboardData.total_tasks_working_on_it,
+                                color: '#DD9968',
+                                icon: 'rotate-cw',
+                            },
+                            {
+                                description: 'Tugas Selesai',
+                                value: dashboardData.total_tasks_completed,
+                                color: '#3AD665',
+                                icon: 'check-square',
+                            },
+                        ].map((stat, index) => <StatisticCard key={index} {...stat} />)}
+                </View>
 
-          <View style={styles.lowerContainer}>
-              <View style={styles.sectionHeader}>
-                  <Text style={styles.sectionTitle}>Tugas Saya</Text>
-                  <TouchableOpacity onPress={() => navigation.navigate('Tugas')}>
-                      <Text style={styles.sectionLink}>Lihat Semua</Text>
-                  </TouchableOpacity>
-              </View>
+                <View style={styles.lowerContainer}>
+                    <View style={styles.sectionHeader}>
+                        <Text style={styles.sectionTitle}>Tugas Saya</Text>
+                        <TouchableOpacity onPress={() => navigation.navigate('Tugas')}>
+                            <Text style={styles.sectionLink}>Lihat Semua</Text>
+                        </TouchableOpacity>
+                    </View>
 
-              <View style={styles.tasksContainer}>
-              {groupedTasks && Object.keys(groupedTasks).length > 0 ? (
-    <>
-      {Object.keys(groupedTasks)
-        .slice(0, 3)
-        .map((projectName, index) => (
-          <TaskCard key={index} projectName={projectName} tasks={groupedTasks[projectName]} />
-        ))}
-      {Object.keys(groupedTasks).length > 3 && (
-        <TouchableOpacity
-          style={styles.moreInfoContainer}
-          onPress={() => navigation.navigate('Tugas')}
-        >
-          <Text style={styles.moreInfoText}>
-            {`Lihat ${Object.keys(groupedTasks).length - 3} proyek lainnya`}
-          </Text>
-        </TouchableOpacity>
-      )}
-    </>
-  ) : (
-    <View style={styles.noTasksBox}>
-         <Text style={styles.noTasksText}>Tidak ada tugas saat ini.</Text>
-    </View>
-   
-  )}
-              </View>
-          </View>
-      </ScrollView>
-      <ReusableBottomPopUp
+                    <View style={styles.tasksContainer}>
+                        {groupedTasks && Object.keys(groupedTasks).length > 0 ? (
+                            <>
+                                {Object.keys(groupedTasks)
+                                    .slice(0, 3)
+                                    .map((projectName, index) => (
+                                        <TaskCard
+                                            key={index}
+                                            projectName={projectName}
+                                            tasks={groupedTasks[projectName]}
+                                        />
+                                    ))}
+                                {Object.keys(groupedTasks).length > 3 && (
+                                    <TouchableOpacity
+                                        style={styles.moreInfoContainer}
+                                        onPress={() => navigation.navigate('Tugas')}
+                                    >
+                                        <Text style={styles.moreInfoText}>
+                                            {`Lihat ${Object.keys(groupedTasks).length - 3} proyek lainnya`}
+                                        </Text>
+                                    </TouchableOpacity>
+                                )}
+                            </>
+                        ) : (
+                            <View style={styles.noTasksBox}>
+                                <Text style={styles.noTasksText}>Tidak ada tugas saat ini.</Text>
+                            </View>
+                        )}
+                    </View>
+                </View>
+            </ScrollView>
+            <ReusableBottomPopUp
                 show={alert.show}
                 alertType={alert.type}
                 message={alert.message}
-                onConfirm={() => setAlert(prev => ({ ...prev, show: false }))}  
+                onConfirm={() => setAlert((prev) => ({ ...prev, show: false }))}
             />
-  </View>
+        </View>
     );
 };
 
@@ -401,38 +463,38 @@ const styles = StyleSheet.create({
         padding: 10,
     },
     backgroundBox: {
-      height: 125,
-      width: '100%',
-      position: 'absolute',
-      top: 0,
-      left: 0,
-  },
-  linearGradient: {
-      flex: 1,
-      borderBottomLeftRadius: 50,
-      borderBottomRightRadius: 30,
-  },
-  header: {
-      fontSize: 24,
-      color: 'white',
-      paddingVertical: 20,
-      paddingHorizontal: 40,
-      marginTop: 50,
-      fontFamily: 'Poppins-Regular',
-      letterSpacing: -1,
-  },
+        height: 125,
+        width: '100%',
+        position: 'absolute',
+        top: 0,
+        left: 0,
+    },
+    linearGradient: {
+        flex: 1,
+        borderBottomLeftRadius: 50,
+        borderBottomRightRadius: 30,
+    },
+    header: {
+        fontSize: 24,
+        color: 'white',
+        paddingVertical: 20,
+        paddingHorizontal: 40,
+        marginTop: 50,
+        fontFamily: 'Poppins-Regular',
+        letterSpacing: -1,
+    },
     scrollViewContent: {
-      flexGrow: 1,
-      paddingTop: 20,
-      paddingBottom: 40,
-  },
-  upperGridContainer: {
-      flexDirection: 'row',
-      flexWrap: 'wrap',
-      justifyContent: 'center',
-      gap: 20,
-      marginBottom: 20,
-  },
+        flexGrow: 1,
+        paddingTop: 20,
+        paddingBottom: 40,
+    },
+    upperGridContainer: {
+        flexDirection: 'row',
+        flexWrap: 'wrap',
+        justifyContent: 'center',
+        gap: 20,
+        marginBottom: 20,
+    },
     statisticCard: {
         width: cardWidth,
         height: 80, // Reduced height
@@ -512,7 +574,7 @@ const styles = StyleSheet.create({
         marginBottom: 16,
     },
     sectionTitle: {
-      fontSize: 14,
+        fontSize: 14,
         color: '#0E509E',
         fontFamily: 'Poppins-Medium',
     },
@@ -525,7 +587,7 @@ const styles = StyleSheet.create({
         minHeight: 100,
         borderRadius: 10,
         backgroundColor: '#F2F2F7',
-        marginBottom: 70
+        marginBottom: 70,
     },
     scrollContent: {
         flexGrow: 1,
@@ -549,10 +611,10 @@ const styles = StyleSheet.create({
         fontFamily: 'Poppins-SemiBold',
     },
     taskSection: {
-      marginBottom: 12,
-      paddingVertical: 8,
-      borderBottomWidth: 1,
-      borderBottomColor: '#E9E9EB',
+        marginBottom: 12,
+        paddingVertical: 8,
+        borderBottomWidth: 1,
+        borderBottomColor: '#E9E9EB',
     },
     taskItem: {
         flexDirection: 'row',
@@ -616,13 +678,13 @@ const styles = StyleSheet.create({
         shadowOffset: { width: 0, height: 2 },
         shadowOpacity: 0.1,
         shadowRadius: 4,
-      },
-        noTasksText: {
-            fontSize: 12,
-            color: '#1C1C1E',
-            fontFamily: 'Poppins-Medium',
-            textAlign: 'center',
-        },
+    },
+    noTasksText: {
+        fontSize: 12,
+        color: '#1C1C1E',
+        fontFamily: 'Poppins-Medium',
+        textAlign: 'center',
+    },
 });
 
 export default Home;

@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import {
     KeyboardAvoidingView,
     Platform,
@@ -12,13 +12,13 @@ import {
     Keyboard,
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { login } from './../api/auth';
+import { useNavigation } from '@react-navigation/native';
+import { jwtDecode } from 'jwt-decode';
+import { loginMobile } from '../api/auth';
 import LogoKTApp from '../../assets/images/Meotrik_PM_Logo.png';
 import BackgroundImage from '../../assets/images/kt_city_scapes.png';
-import { useNavigation } from '@react-navigation/native';
-import ReusableAlert from '../components/ReusableAlert'; // Import the ReusableAlert component
+import ReusableAlert from '../components/ReusableAlert';
 import { useFonts } from '../utils/UseFonts';
-import { jwtDecode } from 'jwt-decode';
 
 const Login = () => {
     const [credentials, setCredentials] = useState({ username: '', password: '' });
@@ -28,7 +28,7 @@ const Login = () => {
     const fontsLoaded = useFonts();
     const navigation = useNavigation();
 
-    React.useEffect(() => {
+    useEffect(() => {
         const keyboardDidShowListener = Keyboard.addListener('keyboardDidShow', () => setKeyboardVisible(true));
         const keyboardDidHideListener = Keyboard.addListener('keyboardDidHide', () => setKeyboardVisible(false));
 
@@ -60,15 +60,15 @@ const Login = () => {
         }
 
         try {
-            const data = await login(username, password);
+            const data = await loginMobile(username, password);
             await AsyncStorage.setItem('userData', JSON.stringify(data));
 
             if (data.token) {
-                await AsyncStorage.setItem('token', data.token);
                 const decodedToken = jwtDecode(data.token);
                 const { jobs_id, company_id, id, role_id } = decodedToken.data;
 
                 await Promise.all([
+                    AsyncStorage.setItem('token', data.token),
                     AsyncStorage.setItem('expiredToken', data.expires_token),
                     AsyncStorage.setItem('userJob', jobs_id.toString()),
                     AsyncStorage.setItem('userRole', role_id.toString()),
@@ -88,13 +88,13 @@ const Login = () => {
         }
     }, [credentials, navigation, showAlert]);
 
-    const togglePasswordVisibility = () => {
-        setPasswordVisible(!passwordVisible);
-    };
+    const togglePasswordVisibility = useCallback(() => {
+        setPasswordVisible((prev) => !prev);
+    }, []);
 
-    const handleAlertConfirm = () => {
+    const handleAlertConfirm = useCallback(() => {
         setAlert((prev) => ({ ...prev, show: false }));
-    };
+    }, []);
 
     if (!fontsLoaded) {
         return (
@@ -109,30 +109,18 @@ const Login = () => {
             <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={styles.container}>
                 <View style={styles.card}>
                     <Image source={LogoKTApp} style={styles.logo} resizeMode="contain" />
-                    <View style={styles.inputContainer}>
-                        <Text style={styles.label}>User Name</Text>
-                        <TextInput
-                            placeholder="Masukkan Username"
-                            value={credentials.username}
-                            onChangeText={(value) => handleInputChange('username', value)}
-                            style={styles.input}
-                        />
-                    </View>
-                    <View style={styles.inputContainer}>
-                        <Text style={styles.label}>Password</Text>
-                        <View style={styles.passwordContainer}>
-                            <TextInput
-                                placeholder="Masukkan Password"
-                                value={credentials.password}
-                                onChangeText={(value) => handleInputChange('password', value)}
-                                secureTextEntry={!passwordVisible}
-                                style={styles.passwordInput}
-                            />
-                            <TouchableOpacity onPress={togglePasswordVisibility} style={styles.showButton}>
-                                <Text style={styles.showButtonText}>{passwordVisible ? 'Hide' : 'Show'}</Text>
-                            </TouchableOpacity>
-                        </View>
-                    </View>
+                    <InputField
+                        label="User Name"
+                        value={credentials.username}
+                        onChangeText={(value) => handleInputChange('username', value)}
+                        placeholder="Masukkan Username"
+                    />
+                    <PasswordField
+                        value={credentials.password}
+                        onChangeText={(value) => handleInputChange('password', value)}
+                        passwordVisible={passwordVisible}
+                        togglePasswordVisibility={togglePasswordVisibility}
+                    />
                     <TouchableOpacity
                         onPress={() => navigation.navigate('ForgotPassword')}
                         style={styles.forgotPasswordContainer}
@@ -150,11 +138,7 @@ const Login = () => {
                     </TouchableOpacity>
                 </View>
             </KeyboardAvoidingView>
-            {!keyboardVisible && (
-                <Text style={styles.footerText}>
-                    © 2024 KejarTugas.com by PT Global Innovation Technology. All rights reserved.
-                </Text>
-            )}
+            {!keyboardVisible && <FooterText />}
             <ReusableAlert
                 show={alert.show}
                 alertType={alert.type}
@@ -164,6 +148,37 @@ const Login = () => {
         </ImageBackground>
     );
 };
+
+const InputField = ({ label, value, onChangeText, placeholder }) => (
+    <View style={styles.inputContainer}>
+        <Text style={styles.label}>{label}</Text>
+        <TextInput placeholder={placeholder} value={value} onChangeText={onChangeText} style={styles.input} />
+    </View>
+);
+
+const PasswordField = ({ value, onChangeText, passwordVisible, togglePasswordVisibility }) => (
+    <View style={styles.inputContainer}>
+        <Text style={styles.label}>Password</Text>
+        <View style={styles.passwordContainer}>
+            <TextInput
+                placeholder="Masukkan Password"
+                value={value}
+                onChangeText={onChangeText}
+                secureTextEntry={!passwordVisible}
+                style={styles.passwordInput}
+            />
+            <TouchableOpacity onPress={togglePasswordVisibility} style={styles.showButton}>
+                <Text style={styles.showButtonText}>{passwordVisible ? 'Hide' : 'Show'}</Text>
+            </TouchableOpacity>
+        </View>
+    </View>
+);
+
+const FooterText = () => (
+    <Text style={styles.footerText}>
+        © 2024 KejarTugas.com by PT Global Innovation Technology. All rights reserved.
+    </Text>
+);
 
 const styles = StyleSheet.create({
     backgroundImage: {
