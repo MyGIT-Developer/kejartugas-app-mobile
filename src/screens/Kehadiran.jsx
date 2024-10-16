@@ -1,28 +1,28 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import {
-    View,
-    Text,
-    StyleSheet,
-    Alert,
-    TouchableOpacity,
-    RefreshControl,
-    Dimensions,
-} from 'react-native';
+import { View, Text, StyleSheet, Alert, TouchableOpacity, RefreshControl, Dimensions } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import * as Location from 'expo-location';
 import { ScrollView } from 'react-native-gesture-handler';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
-import { Feather } from '@expo/vector-icons';
+import { Feather, MaterialIcons } from '@expo/vector-icons';
 
 import CircularButton from '../components/CircularButton';
 import ReusableBottomPopUp from '../components/ReusableBottomPopUp';
 import { markAbsent, getAttendance, getAttendanceReport, checkOut, checkIn } from '../api/absent';
 import { getParameter } from '../api/parameter';
 
-
 const { height } = Dimensions.get('window');
-
+const AccessDenied = () => {
+    return (
+        <View style={styles.accessDeniedContainer}>
+            <View style={styles.iconContainer}>
+                <MaterialIcons name="block" size={50} color="white" />
+            </View>
+            <Text style={styles.message}>Anda tidak mempunyai akses.</Text>
+        </View>
+    );
+};
 const Kehadiran = () => {
     const [currentTime, setCurrentTime] = useState('');
     const [locationName, setLocationName] = useState('Waiting for location...');
@@ -37,6 +37,7 @@ const Kehadiran = () => {
     const [alert, setAlert] = useState({ show: false, type: 'success', message: '' });
     const [location, setLocation] = useState(null);
     const [currentPage, setCurrentPage] = useState(0);
+    const [hasAccess, setHasAccess] = useState(null);
 
     const navigation = useNavigation();
 
@@ -69,13 +70,31 @@ const Kehadiran = () => {
             setJamTelat(response.data.jam_telat);
             setRadius(response.data.radius);
         } catch (error) {
-            console.error("Error fetching office hour data:", error);
+            console.error('Error fetching office hour data:', error);
         }
     }, [companyId]);
 
     useEffect(() => {
         fetchOfficeHour();
     }, [fetchOfficeHour]);
+    useEffect(() => {
+        checkAccessPermission();
+    }, []);
+    const checkAccessPermission = async () => {
+        try {
+            const accessPermissions = await AsyncStorage.getItem('access_permissions');
+            const permissions = JSON.parse(accessPermissions);
+            setHasAccess(permissions?.access_attendance === true);
+        } catch (error) {
+            console.error('Error checking access permission:', error);
+            setHasAccess(false);
+        }
+    };
+    useEffect(() => {
+        if (hasAccess) {
+            fetchAttendanceData();
+        }
+    }, [hasAccess]);
 
     const fetchAttendanceData = useCallback(async () => {
         if (!employeeId) return;
@@ -99,7 +118,7 @@ const Kehadiran = () => {
     useFocusEffect(
         useCallback(() => {
             fetchAttendanceData();
-        }, [fetchAttendanceData])
+        }, [fetchAttendanceData]),
     );
 
     const onRefresh = useCallback(async () => {
@@ -141,20 +160,31 @@ const Kehadiran = () => {
 
             if (reverseGeocodeResult) {
                 setLocationName(
-                    `${reverseGeocodeResult.street}, ${reverseGeocodeResult.city}, ${reverseGeocodeResult.region}, ${reverseGeocodeResult.country}`
+                    `${reverseGeocodeResult.street}, ${reverseGeocodeResult.city}, ${reverseGeocodeResult.region}, ${reverseGeocodeResult.country}`,
                 );
             } else {
                 setLocationName('Unable to retrieve location name');
             }
         })();
     }, []);
+    if (hasAccess === null) {
+        return (
+            <View style={styles.container}>
+                <Text>Loading...</Text>
+            </View>
+        );
+    }
+
+    if (hasAccess === false) {
+        return <AccessDenied />;
+    }
 
     const handleClockIn = useCallback(() => {
         if (!location || !locationName) {
             showAlert('Location data not available. Please try again.', 'error');
             return;
         }
-        
+
         try {
             navigation.navigate('DetailKehadiran', { location, locationName, jamTelat, radius });
         } catch (error) {
@@ -176,7 +206,7 @@ const Kehadiran = () => {
 
     const showAlert = (message, type) => {
         setAlert({ show: true, type, message });
-        setTimeout(() => setAlert(prev => ({ ...prev, show: false })), 3000);
+        setTimeout(() => setAlert((prev) => ({ ...prev, show: false })), 3000);
     };
 
     const handleNextPage = () => {
@@ -194,9 +224,9 @@ const Kehadiran = () => {
     const getBackgroundColor = (absenStatus) => {
         const colors = {
             'On Time': '#a5dbff',
-            'Early': '#c8ffca',
-            'Late': '#ffbda5',
-            'Holiday': '#dedede'
+            Early: '#c8ffca',
+            Late: '#ffbda5',
+            Holiday: '#dedede',
         };
         return colors[absenStatus] || '#dedede';
     };
@@ -204,9 +234,9 @@ const Kehadiran = () => {
     const getIndicatorDotColor = (absenStatus) => {
         const colors = {
             'On Time': '#4491c5',
-            'Early': '#00ff24',
-            'Late': '#ff0002',
-            'Holiday': '#aaaaaa'
+            Early: '#00ff24',
+            Late: '#ff0002',
+            Holiday: '#aaaaaa',
         };
         return colors[absenStatus] || '#aaaaaa';
     };
@@ -236,7 +266,7 @@ const Kehadiran = () => {
 
         const formattedDate = currentDate.toISOString().split('T')[0];
 
-        const attendanceForDate = attendanceData.find(attendance => {
+        const attendanceForDate = attendanceData.find((attendance) => {
             const checkinDate = new Date(attendance.checkin).toISOString().split('T')[0];
             return checkinDate === formattedDate;
         });
@@ -312,7 +342,7 @@ const Kehadiran = () => {
                     end={{ x: 1, y: 1 }}
                 />
             </View>
-    
+
             <ScrollView
                 contentContainerStyle={styles.scrollViewContent}
                 refreshControl={
@@ -325,12 +355,12 @@ const Kehadiran = () => {
                 }
             >
                 <Text style={styles.header}>Kehadiran</Text>
-    
+
                 <View style={styles.mainContainer}>
                     <View style={styles.upperContainer}>
                         <Text style={styles.timeText}>{currentTime}</Text>
                         <Text style={styles.locationText}>{errorMsg || locationName}</Text>
-    
+
                         <View style={styles.buttonContainer}>
                             {isCheckedIn ? (
                                 <CircularButton
@@ -348,9 +378,9 @@ const Kehadiran = () => {
                             )}
                         </View>
                     </View>
-    
+
                     <View style={styles.lowerContainer}>{paginatedDateViews}</View>
-    
+
                     <View style={styles.paginationControls}>
                         <TouchableOpacity onPress={handlePreviousPage} disabled={currentPage === 0}>
                             <Feather
@@ -360,28 +390,31 @@ const Kehadiran = () => {
                                 style={[styles.paginationButton, currentPage === 0 && styles.disabledButton]}
                             />
                         </TouchableOpacity>
-    
+
                         <Text>
                             Page {currentPage + 1} of {totalPages}
                         </Text>
-    
+
                         <TouchableOpacity onPress={handleNextPage} disabled={currentPage === totalPages - 1}>
                             <Feather
                                 name="chevron-right"
                                 size={24}
                                 color="#148FFF"
-                                style={[styles.paginationButton, currentPage === totalPages - 1 && styles.disabledButton]}
+                                style={[
+                                    styles.paginationButton,
+                                    currentPage === totalPages - 1 && styles.disabledButton,
+                                ]}
                             />
                         </TouchableOpacity>
                     </View>
                 </View>
             </ScrollView>
-    
+
             <ReusableBottomPopUp
                 show={alert.show}
                 alertType={alert.type}
                 message={alert.message}
-                onConfirm={() => setAlert(prev => ({ ...prev, show: false }))}  
+                onConfirm={() => setAlert((prev) => ({ ...prev, show: false }))}
             />
         </View>
     );
@@ -604,6 +637,34 @@ const styles = StyleSheet.create({
     },
     disabledButton: {
         color: '#ccc',
+    },
+    //accessDenied
+    accessDeniedContainer: {
+        flex: 1,
+        justifyContent: 'center',
+        alignItems: 'center',
+        padding: 20,
+        backgroundColor: '#F0F0F0',
+    },
+    iconContainer: {
+        width: 100,
+        height: 100,
+        borderRadius: 50,
+        backgroundColor: '#FF6B6B',
+        justifyContent: 'center',
+        alignItems: 'center',
+        marginBottom: 20,
+    },
+    icon: {
+        fontSize: 40,
+        color: 'white',
+        fontWeight: 'bold',
+    },
+    message: {
+        fontSize: 16,
+        textAlign: 'center',
+        fontFamily: 'Poppins-Regular',
+        color: '#666',
     },
 });
 

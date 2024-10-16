@@ -29,8 +29,8 @@ const AppNavigator = () => {
             headerShown: false,
             tabBarStyle: {
                 ...styles.tabBar,
-                bottom: 5 + insets.bottom,
-                height: Platform.OS === 'ios' ? 80 : 70,
+                bottom: Platform.OS === 'ios' ? 5 + insets.bottom : 25, // Adjusted for Android
+                height: Platform.OS === 'ios' ? 80 : 70, // Reduced height for Android
                 transform: [
                     {
                         translateY: tabBarVisibility.interpolate({
@@ -89,34 +89,31 @@ const styles = StyleSheet.create({
     tabBar: {
         position: 'absolute',
         right: 10,
-        padding: 0,
         left: 10,
-        elevation: 4,
+        elevation: 5,
         backgroundColor: '#fff',
-        borderRadius: Platform.OS === 'ios' ? 80 : 100,
+        borderRadius: 100,
         shadowColor: '#000',
         shadowOpacity: 0.25,
         shadowOffset: { width: 0, height: 5 },
         shadowRadius: 10,
         overflow: 'visible',
     },
-
     iconContainer: {
         alignItems: 'center',
         justifyContent: 'center',
         width: 50,
-        height: 50, // Tinggi disamakan agar lebih proporsional
-        marginBottom: Platform.OS === 'ios' ? -20 : 0, // Tambahkan margin bottom agar ikon turun
+        height: 50,
     },
     activeIconContainer: {
-        marginBottom: Platform.OS === 'ios' ? -10 : 20,
+        marginBottom: Platform.OS === 'ios' ? -10 : 10, // Reduced margin for Android
     },
     kehadiranIconContainer: (focused) => ({
-        top: Platform.OS === 'ios' ? -20 : -20,
-        width: Platform.OS === 'ios' ? 60 : 70,
-        height: Platform.OS === 'ios' ? 60 : 70,
+        top: -20,
+        width: Platform.OS === 'ios' ? 60 : 65,
+        height: Platform.OS === 'ios' ? 60 : 65,
         backgroundColor: focused ? '#16247d' : '#2c3da5',
-        borderRadius: Platform.OS === 'ios' ? 25 : 30,
+        borderRadius: 30,
         justifyContent: 'center',
         alignItems: 'center',
         overflow: 'hidden',

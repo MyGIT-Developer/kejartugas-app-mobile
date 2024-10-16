@@ -5,6 +5,7 @@ import Shimmer from '../components/Shimmer';
 import DetailProyekModal from '../components/ReusableBottomModal';
 import DraggableModalTask from '../components/DraggableModalTask';
 import ReusableModalSuccess from '../components/TaskModalSuccess';
+import { MaterialIcons } from '@expo/vector-icons';
 import ReusableAlert from '../components/ReusableAlert';
 import { useNavigation } from '@react-navigation/native';
 import { useFonts } from '../utils/UseFonts';
@@ -29,7 +30,7 @@ const AccessDenied = () => {
     return (
         <View style={styles.accessDeniedContainer}>
             <View style={styles.iconContainer}>
-                <Text style={styles.icon}>X</Text>
+                <MaterialIcons name="block" size={50} color="white" />
             </View>
             <Text style={styles.message}>Anda tidak mempunyai akses tugas.</Text>
         </View>
@@ -651,24 +652,19 @@ const styles = StyleSheet.create({
         backgroundColor: '#F0F0F0',
     },
     iconContainer: {
-        width: 80,
-        height: 80,
-        borderRadius: 40,
+        width: 100,
+        height: 100,
+        borderRadius: 50,
         backgroundColor: '#FF6B6B',
         justifyContent: 'center',
         alignItems: 'center',
         marginBottom: 20,
     },
-    icon: {
-        fontSize: 40,
-        color: 'white',
-        fontWeight: 'bold',
-    },
     message: {
-        fontSize: 16,
+        fontSize: 18,
         textAlign: 'center',
         fontFamily: 'Poppins-Regular',
-        color: '#666',
+        color: '#444',
     },
     //accessDenied
 });
