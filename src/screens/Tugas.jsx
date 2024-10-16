@@ -32,7 +32,7 @@ const AccessDenied = () => {
             <View style={styles.iconContainer}>
                 <MaterialIcons name="block" size={50} color="white" />
             </View>
-            <Text style={styles.message}>Anda tidak mempunyai akses tugas.</Text>
+            <Text style={styles.message}>Anda tidak mempunyai akses.</Text>
         </View>
     );
 };
@@ -660,11 +660,16 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         marginBottom: 20,
     },
+    icon: {
+        fontSize: 40,
+        color: 'white',
+        fontWeight: 'bold',
+    },
     message: {
-        fontSize: 18,
+        fontSize: 16,
         textAlign: 'center',
         fontFamily: 'Poppins-Regular',
-        color: '#444',
+        color: '#666',
     },
     //accessDenied
 });
