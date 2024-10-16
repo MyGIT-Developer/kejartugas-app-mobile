@@ -63,7 +63,7 @@ const Login = () => {
             const data = await loginMobile(username, password);
             await AsyncStorage.setItem('userData', JSON.stringify(data));
 
-            if (data.token) {
+            if (data.token && data.access_permissions) {
                 const decodedToken = jwtDecode(data.token);
                 const { jobs_id, company_id, id, role_id } = decodedToken.data;
 
@@ -75,15 +75,18 @@ const Login = () => {
                     AsyncStorage.setItem('employeeId', id.toString()),
                     AsyncStorage.setItem('companyId', company_id.toString()),
                     AsyncStorage.setItem('employee_name', username),
-                    AsyncStorage.setItem('access_permissions', data.access_permissions.toString()),
+                    AsyncStorage.setItem('access_permissions', JSON.stringify(data.access_permissions)),
                 ]);
+
+                console.log('Access Permissions:', data.access_permissions);
+                showAlert('Login Berhasil! Anda akan diarahkan ke halaman utama.', 'success');
+                setTimeout(() => {
+                    setAlert((prev) => ({ ...prev, show: false }));
+                    navigation.navigate('App', { screen: 'Home' });
+                }, 1500);
+            } else {
+                throw new Error('Login gagal: Data tidak lengkap');
             }
-            console.log('Access Permissions:', data.access_permissions);
-            showAlert('Login Berhasil! Anda akan diarahkan ke halaman utama.', 'success');
-            setTimeout(() => {
-                setAlert((prev) => ({ ...prev, show: false }));
-                navigation.navigate('App', { screen: 'Home' });
-            }, 1500);
         } catch (err) {
             showAlert(err.message);
         }

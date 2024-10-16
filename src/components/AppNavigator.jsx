@@ -29,8 +29,8 @@ const AppNavigator = () => {
             headerShown: false,
             tabBarStyle: {
                 ...styles.tabBar,
-                bottom: 10 + insets.bottom,
-                height: Platform.OS === 'ios' ? 90 : 70,
+                bottom: 5 + insets.bottom,
+                height: Platform.OS === 'ios' ? 80 : 70,
                 transform: [
                     {
                         translateY: tabBarVisibility.interpolate({
@@ -88,29 +88,31 @@ const AppNavigator = () => {
 const styles = StyleSheet.create({
     tabBar: {
         position: 'absolute',
-        bottom: 20,
         right: 10,
+        padding: 0,
         left: 10,
         elevation: 4,
         backgroundColor: '#fff',
-        borderRadius: 100,
+        borderRadius: Platform.OS === 'ios' ? 80 : 100,
         shadowColor: '#000',
         shadowOpacity: 0.25,
         shadowOffset: { width: 0, height: 5 },
         shadowRadius: 10,
         overflow: 'visible',
     },
+
     iconContainer: {
         alignItems: 'center',
         justifyContent: 'center',
         width: 50,
-        height: 50,
+        height: 50, // Tinggi disamakan agar lebih proporsional
+        marginBottom: Platform.OS === 'ios' ? -20 : 0, // Tambahkan margin bottom agar ikon turun
     },
     activeIconContainer: {
-        marginBottom: Platform.OS === 'ios' ? 10 : 20,
+        marginBottom: Platform.OS === 'ios' ? -10 : 20,
     },
     kehadiranIconContainer: (focused) => ({
-        top: Platform.OS === 'ios' ? -10 : -20,
+        top: Platform.OS === 'ios' ? -20 : -20,
         width: Platform.OS === 'ios' ? 60 : 70,
         height: Platform.OS === 'ios' ? 60 : 70,
         backgroundColor: focused ? '#16247d' : '#2c3da5',

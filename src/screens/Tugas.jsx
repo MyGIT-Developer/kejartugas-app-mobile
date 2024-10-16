@@ -1,13 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import {
-    View,
-    Text,
-    StyleSheet,
-    ScrollView,
-    TouchableOpacity,
-    SafeAreaView,
-    RefreshControl,
-} from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, SafeAreaView, RefreshControl } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import Shimmer from '../components/Shimmer';
 import DetailProyekModal from '../components/ReusableBottomModal';
@@ -22,7 +14,8 @@ import { fetchTotalTasksForEmployee } from '../api/task';
 const GRADIENT_COLORS = ['#0E509E', '#5FA0DC', '#9FD2FF'];
 
 const calculateRemainingDays = (endDate, status) => {
-    if (status === 'Completed') {21111
+    if (status === 'Completed') {
+        21111;
         return 0;
     }
     const today = new Date();
@@ -32,7 +25,17 @@ const calculateRemainingDays = (endDate, status) => {
     const timeDiff = end.getTime() - today.getTime();
     return Math.ceil(timeDiff / (1000 * 3600 * 24));
 };
-
+const AccessDenied = () => {
+    return (
+        <View style={styles.accessDeniedContainer}>
+            <View style={styles.iconContainer}>
+                <Text style={styles.icon}>X</Text>
+            </View>
+            <Text style={styles.title}>Akses Ditolak</Text>
+            <Text style={styles.message}>Anda tidak mempunyai akses tugas.</Text>
+        </View>
+    );
+};
 const getStatusBadgeColor = (status, endDate) => {
     if (status === 'Completed') {
         return { color: '#C9F8C1', textColor: '#333333', label: 'Selesai' };
@@ -77,12 +80,7 @@ const getCollectionStatusBadgeColor = (status) => {
     }
 };
 
-
-const TaskCard = React.memo(({ 
-    task = {}, 
-    onProjectDetailPress = () => {}, 
-    onTaskDetailPress = () => {} 
-}) => {
+const TaskCard = React.memo(({ task = {}, onProjectDetailPress = () => {}, onTaskDetailPress = () => {} }) => {
     const {
         color: badgeColor,
         textColor: badgeTextColor,
@@ -192,15 +190,30 @@ const Tugas = () => {
     const [projects, setProjects] = useState([]);
     const [modalType, setModalType] = useState('default');
     const [showAlert, setShowAlert] = useState(false);
+    const [hasAccess, setHasAccess] = useState(null);
 
     const navigation = useNavigation();
 
     const fontsLoaded = useFonts();
 
     useEffect(() => {
-        fetchTasks();
+        checkAccessPermission();
     }, []);
-
+    const checkAccessPermission = async () => {
+        try {
+            const accessPermissions = await AsyncStorage.getItem('access_permissions');
+            const permissions = JSON.parse(accessPermissions);
+            setHasAccess(permissions?.access_tasks === true);
+        } catch (error) {
+            console.error('Error checking access permission:', error);
+            setHasAccess(false);
+        }
+    };
+    useEffect(() => {
+        if (hasAccess) {
+            fetchTasks();
+        }
+    }, [hasAccess]);
     const fetchTasks = async () => {
         setRefreshing(true);
         setIsLoading(true);
@@ -334,6 +347,17 @@ const Tugas = () => {
     if (!fontsLoaded) {
         return null;
     }
+    if (hasAccess === null) {
+        return (
+            <View style={styles.container}>
+                <Text>Loading...</Text>
+            </View>
+        );
+    }
+
+    if (hasAccess === false) {
+        return <AccessDenied />;
+    }
 
     return (
         <SafeAreaView style={styles.safeArea}>
@@ -420,12 +444,7 @@ const Tugas = () => {
                 projectDetails={selectedProject || {}}
             />
 
-            <ReusableAlert
-                show={showAlert}
-                alertType="error"
-                message={error}
-                onConfirm={() => setShowAlert(false)}
-            />
+            <ReusableAlert show={showAlert} alertType="error" message={error} onConfirm={() => setShowAlert(false)} />
         </SafeAreaView>
     );
 };
@@ -460,6 +479,41 @@ const styles = StyleSheet.create({
     content: {
         padding: 20,
     },
+    accessDeniedContainer: {
+        flex: 1,
+        justifyContent: 'center',
+        alignItems: 'center',
+        padding: 20,
+        backgroundColor: '#F0F0F0',
+    },
+    iconContainer: {
+        width: 80,
+        height: 80,
+        borderRadius: 40,
+        backgroundColor: '#FF6B6B',
+        justifyContent: 'center',
+        alignItems: 'center',
+        marginBottom: 20,
+    },
+    icon: {
+        fontSize: 40,
+        color: 'white',
+        fontWeight: 'bold',
+    },
+    title: {
+        fontSize: 24,
+        fontWeight: 'bold',
+        marginBottom: 20,
+        fontFamily: 'Poppins-Bold',
+        color: '#333',
+    },
+    message: {
+        fontSize: 16,
+        textAlign: 'center',
+        fontFamily: 'Poppins-Regular',
+        color: '#666',
+    },
+
     sectionHeader: {
         flexDirection: 'row',
         justifyContent: 'space-between',
@@ -618,6 +672,11 @@ const styles = StyleSheet.create({
         fontWeight: '500',
         fontSize: 14,
         fontFamily: 'Poppins-Regular',
+    },
+    loadingContainer: {
+        flex: 1,
+        justifyContent: 'center',
+        alignItems: 'center',
     },
 });
 

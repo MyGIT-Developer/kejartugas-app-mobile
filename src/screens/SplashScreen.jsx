@@ -5,8 +5,8 @@ import { useNavigation } from '@react-navigation/native';
 import { useFonts } from '../utils/UseFonts';
 import * as SplashScreen from 'expo-splash-screen';
 
-const SPLASH_DELAY = 2000;
-const AUTH_KEYS = ['userData', 'token', 'userJob', 'employeeId', 'companyId', 'expiredToken'];
+const SPLASH_DELAY = 3000;
+const AUTH_KEYS = ['userData', 'token', 'userJob', 'employeeId', 'companyId', 'expiredToken', 'access_permissions'];
 
 // Prevent the splash screen from auto-hiding
 SplashScreen.preventAutoHideAsync();
@@ -35,28 +35,28 @@ export default function SplashScreenWrapper() {
             try {
                 const token = await AsyncStorage.getItem('token');
                 const expiredToken = await AsyncStorage.getItem('expiredToken');
+                const accessPermissions = await AsyncStorage.getItem('access_permissions');
 
                 console.log('Retrieved token:', token);
                 console.log('Retrieved expiredToken:', expiredToken);
+                console.log('Retrieved access permissions:', accessPermissions);
 
-                if (token) {
-                    if (expiredToken) {
-                        const currentTime = new Date();
-                        const expirationTime = new Date(expiredToken);
+                if (token && expiredToken && accessPermissions) {
+                    const currentTime = new Date();
+                    const expirationTime = new Date(expiredToken);
+                    console.log('Current time:', currentTime);
+                    console.log('Expiration time:', expirationTime);
 
-                        console.log('Current time:', currentTime);
-                        console.log('Expiration time:', expirationTime);
-
-                        if (currentTime < expirationTime) {
-                            navigateTo('App');
-                        } else {
-                            await clearAuthData();
-                            navigateTo('Login');
-                        }
+                    if (currentTime < expirationTime) {
+                        // Token is still valid and access permissions are available
+                        navigateTo('App');
                     } else {
+                        await clearAuthData();
                         navigateTo('Login');
                     }
                 } else {
+                    // If any of token, expiredToken, or accessPermissions is missing, go to login
+                    await clearAuthData();
                     navigateTo('Login');
                 }
             } catch (error) {
