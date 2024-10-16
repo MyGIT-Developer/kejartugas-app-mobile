@@ -18,22 +18,8 @@ const FloatingButtonProject = () => {
 
     return (
         <View style={styles.container}>
-            {isOpen && (
-                <View style={styles.menu}>
-                    <Animatable.View animation="bounceIn" style={styles.button}>
-                        <TouchableOpacity onPress={() => alert('Create')}>
-                            <Icon name="plus" size={26} color="#148FFF" onPress={handleGoToCreate}/>
-                        </TouchableOpacity>
-                    </Animatable.View>
-                    <Animatable.View animation="bounceIn" style={styles.button}>
-                        <TouchableOpacity onPress={() => alert('Update')}>
-                            <Icon name="refresh-cw" size={26} color="#148FFF" />
-                        </TouchableOpacity>
-                    </Animatable.View>
-                </View>
-            )}
-            <TouchableOpacity onPress={toggleMenu} style={styles.floatingButton}>
-                <Icon name={isOpen ? 'x' : 'plus'} size={26} color="#148FFF" />
+            <TouchableOpacity onPress={handleGoToCreate} style={styles.floatingButton}>
+            <Icon name="plus" size={26} color="#148FFF" />
             </TouchableOpacity>
         </View>
     );

@@ -52,11 +52,11 @@ const DetailProjekSatu = ({ data }) => {
             <View style={styles.midContainer}>
                 <CountContainer
                     label="Tugas Dalam Proses"
-                    value={data.total_tasks_working_on_it}
+                    value={data.total_tasks_working_on_it ? data.total_tasks_working_on_it : "0"}
                     borderColor="#DD9968"
                 />
-                <CountContainer label="Semua Tugas Selesai" value={data.total_task_completed} borderColor="#3AD665" />
-                <CountContainer label="Total Tugas" value={data.total_task_created} borderColor="#DD6868" />
+                <CountContainer label="Semua Tugas Selesai" value={data.total_task_completed ? data.total_task_completed : "0"} borderColor="#3AD665" />
+                <CountContainer label="Total Tugas" value={data.total_task_created ? data.total_task_created : "0"} borderColor="#DD6868" />
             </View>
 
             {/* <View style={styles.lowerContainer}>

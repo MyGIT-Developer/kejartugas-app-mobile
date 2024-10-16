@@ -7,7 +7,6 @@ const SlidingFragment = ({ fragments, activeFragment, data }) => {
     const translateX = useRef(new Animated.Value(0)).current;
 
     useEffect(() => {
-        console.log('Active Fragment:', activeFragment);
         Animated.spring(translateX, {
             toValue: -SCREEN_WIDTH * activeFragment,
             useNativeDriver: true,
@@ -24,7 +23,6 @@ const SlidingFragment = ({ fragments, activeFragment, data }) => {
             >
                 {fragments.map((fragment, index) => {
                     const ScreenComponent = fragment.screen;
-                    console.log('Rendering Fragment:', fragment.title);
                     return (
                         <View key={index} style={styles.fragment}>
                             <ScreenComponent data={data} />

@@ -2,8 +2,7 @@ import React, { useState } from 'react';
 import { View, Text, TextInput, TouchableOpacity, StyleSheet, Alert, Image } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import Icon from 'react-native-vector-icons/Feather';
-import * as ImagePicker from 'expo-image-picker';
-import * as FileSystem from 'expo-file-system';
+ 
 import { useNavigation } from '@react-navigation/native';
 import ReusableAlertBottomPopUp from '../components/ReusableBottomPopUp';
 import { submitTask } from '../api/task';
