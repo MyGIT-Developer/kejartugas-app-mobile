@@ -2,54 +2,76 @@ import React, { useEffect, useRef } from 'react';
 import { Animated, StyleSheet, View, Dimensions, Text, TouchableOpacity, Keyboard, Modal } from 'react-native';
 import LottieView from 'lottie-react-native';
 
-// Adjust these paths based on your project structure
 import successAnimation from '../../assets/animations/success.json';
 import errorAnimation from '../../assets/animations/error.json';
+import deleteAnimation from '../../assets/animations/trash-success.json';
 
 const { width, height } = Dimensions.get('window');
 
 const ReusableAlertBottomPopUp = ({ show, alertType, message, onConfirm }) => {
     const isSuccess = alertType === 'success';
-    const slideAnim = useRef(new Animated.Value(height)).current; // Start off-screen
+    const isDelete = alertType === 'delete';
+    const slideAnim = useRef(new Animated.Value(height)).current;
 
     useEffect(() => {
         if (show) {
-            Keyboard.dismiss(); // Dismiss the keyboard when the alert shows
+            Keyboard.dismiss();
             Animated.spring(slideAnim, {
-                toValue: 0, // Slide up to visible position
+                toValue: 0,
                 useNativeDriver: true,
             }).start();
         } else {
             Animated.timing(slideAnim, {
-                toValue: height, // Slide down to hide
+                toValue: height,
                 duration: 300,
                 useNativeDriver: true,
             }).start();
         }
     }, [show]);
 
+    const getAnimationSource = () => {
+        switch (alertType) {
+            case 'success':
+                return successAnimation;
+            case 'delete':
+                return deleteAnimation;
+            default:
+                return errorAnimation;
+        }
+    };
+
+    const getTitle = () => {
+        switch (alertType) {
+            case 'success':
+                return 'Success';
+            case 'delete':
+                return 'Deleted';
+            default:
+                return 'Error';
+        }
+    };
+
+    const getDefaultMessage = () => {
+        switch (alertType) {
+            case 'success':
+                return 'Action completed successfully.';
+            case 'delete':
+                return 'Item has been deleted successfully.';
+            default:
+                return 'An error occurred.';
+        }
+    };
+
     return (
-        <Modal
-            visible={show}
-            transparent={true}
-            animationType="fade"
-            onRequestClose={() => {}}
-        >
+        <Modal visible={show} transparent={true} animationType="fade" onRequestClose={() => {}}>
             <View style={styles.overlay}>
                 <Animated.View style={[styles.alertWrapper, { transform: [{ translateY: slideAnim }] }]}>
                     <View style={styles.alertContent}>
                         <View style={styles.iconContainer}>
-                            <LottieView
-                                source={isSuccess ? successAnimation : errorAnimation}
-                                autoPlay
-                                loop={false}
-                                style={styles.icon}
-                            />
+                            <LottieView source={getAnimationSource()} autoPlay loop={false} style={styles.icon} />
                         </View>
-                        <Text style={styles.title}>{isSuccess ? 'Success' : 'Error'}</Text>
-                        <Text style={styles.message}>
-                            {message || (isSuccess ? 'Action completed successfully.' : 'An error occurred.')}
-                        </Text>
+                        <Text style={styles.title}>{getTitle()}</Text>
+                        <Text style={styles.message}>{message || getDefaultMessage()}</Text>
                         <TouchableOpacity style={styles.button} onPress={onConfirm}>
                             <Text style={styles.buttonText}>Okay</Text>
                         </TouchableOpacity>

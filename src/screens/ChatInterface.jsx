@@ -110,13 +110,13 @@ const ChatInterface = ({ route, navigation }) => {
             setIsGeminiMode(true);
             const geminiMessage = {
                 id: Date.now().toString(),
-                message: "Halo! Saya adalah Gemini AI. Apa yang ingin Anda tanyakan?",
+                message: 'Halo! Saya adalah Gemini AI. Apa yang ingin Anda tanyakan?',
                 employee_name: 'Gemini AI',
                 employee_id: 'gemini',
                 time: new Date().toISOString(),
                 status: 'sent',
             };
-            setMessages(prevMessages => [...prevMessages, geminiMessage]);
+            setMessages((prevMessages) => [...prevMessages, geminiMessage]);
             setInputText('');
             return;
         }
@@ -125,13 +125,13 @@ const ChatInterface = ({ route, navigation }) => {
             setIsGeminiMode(false);
             const quitMessage = {
                 id: Date.now().toString(),
-                message: "Terima kasih telah menggunakan Gemini AI. Kembali ke mode chat normal.",
+                message: 'Terima kasih telah menggunakan Gemini AI. Kembali ke mode chat normal.',
                 employee_name: 'System',
                 employee_id: 'system',
                 time: new Date().toISOString(),
                 status: 'sent',
             };
-            setMessages(prevMessages => [...prevMessages, quitMessage]);
+            setMessages((prevMessages) => [...prevMessages, quitMessage]);
             setInputText('');
             return;
         }
@@ -145,30 +145,33 @@ const ChatInterface = ({ route, navigation }) => {
             status: 'sending',
         };
 
-        setMessages(prevMessages => [...prevMessages, newMessage]);
+        setMessages((prevMessages) => [...prevMessages, newMessage]);
         setInputText('');
         setSending(true);
 
         try {
             if (isGeminiMode) {
                 // Call Gemini AI API
-                const response = await fetch('https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key=AIzaSyCbw7k1d60bhz7fHM9xgPZNql6LqQLxizM', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
+                const response = await fetch(
+                    'https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key=AIzaSyCbw7k1d60bhz7fHM9xgPZNql6LqQLxizM',
+                    {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({
+                            contents: [
+                                {
+                                    parts: [
+                                        {
+                                            text: inputText,
+                                        },
+                                    ],
+                                },
+                            ],
+                        }),
                     },
-                    body: JSON.stringify({
-                        contents: [
-                            {
-                                parts: [
-                                    {
-                                        text: inputText
-                                    }
-                                ]
-                            }
-                        ]
-                    })
-                });
+                );
 
                 const data = await response.json();
                 const geminiResponse = data.candidates[0].content.parts[0].text;
@@ -182,28 +185,28 @@ const ChatInterface = ({ route, navigation }) => {
                     status: 'sent',
                 };
 
-                setMessages(prevMessages => [...prevMessages, geminiMessage]);
+                setMessages((prevMessages) => [...prevMessages, geminiMessage]);
             } else {
                 // Existing chat logic
                 const response = await sendChatMessage(employeeId, taskId, inputText.trim(), companyId);
 
                 if (response && response.id) {
-                    setMessages(prevMessages =>
-                        prevMessages.map(msg =>
-                            msg.id === newMessage.id ? { ...msg, status: 'sent', id: response.id.toString() } : msg
-                        )
+                    setMessages((prevMessages) =>
+                        prevMessages.map((msg) =>
+                            msg.id === newMessage.id ? { ...msg, status: 'sent', id: response.id.toString() } : msg,
+                        ),
                     );
                 } else {
-                    setMessages(prevMessages =>
-                        prevMessages.map(msg => (msg.id === newMessage.id ? { ...msg, status: 'sent' } : msg))
+                    setMessages((prevMessages) =>
+                        prevMessages.map((msg) => (msg.id === newMessage.id ? { ...msg, status: 'sent' } : msg)),
                     );
                 }
             }
         } catch (error) {
             Alert.alert('Error', 'Failed to send message. Please try again.');
 
-            setMessages(prevMessages =>
-                prevMessages.map(msg => (msg.id === newMessage.id ? { ...msg, status: 'failed' } : msg))
+            setMessages((prevMessages) =>
+                prevMessages.map((msg) => (msg.id === newMessage.id ? { ...msg, status: 'failed' } : msg)),
             );
         } finally {
             setSending(false);
@@ -217,7 +220,11 @@ const ChatInterface = ({ route, navigation }) => {
                     <Shimmer width={40} height={40} style={styles.shimmerAvatar} />
                     <View style={styles.shimmerTextContainer}>
                         <Shimmer width={SCREEN_WIDTH * 0.6} height={20} style={styles.shimmerText} />
-                        <Shimmer width={SCREEN_WIDTH * 0.4} height={15} style={[styles.shimmerText, { marginTop: 5 }]} />
+                        <Shimmer
+                            width={SCREEN_WIDTH * 0.4}
+                            height={15}
+                            style={[styles.shimmerText, { marginTop: 5 }]}
+                        />
                     </View>
                 </View>
             ))}
@@ -245,13 +252,13 @@ const ChatInterface = ({ route, navigation }) => {
             hour: '2-digit',
             minute: '2-digit',
         });
-    
+
         const isCurrentUser = item.employee_id === employeeId || item.employee_id === 'user';
         const isGemini = item.employee_id === 'gemini';
         const isSystem = item.employee_id === 'system';
         const showDateHeader =
             index === 0 || new Date(item.time).toDateString() !== new Date(messages[index - 1].time).toDateString();
-    
+
         return (
             <>
                 {showDateHeader && <Text style={styles.dateLabel}>{renderDateHeader(item.time)}</Text>}
@@ -278,12 +285,7 @@ const ChatInterface = ({ route, navigation }) => {
                             <View style={styles.timeAndIconContainer}>
                                 <Text style={[styles.messageTime, styles.currentUserTime]}>{timeInGMT7}</Text>
                                 {item.status === 'sending' && (
-                                    <Ionicons
-                                        name="time-outline"
-                                        size={12}
-                                        color="#777"
-                                        style={styles.sendingIcon}
-                                    />
+                                    <Ionicons name="time-outline" size={12} color="#777" style={styles.sendingIcon} />
                                 )}
                                 {item.status === 'failed' && (
                                     <Ionicons
@@ -314,9 +316,7 @@ const ChatInterface = ({ route, navigation }) => {
                                 {item.message}
                             </Text>
                         </View>
-                        {!isCurrentUser && (
-                            <Text style={[styles.messageTime, styles.otherUserTime]}>{timeInGMT7}</Text>
-                        )}
+                        {!isCurrentUser && <Text style={[styles.messageTime, styles.otherUserTime]}>{timeInGMT7}</Text>}
                     </View>
                 </View>
             </>
@@ -388,13 +388,17 @@ const ChatInterface = ({ route, navigation }) => {
             <View style={styles.inputContainer}>
                 <TextInput
                     style={styles.input}
-                    placeholder={isGeminiMode ? "Ask Gemini AI... (or type 'quit' to exit)" : "Ketik pesan..."}
+                    placeholder={isGeminiMode ? "Ask Gemini AI... (or type 'quit' to exit)" : 'Ketik pesan...'}
                     placeholderTextColor="#999"
                     value={inputText}
                     onChangeText={setInputText}
                     multiline
                 />
-                <TouchableOpacity style={[styles.sendButton, isGeminiMode && styles.geminiSendButton]} onPress={handleSend} disabled={sending}>
+                <TouchableOpacity
+                    style={[styles.sendButton, isGeminiMode && styles.geminiSendButton]}
+                    onPress={handleSend}
+                    disabled={sending}
+                >
                     <Ionicons name="paper-plane" color="#fff" size={24} />
                 </TouchableOpacity>
             </View>
@@ -476,7 +480,9 @@ const styles = StyleSheet.create({
     },
     currentUserContainer: {
         alignSelf: 'flex-end',
+        marginRight: 10,
     },
+
     otherUserContainer: {
         alignSelf: 'flex-start',
     },
@@ -494,7 +500,9 @@ const styles = StyleSheet.create({
     currentUserSender: {
         color: '#777',
         textAlign: 'right',
+        marginRight: 10, // Added right margin to align with the bubble
     },
+
     otherUserSender: {
         color: '#555',
     },
