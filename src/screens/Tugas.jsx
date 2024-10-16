@@ -31,7 +31,6 @@ const AccessDenied = () => {
             <View style={styles.iconContainer}>
                 <Text style={styles.icon}>X</Text>
             </View>
-            <Text style={styles.title}>Akses Ditolak</Text>
             <Text style={styles.message}>Anda tidak mempunyai akses tugas.</Text>
         </View>
     );
@@ -479,41 +478,6 @@ const styles = StyleSheet.create({
     content: {
         padding: 20,
     },
-    accessDeniedContainer: {
-        flex: 1,
-        justifyContent: 'center',
-        alignItems: 'center',
-        padding: 20,
-        backgroundColor: '#F0F0F0',
-    },
-    iconContainer: {
-        width: 80,
-        height: 80,
-        borderRadius: 40,
-        backgroundColor: '#FF6B6B',
-        justifyContent: 'center',
-        alignItems: 'center',
-        marginBottom: 20,
-    },
-    icon: {
-        fontSize: 40,
-        color: 'white',
-        fontWeight: 'bold',
-    },
-    title: {
-        fontSize: 24,
-        fontWeight: 'bold',
-        marginBottom: 20,
-        fontFamily: 'Poppins-Bold',
-        color: '#333',
-    },
-    message: {
-        fontSize: 16,
-        textAlign: 'center',
-        fontFamily: 'Poppins-Regular',
-        color: '#666',
-    },
-
     sectionHeader: {
         flexDirection: 'row',
         justifyContent: 'space-between',
@@ -678,6 +642,35 @@ const styles = StyleSheet.create({
         justifyContent: 'center',
         alignItems: 'center',
     },
+    //accessDenied
+    accessDeniedContainer: {
+        flex: 1,
+        justifyContent: 'center',
+        alignItems: 'center',
+        padding: 20,
+        backgroundColor: '#F0F0F0',
+    },
+    iconContainer: {
+        width: 80,
+        height: 80,
+        borderRadius: 40,
+        backgroundColor: '#FF6B6B',
+        justifyContent: 'center',
+        alignItems: 'center',
+        marginBottom: 20,
+    },
+    icon: {
+        fontSize: 40,
+        color: 'white',
+        fontWeight: 'bold',
+    },
+    message: {
+        fontSize: 16,
+        textAlign: 'center',
+        fontFamily: 'Poppins-Regular',
+        color: '#666',
+    },
+    //accessDenied
 });
 
 export default Tugas;
