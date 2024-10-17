@@ -1,8 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { View, Text, StyleSheet, Alert, TouchableOpacity, RefreshControl, Dimensions } from 'react-native';
+import { View, Text, StyleSheet, Alert, TouchableOpacity, RefreshControl, Dimensions, ScrollView } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import * as Location from 'expo-location';
-import { ScrollView } from 'react-native-gesture-handler';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { Feather, MaterialIcons } from '@expo/vector-icons';
@@ -46,118 +45,27 @@ const Kehadiran = () => {
     const today = new Date();
     const daysDiff = Math.floor((today - startDate) / (1000 * 60 * 60 * 24));
 
-    useEffect(() => {
-        const getData = async () => {
-            try {
-                const storedEmployeeId = await AsyncStorage.getItem('employeeId');
-                const storedCompanyId = await AsyncStorage.getItem('companyId');
-
-                setEmployeeId(storedEmployeeId);
-                setCompanyId(storedCompanyId);
-            } catch (error) {
-                console.error('Error fetching AsyncStorage data:', error);
-            }
-        };
-
-        getData();
-    }, []);
-
-    const fetchOfficeHour = useCallback(async () => {
-        if (!companyId) return;
+    const fetchData = useCallback(async () => {
+        if (!employeeId || !companyId) return;
 
         try {
-            const response = await getParameter(companyId);
-            setJamTelat(response.data.jam_telat);
-            setRadius(response.data.radius);
-        } catch (error) {
-            console.error('Error fetching office hour data:', error);
-        }
-    }, [companyId]);
+            const [attendanceResponse, parameterResponse, locationResponse] = await Promise.all([
+                getAttendance(employeeId),
+                getParameter(companyId),
+                Location.getCurrentPositionAsync({}),
+            ]);
 
-    useEffect(() => {
-        fetchOfficeHour();
-    }, [fetchOfficeHour]);
-    useEffect(() => {
-        checkAccessPermission();
-    }, []);
-    const checkAccessPermission = async () => {
-        try {
-            const accessPermissions = await AsyncStorage.getItem('access_permissions');
-            const permissions = JSON.parse(accessPermissions);
-            setHasAccess(permissions?.access_attendance === true);
-        } catch (error) {
-            console.error('Error checking access permission:', error);
-            setHasAccess(false);
-        }
-    };
-    useEffect(() => {
-        if (hasAccess) {
-            fetchAttendanceData();
-        }
-    }, [hasAccess]);
+            setAttendanceData(attendanceResponse.attendance);
+            setIsCheckedIn(attendanceResponse.isCheckedInToday);
 
-    const fetchAttendanceData = useCallback(async () => {
-        if (!employeeId) return;
+            setJamTelat(parameterResponse.data.jam_telat);
+            setRadius(parameterResponse.data.radius);
 
-        try {
-            const response = await getAttendance(employeeId);
-            setAttendanceData(response.attendance);
-            setIsCheckedIn(response.isCheckedInToday);
-        } catch (error) {
-            console.error('Error fetching attendance data:', error);
-            Alert.alert('Error', 'Failed to fetch attendance data. Please try again.');
-        }
-    }, [employeeId]);
-
-    useEffect(() => {
-        if (employeeId) {
-            fetchAttendanceData();
-        }
-    }, [employeeId, fetchAttendanceData]);
-
-    useFocusEffect(
-        useCallback(() => {
-            fetchAttendanceData();
-        }, [fetchAttendanceData]),
-    );
-
-    const onRefresh = useCallback(async () => {
-        setRefreshing(true);
-        try {
-            await fetchAttendanceData();
-        } catch (error) {
-            console.error('Error during refresh:', error);
-        } finally {
-            setRefreshing(false);
-        }
-    }, [fetchAttendanceData]);
-
-    useEffect(() => {
-        const interval = setInterval(() => {
-            const now = new Date();
-            const time = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true });
-            setCurrentTime(time);
-        }, 1000);
-
-        return () => clearInterval(interval);
-    }, []);
-
-    useEffect(() => {
-        (async () => {
-            let { status } = await Location.requestForegroundPermissionsAsync();
-            if (status !== 'granted') {
-                setErrorMsg('Permission to access location was denied');
-                return;
-            }
-
-            let location = await Location.getCurrentPositionAsync({});
-            const { latitude, longitude } = location.coords;
-
+            const { latitude, longitude } = locationResponse.coords;
             const formattedCoordinates = `${latitude.toFixed(6)}, ${longitude.toFixed(6)}`;
             setLocation(formattedCoordinates);
 
             const [reverseGeocodeResult] = await Location.reverseGeocodeAsync({ latitude, longitude });
-
             if (reverseGeocodeResult) {
                 setLocationName(
                     `${reverseGeocodeResult.street}, ${reverseGeocodeResult.city}, ${reverseGeocodeResult.region}, ${reverseGeocodeResult.country}`,
@@ -165,26 +73,85 @@ const Kehadiran = () => {
             } else {
                 setLocationName('Unable to retrieve location name');
             }
-        })();
-    }, []);
-    if (hasAccess === null) {
-        return (
-            <View style={styles.container}>
-                <Text>Loading...</Text>
-            </View>
-        );
-    }
+        } catch (error) {
+            console.error('Error fetching data:', error);
+            Alert.alert('Error', 'Failed to fetch data. Please try again.');
+        }
+    }, [employeeId, companyId]);
 
-    if (hasAccess === false) {
-        return <AccessDenied />;
-    }
+    const onRefresh = useCallback(async () => {
+        setRefreshing(true);
+        try {
+            await fetchData();
+        } catch (error) {
+            console.error('Error during refresh:', error);
+            showAlert('Failed to refresh data. Please try again.', 'error');
+        } finally {
+            setRefreshing(false);
+        }
+    }, [fetchData]);
+
+    useEffect(() => {
+        const getData = async () => {
+            try {
+                const storedEmployeeId = await AsyncStorage.getItem('employeeId');
+                const storedCompanyId = await AsyncStorage.getItem('companyId');
+                setEmployeeId(storedEmployeeId);
+                setCompanyId(storedCompanyId);
+            } catch (error) {
+                console.error('Error fetching AsyncStorage data:', error);
+            }
+        };
+        getData();
+    }, []);
+
+    useEffect(() => {
+        if (employeeId && companyId) {
+            fetchData();
+        }
+    }, [employeeId, companyId, fetchData]);
+
+    useEffect(() => {
+        const checkAccessPermission = async () => {
+            try {
+                const accessPermissions = await AsyncStorage.getItem('access_permissions');
+                const permissions = JSON.parse(accessPermissions);
+                setHasAccess(permissions?.access_attendance === true);
+            } catch (error) {
+                console.error('Error checking access permission:', error);
+                setHasAccess(false);
+            }
+        };
+        checkAccessPermission();
+    }, []);
+
+    useFocusEffect(
+        useCallback(() => {
+            if (hasAccess && employeeId && companyId) {
+                fetchData();
+            }
+        }, [hasAccess, employeeId, companyId, fetchData]),
+    );
+
+    useEffect(() => {
+        const interval = setInterval(() => {
+            const now = new Date();
+            const time = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true });
+            setCurrentTime(time);
+        }, 1000);
+        return () => clearInterval(interval);
+    }, []);
+
+    const showAlert = (message, type) => {
+        setAlert({ show: true, type, message });
+        setTimeout(() => setAlert((prev) => ({ ...prev, show: false })), 3000);
+    };
 
     const handleClockIn = useCallback(() => {
         if (!location || !locationName) {
             showAlert('Location data not available. Please try again.', 'error');
             return;
         }
-
         try {
             navigation.navigate('DetailKehadiran', { location, locationName, jamTelat, radius });
         } catch (error) {
@@ -197,16 +164,11 @@ const Kehadiran = () => {
         try {
             const updateResponse = await checkOut(employeeId, companyId);
             showAlert(`${updateResponse}`, 'success');
-            fetchAttendanceData();
+            fetchData();
         } catch (error) {
             const errorMessage = error.message || 'Unknown error';
             showAlert(`${errorMessage}`, 'error');
         }
-    };
-
-    const showAlert = (message, type) => {
-        setAlert({ show: true, type, message });
-        setTimeout(() => setAlert((prev) => ({ ...prev, show: false })), 3000);
     };
 
     const handleNextPage = () => {
@@ -334,15 +296,6 @@ const Kehadiran = () => {
 
     return (
         <View style={styles.container}>
-            <View style={styles.backgroundBox}>
-                <LinearGradient
-                    colors={['#0E509E', '#5FA0DC', '#9FD2FF']}
-                    style={styles.linearGradient}
-                    start={{ x: 0, y: 0 }}
-                    end={{ x: 1, y: 1 }}
-                />
-            </View>
-
             <ScrollView
                 contentContainerStyle={styles.scrollViewContent}
                 refreshControl={
@@ -351,9 +304,19 @@ const Kehadiran = () => {
                         onRefresh={onRefresh}
                         colors={['#0E509E']}
                         tintColor="#0E509E"
+                        progressBackgroundColor="#ffffff"
                     />
                 }
             >
+                <View style={styles.backgroundBox}>
+                    <LinearGradient
+                        colors={['#0E509E', '#5FA0DC', '#9FD2FF']}
+                        style={styles.linearGradient}
+                        start={{ x: 0, y: 0 }}
+                        end={{ x: 1, y: 1 }}
+                    />
+                </View>
+
                 <Text style={styles.header}>Kehadiran</Text>
 
                 <View style={styles.mainContainer}>
@@ -423,6 +386,10 @@ const styles = StyleSheet.create({
     container: {
         minHeight: height, // Ensure the content is at least as tall as the screen
         flexGrow: 1,
+    },
+    scrollViewContent: {
+        flexGrow: 1,
+        paddingBottom: 20, // Add some bottom padding for better scrolling
     },
     locationContainer: {
         flexDirection: 'row', // Align items horizontally

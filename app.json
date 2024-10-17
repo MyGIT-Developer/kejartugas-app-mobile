@@ -18,6 +18,7 @@
             "bundleIdentifier": "com.innovation.kejartugas",
             "jsEngine": "hermes",
             "infoPlist": {
+                "NSCameraUsageDescription": "Aplikasi ini memerlukan akses kamera untuk mengambil foto.",
                 "NSLocationWhenInUseUsageDescription": "This app needs access to location when open.",
                 "NSLocationAlwaysUsageDescription": "This app needs access to location when in the background.",
                 "NSLocationAlwaysAndWhenInUseUsageDescription": "This app needs access to location when open and in the background."

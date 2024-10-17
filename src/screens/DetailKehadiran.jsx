@@ -1,14 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import {
-    View,
-    Text,
-    StyleSheet,
-    TouchableOpacity,
-    Image,
-    ScrollView,
-    Alert,
-    TextInput,
-} from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Image, ScrollView, Alert, TextInput } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import { Feather } from '@expo/vector-icons';
@@ -20,7 +11,7 @@ import Shimmer from '../components/Shimmer'; // Sesuaikan path jika diperlukan
 import MyMap from '../components/Maps';
 import ReusableBottomPopUp from '../components/ReusableBottomPopUp';
 import CheckBox from '../components/Checkbox';
-
+import { Camera } from 'expo-camera'; // Import Camera
 const DetailKehadiran = () => {
     const navigation = useNavigation();
     const route = useRoute();
@@ -34,16 +25,18 @@ const DetailKehadiran = () => {
     const [alert, setAlert] = useState({ show: false, type: 'success', message: '' });
     const [reasonInput, setReasonInput] = useState('');
 
-    const [latitude, longitude] = location.split(',').map(coord => parseFloat(coord.trim()));
-    
+    const [latitude, longitude] = location.split(',').map((coord) => parseFloat(coord.trim()));
+
     const parsedLocation = {
         latitude: isNaN(latitude) ? 0 : latitude,
-        longitude: isNaN(longitude) ? 0 : longitude
+        longitude: isNaN(longitude) ? 0 : longitude,
     };
 
     useEffect(() => {
         const interval = setInterval(updateCurrentTime, 1000);
         getStoredData();
+        // requestCameraPermission();
+        triggerCamera();
         return () => clearInterval(interval);
     }, []);
 
@@ -76,6 +69,13 @@ const DetailKehadiran = () => {
 
     const triggerCamera = async () => {
         try {
+            // Minta izin kamera setiap kali kamera dipicu
+            const { status } = await Camera.requestCameraPermissionsAsync();
+            if (status !== 'granted') {
+                Alert.alert('Izin Ditolak', 'Aplikasi membutuhkan izin kamera untuk melanjutkan.');
+                return; // Jika izin tidak diberikan, keluar dari fungsi
+            }
+
             const result = await launchCameraAsync({
                 mediaTypes: MediaTypeOptions.Images,
                 allowsEditing: false,
@@ -86,11 +86,11 @@ const DetailKehadiran = () => {
             if (!result.canceled && result.assets && result.assets[0].uri) {
                 setCapturedImage(result.assets[0].uri);
             } else {
-                Alert.alert('Camera was canceled or no valid image was captured.');
+                Alert.alert('Kamera dibatalkan atau tidak ada gambar yang diambil.');
             }
         } catch (error) {
-            console.error('Camera error:', error);
-            Alert.alert('Error', `Error when using camera: ${error.message || 'Unknown error'}`);
+            console.error('Error menggunakan kamera:', error);
+            Alert.alert('Error', `Error saat menggunakan kamera: ${error.message || 'Error tidak diketahui'}`);
         }
     };
 
@@ -106,14 +106,7 @@ const DetailKehadiran = () => {
         }
 
         try {
-            await checkIn(
-                employeeId,
-                companyId,
-                isUserLate ? reasonInput : null,
-                capturedImage,
-                location,
-                isWFH,
-            );
+            await checkIn(employeeId, companyId, isUserLate ? reasonInput : null, capturedImage, location, isWFH);
             showAlert('Anda berhasil check-in!', 'success');
             setTimeout(() => {
                 setAlert((prev) => ({ ...prev, show: false }));
@@ -169,22 +162,16 @@ const DetailKehadiran = () => {
                         <MyMap location={parsedLocation} radius={radius} />
                     </View> */}
 
-                    <CheckBox
-                        onPress={() => setIsWFH(!isWFH)}
-                        title="Sedang berada di luar kantor"
-                        isChecked={isWFH}
-                    />
+                    <CheckBox onPress={() => setIsWFH(!isWFH)} title="Sedang berada di luar kantor" isChecked={isWFH} />
 
                     {!capturedImage && (
                         <TouchableOpacity style={styles.cameraButton} onPress={triggerCamera}>
                             <Icon name="camera-alt" size={24} color="white" />
-                            <Text style={styles.cameraButtonText}>Ambil Foto</Text>
+                            <Text style={styles.cameraButtonText}>Ambil Foto Ulang</Text>
                         </TouchableOpacity>
                     )}
 
-                    {capturedImage && (
-                        <Image source={{ uri: capturedImage }} style={styles.previewImage} />
-                    )}
+                    {capturedImage && <Image source={{ uri: capturedImage }} style={styles.previewImage} />}
 
                     {isUserLate && (
                         <TextInput
@@ -323,7 +310,7 @@ const styles = StyleSheet.create({
         height: 200,
         resizeMode: 'cover',
         borderRadius: 10,
-        marginTop:20,
+        marginTop: 20,
         marginBottom: 20,
     },
     input: {
