@@ -633,6 +633,13 @@ const styles = StyleSheet.create({
         fontFamily: 'Poppins-Regular',
         color: '#666',
     },
+    message: {
+        fontSize: 18,
+        fontWeight: 'bold',
+        color: '#333',
+        textAlign: 'center',
+        marginTop: 20,
+    },
 });
 
 export default Kehadiran;

@@ -35,7 +35,6 @@ const DetailKehadiran = () => {
     useEffect(() => {
         const interval = setInterval(updateCurrentTime, 1000);
         getStoredData();
-        // requestCameraPermission();
         triggerCamera();
         return () => clearInterval(interval);
     }, []);
@@ -69,11 +68,10 @@ const DetailKehadiran = () => {
 
     const triggerCamera = async () => {
         try {
-            // Minta izin kamera setiap kali kamera dipicu
             const { status } = await Camera.requestCameraPermissionsAsync();
             if (status !== 'granted') {
-                Alert.alert('Izin Ditolak', 'Aplikasi membutuhkan izin kamera untuk melanjutkan.');
-                return; // Jika izin tidak diberikan, keluar dari fungsi
+                showAlert('Izin Ditolak. Aplikasi membutuhkan izin kamera untuk melanjutkan.', 'error');
+                return;
             }
 
             const result = await launchCameraAsync({
@@ -86,11 +84,11 @@ const DetailKehadiran = () => {
             if (!result.canceled && result.assets && result.assets[0].uri) {
                 setCapturedImage(result.assets[0].uri);
             } else {
-                Alert.alert('Kamera dibatalkan atau tidak ada gambar yang diambil.');
+                showAlert('Kamera dibatalkan atau tidak ada gambar yang diambil.', 'error');
             }
         } catch (error) {
             console.error('Error menggunakan kamera:', error);
-            Alert.alert('Error', `Error saat menggunakan kamera: ${error.message || 'Error tidak diketahui'}`);
+            // showAlert(`Error saat menggunakan kamera: ${error.message || 'Error tidak diketahui'}`, 'error');
         }
     };
 
@@ -157,10 +155,6 @@ const DetailKehadiran = () => {
                         <Text style={styles.locationTitle}>Lokasi saat ini</Text>
                     </View>
                     <Text style={styles.locationName}>{locationName}</Text>
-
-                    {/* <View style={styles.mapContainer}>
-                        <MyMap location={parsedLocation} radius={radius} />
-                    </View> */}
 
                     <CheckBox onPress={() => setIsWFH(!isWFH)} title="Sedang berada di luar kantor" isChecked={isWFH} />
 
