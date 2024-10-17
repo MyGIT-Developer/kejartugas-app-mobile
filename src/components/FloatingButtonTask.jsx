@@ -8,7 +8,9 @@ const FloatingButtonTask = ({ projectData }) => {
     const navigator = useNavigation();
     
     const handleGoToCreate = () => {
-        navigator.navigate('AddTaskForm', { projectData }); // Pass projectData as a parameter
+        navigator.navigate('TaskForm', {
+            projectData: projectData
+        });// Pass projectData as a parameter
     };
 
     return (

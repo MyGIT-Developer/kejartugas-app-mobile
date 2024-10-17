@@ -14,7 +14,7 @@ import {
 import CheckBox from '@react-native-community/checkbox'; // External CheckBox component
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { Picker } from '@react-native-picker/picker';
-import { useNavigation, useFocusEffect } from '@react-navigation/native';
+import { useNavigation, useRoute } from '@react-navigation/native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { LinearGradient } from 'expo-linear-gradient';
 import * as Progress from 'react-native-progress';
@@ -25,17 +25,22 @@ import ReusableBottomPopUp from '../components/ReusableBottomPopUp';
 const { height, width: SCREEN_WIDTH } = Dimensions.get('window');
 import Icon from 'react-native-vector-icons/MaterialIcons'; // Or any other icon library
 
-const AddProjectForm = ({ route }) => {
+const AddProjectForm = () => {
+    const route = useRoute();
+    const { mode = 'create', initialTaskData = null } = route.params;
+
     const [companyId, setCompanyId] = useState('');
     const [employeeId, setEmployeeId] = useState('');
+    const [jobsId, setJobsId] = useState('');
+    const [roleId, setRoleId] = useState('');
     const navigation = useNavigation();
     const [formState, setFormState] = useState({
-        company_id: '',
-        project_name: '',
-        role_id: '',
-        jobs_id: '',
-        team_id: '',
-        assign_by: '',
+        company_id: companyId,
+        project_name: initialTaskData?.project_name || "",
+        role_id: initialTaskData?.role_id || employeeId,
+        jobs_id: initialTaskData?.jobs_id || employeeId,
+        team_id: initialTaskData?.team_id || employeeId,
+        assign_by: initialTaskData?.assign_by || employeeId,
         assign_to: [],
         start_date: new Date(),
         end_date: new Date(),
@@ -74,6 +79,8 @@ const AddProjectForm = ({ route }) => {
                 const roleId = await AsyncStorage.getItem('userRole');
                 setCompanyId(companyId);
                 setEmployeeId(employeeId);
+                setJobsId(jobsId);
+                setRoleId(roleId);
                 setFormState((prev) => ({
                     ...prev,
                     company_id: companyId,

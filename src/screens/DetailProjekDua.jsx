@@ -1,12 +1,14 @@
 import React, { useState, useCallback, useMemo, useEffect } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Dimensions, ScrollView, Button, SafeAreaView } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Dimensions, ScrollView, Alert , SafeAreaView } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import DraggableModalTask from '../components/DraggableModalTask';
 import ReusableModalSuccess from '../components/TaskModalSuccess';
-import { fetchTaskById } from '../api/task'; // Import the fetchTaskById function
+import { fetchTaskById, deleteTask } from '../api/task'; // Import the fetchTaskById function
 import AsyncStorage from '@react-native-async-storage/async-storage';
 const { height } = Dimensions.get('window');
 import FloatingButtonTask from '../components/FloatingButtonTask';
+import { useNavigation } from '@react-navigation/native';
+import ReusableBottomPopUp from '../components/ReusableBottomPopUp';
 
 const STATUS_MAPPING = {
     Completed: { text: 'Selesai', bgColor: '#C9F8C1', textColor: '#0A642E' },
@@ -93,9 +95,11 @@ const getStatusBadgeColor = (status, endDate) => {
     }
 };
 
-const TableRow = React.memo(({ item, index, onTaskPress }) => {
+const TableRow = React.memo(({ item, index, onTaskPress, projectData, fetchProjectData }) => {
     const [expanded, setExpanded] = useState(false);
     const toggleExpanded = useCallback(() => setExpanded((prev) => !prev), []);
+    const navigation = useNavigation();
+    const [alert, setAlert] = useState({ show: false, type: 'success', message: '' });
 
     const statusInfo = STATUS_MAPPING[item.task_status] || {
         text: 'Tidak Diketahui',
@@ -103,6 +107,53 @@ const TableRow = React.memo(({ item, index, onTaskPress }) => {
         textColor: 'black',
     };
 
+    const handleGoToUpdate = () => {
+        navigation.navigate('TaskForm', {
+            mode: 'update',
+            initialTaskData: item,
+            projectData: projectData,
+        });
+    };
+
+    const handleDeleteTask = useCallback((taskId) => {
+        const deleteTaskHandler = async () => {
+          try {
+            const response = await deleteTask(taskId);
+            setAlert({
+              show: true,
+              type: 'success',
+              message: response.message,
+            });
+          } catch (error) {
+            console.error('Error deleting task:', error);
+            setAlert({
+              show: true,
+              type: 'error',
+              message: 'Gagal menghapus tugas. Coba lagi.',
+            });
+          } finally {
+            fetchProjectData();
+          }
+        };
+      
+        Alert.alert(
+          "Konfirmasi Hapus",
+          "Apakah Anda yakin ingin menghapus tugas ini?",
+          [
+            {
+              text: "Batal",
+              style: "cancel"
+            },
+            {
+              text: "Hapus",
+              onPress: deleteTaskHandler,
+              style: "destructive"
+            }
+          ],
+          { cancelable: false }
+        );
+      }, []);
+      
     return (
         <ScrollView contentContainerStyle={styles.rowContainer}>
             {item.task_name == 'No data available' ? (
@@ -141,29 +192,6 @@ const TableRow = React.memo(({ item, index, onTaskPress }) => {
                                             .join(', ') || '-'}
                                     </Text>
                                 </View>
-                                <View>
-                                    {/* <Text style={styles.expandedLabel}>Aksi</Text> */}
-                                    <View style={styles.expandedButtonContainer}>
-                                        {/* <TouchableOpacity
-                                            onPress={() => onTaskPress(item)}
-                                            style={[styles.buttonAction, { backgroundColor: 'none' }]}
-                                        >
-                                            <Text style={[styles.expandedText, { color: '#0E509E' }]}>Edit</Text>
-                                            <Feather name={'eye'} color="blue" />
-                                        </TouchableOpacity> */}
-                                        {/* <TouchableOpacity style={[styles.buttonAction, { backgroundColor: 'none' }]}>
-                                            <Text style={[styles.expandedText, { color: '#0E509E' }]}>Delete</Text>
-                                            <Feather name={'edit'} color="black" />
-                                        </TouchableOpacity> */}
-                                        {/* <TouchableOpacity style={[styles.buttonAction, { backgroundColor: 'none' }]}>
-                                            <Text style={[styles.expandedText, { color: '#0E509E' }]}>Approve</Text>
-                                            <Feather name={'trash'} color={'red'} />
-                                        </TouchableOpacity> */}
-                                        {/* <TouchableOpacity style={[styles.buttonAction, {backgroundColor: "#d7d7d7"}]}>
-                            <Text style={[styles.expandedText, { color: '#0E509E' }]}>Reject</Text>
-                        </TouchableOpacity> */}
-                                    </View>
-                                </View>
                             </View>
                             <View style={styles.expandedColumnText}>
                                 <View>
@@ -175,42 +203,60 @@ const TableRow = React.memo(({ item, index, onTaskPress }) => {
                                     <Text style={styles.expandedText}>{formatDate(item.end_date)}</Text>
                                 </View>
                             </View>
+                            <View style={styles.expandedColumnText}>
+                                <View style={styles.expandedButtonContainer}>
+                                    <TouchableOpacity
+                                        onPress={() => onTaskPress(item)}
+                                        style={[styles.buttonAction, { backgroundColor: 'none' }]}
+                                    >
+                                        <Text style={[styles.expandedText, { color: '#0E509E' }]}>Detail</Text>
+                                        <Feather name={'eye'} color="blue" />
+                                    </TouchableOpacity>
+                                    <TouchableOpacity
+                                        onPress={() => handleGoToUpdate()}
+                                        style={[styles.buttonAction, { backgroundColor: 'none' }]}
+                                    >
+                                        <Text style={[styles.expandedText, { color: '#0E509E' }]}>Edit</Text>
+                                        <Feather name={'edit'} color="black" />
+                                    </TouchableOpacity>
+                                    <TouchableOpacity
+                                        onPress={() => handleDeleteTask(item.id)}
+                                        style={[styles.buttonAction, { backgroundColor: 'none' }]}
+                                    >
+                                        <Text style={[styles.expandedText, { color: '#0E509E' }]}>Delete</Text>
+                                        <Feather name={'trash'} color="red" />
+                                    </TouchableOpacity>
+                                    {/* <TouchableOpacity style={[styles.buttonAction, { backgroundColor: 'none' }]}>
+                                            <Text style={[styles.expandedText, { color: '#0E509E' }]}>Approve</Text>
+                                            <Feather name={'check'} color={'blue'} />
+                                        </TouchableOpacity>
+                                        <TouchableOpacity style={[styles.buttonAction, { backgroundColor: 'none' }]}>
+                                        <Text style={[styles.expandedText, { color: '#0E509E' }]}>Reject</Text>
+                            <Feather name={'x'} color={'red'} />
+                        </TouchableOpacity> */}
+                                </View>
+                            </View>
                         </View>
                     )}
+                     <ReusableBottomPopUp
+                show={alert.show}
+                alertType={alert.type}
+                message={alert.message}
+                onConfirm={() => setAlert((prev) => ({ ...prev, show: false }))}
+            />
                 </>
             )}
         </ScrollView>
     );
 });
 
-const DetailProjekDua = ({ data }) => {
+const DetailProjekDua = ({ data, onFetch }) => {
     const taskData = useMemo(() => data.tasks, [data.tasks]);
     const [modalType, setModalType] = useState('default'); // Initialize modalType state
     const [selectedTask, setSelectedTask] = useState(null);
     const [draggableModalVisible, setDraggableModalVisible] = useState(false);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
-    
-    // const fetchTasks = useCallback(async () => {
-    //     try {
-    //         const companyId = await AsyncStorage.getItem('companyId');
-    //         if (companyId) {
-    //             const response = await getTask(companyId);
-    //             setTaskData(response);
-    //         } else {
-    //             throw new Error('Company ID not found');
-    //         }
-    //     } catch (err) {
-    //         console.error('Error fetching tasks:', err);
-    //         setError(err.message);
-    //     } finally {
-    //         setLoading(false);
-    //     }
-    // }, []);
-
-    // useEffect(() => {
-    //     fetchTasks();
-    // }, [fetchTasks]);
 
     const handleTaskDetailPress = async (task) => {
         const baseUrl = 'http://202.10.36.103:8000/';
@@ -285,6 +331,8 @@ const DetailProjekDua = ({ data }) => {
                                 item={item}
                                 index={index}
                                 onTaskPress={handleTaskDetailPress}
+                                projectData={data}
+                                fetchProjectData={onFetch}
                             />
                         ))
                     ) : (
@@ -308,10 +356,12 @@ const DetailProjekDua = ({ data }) => {
                         taskDetails={selectedTask || {}}
                     />
                 )}
-
             </ScrollView>
-            <FloatingButtonTask projectData={data}/>
+            <FloatingButtonTask projectData={data} />
+
+          
         </SafeAreaView>
+
     );
 };
 

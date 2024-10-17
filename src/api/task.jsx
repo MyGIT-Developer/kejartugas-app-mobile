@@ -33,6 +33,26 @@ export const addNewTask = async (formData) => {
     }
 }
 
+export const updateTask = async (id, formData, jobsId) => {
+    try {
+        const token = await AsyncStorage.getItem('token');
+        const response = await apiService.put(`/tasks/${id}`,
+            formData,
+            {
+              headers: {
+                Authorization: `Bearer ${token}`,
+              },
+              params: {
+                jobs_id: jobsId
+              },
+            }
+          );
+        return response.data;
+    } catch (error) {
+        throw new Error(error || 'Adding new task failed');
+    }
+}
+
 export const submitTask = async (taskId, payload) => {
     try {
         const token = await AsyncStorage.getItem('token');

@@ -3,7 +3,7 @@ import { View, Animated, Dimensions, StyleSheet } from 'react-native';
 
 const SCREEN_WIDTH = Dimensions.get('window').width;
 
-const SlidingFragment = ({ fragments, activeFragment, data }) => {
+const SlidingFragment = ({ fragments, activeFragment, data, onFetch }) => {
     const translateX = useRef(new Animated.Value(0)).current;
 
     useEffect(() => {
@@ -25,7 +25,7 @@ const SlidingFragment = ({ fragments, activeFragment, data }) => {
                     const ScreenComponent = fragment.screen;
                     return (
                         <View key={index} style={styles.fragment}>
-                            <ScreenComponent data={data} />
+                            <ScreenComponent data={data} onFetch={onFetch}/>
                         </View>
                     );
                 })}

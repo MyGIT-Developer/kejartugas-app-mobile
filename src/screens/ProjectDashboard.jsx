@@ -248,7 +248,7 @@ const ProjectDashboard = () => {
                     </View>
                 </View>
 
-                <ScrollView contentContainerStyle={{ marginBottom: 100 }}>{renderContent()}</ScrollView>
+                <ScrollView>{renderContent()}</ScrollView>
             </ScrollView>
             <FloatingButton />
         </SafeAreaView>
@@ -258,10 +258,18 @@ const ProjectDashboard = () => {
 const styles = StyleSheet.create({
     safeArea: {
         flex: 1,
-        backgroundColor: '#F0F0F0',
     },
     container: {
+        flex: 1,
+    },
+    contentContainer: {
         flexGrow: 1,
+        paddingBottom: 100, // Add padding at the bottom
+    },
+    errorContainer: {
+        flex: 1,
+        justifyContent: 'center',
+        alignItems: 'center',
     },
     backgroundBox: {
         position: 'absolute',

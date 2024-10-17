@@ -183,28 +183,8 @@ const DetailProjek = ({ route }) => {
                     <View style={styles.projectHeaderContainer}>
                         <Text style={{ fontFamily: 'Poppins-Regular' }}>Nama Proyek</Text>
 
-                        <Pressable
-                                    style={[
-                                        styles.menuItem,
-                                        isPressed && styles.pressedItem, // Apply a different style when pressed
-                                    ]}
-                                    onPressIn={() => setIsPressed(true)}
-                                    onPressOut={() => setIsPressed(false)}
-                                    onPress={() => deleteProjectHandler()}
-                                >
-                                    <View
-                                        style={[
-                                            styles.optionIcon,
-                                            { backgroundColor: isPressed ? '#C43B54' : '#DF4E6E' },
-                                        ]}
-                                    >
-                                        <Feather name="trash-2" size={20} color="#fff" />
-                                    </View>
-                                    {/* <Text style={[styles.optionText, { color: isPressed ? 'gray' : 'black' }]}>
-                                        Hapus
-                                    </Text> */}
-                                </Pressable>
-                        {/* <Popover
+                        
+                        <Popover
                             isVisible={visible}
                             onRequestClose={togglePopover}
                             from={
@@ -214,8 +194,8 @@ const DetailProjek = ({ route }) => {
                             }
                             placement="bottom"
                         >
-                            <View style={styles.menuContainer}> */}
-                                {/* <Pressable
+                            <View style={styles.menuContainer}>
+                                <Pressable
                                     onPress={() => {
                                         togglePopover();
                                     }}
@@ -227,7 +207,7 @@ const DetailProjek = ({ route }) => {
 
                                     <Text style={[styles.optionText, { color: 'black' }]}>Edit Proyek</Text>
                                 </Pressable>
-                                <Pressable
+                                {/* <Pressable
                                     onPress={() => {
                                         togglePopover();
                                     }}
@@ -251,9 +231,29 @@ const DetailProjek = ({ route }) => {
 
                                     <Text style={[styles.optionText, { color: 'black' }]}>Bagikan</Text>
                                 </Pressable> */}
-                                
-                            {/* </View>
-                        </Popover> */}
+                                <Pressable
+                                    style={[
+                                        styles.menuItem,
+                                        isPressed && styles.pressedItem, // Apply a different style when pressed
+                                    ]}
+                                    onPressIn={() => setIsPressed(true)}
+                                    onPressOut={() => setIsPressed(false)}
+                                    onPress={() => deleteProjectHandler()}
+                                >
+                                    <View
+                                        style={[
+                                            styles.optionIcon,
+                                            { backgroundColor: isPressed ? '#C43B54' : '#DF4E6E' },
+                                        ]}
+                                    >
+                                        <Feather name="trash-2" size={20} color="#fff" />
+                                    </View>
+                                    <Text style={[styles.optionText, { color: isPressed ? 'gray' : 'black' }]}>
+                                        Hapus
+                                    </Text>
+                                </Pressable>
+                            </View>
+                        </Popover>
                     </View>
                     <View style={styles.projectInfoContainer}>
                         <View style={styles.projectTextContainer}>
@@ -295,7 +295,7 @@ const DetailProjek = ({ route }) => {
                     </View>
                 </View>
 
-                <SlidingFragment fragments={fragments} activeFragment={activeFragment} data={projectData} />
+                <SlidingFragment fragments={fragments} activeFragment={activeFragment} data={projectData} onFetch={fetchProjectById}/>
             </ScrollView>
             <ReusableBottomPopUp
                 show={alert.show}

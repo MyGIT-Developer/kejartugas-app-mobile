@@ -9,6 +9,7 @@ const { width } = Dimensions.get('window');
 const cardWidth = (width - 60) / 2;
 import { fetchTaskById, fetchTotalTasksForEmployee } from '../api/task'; // Import the fetchTaskById function
 import ReusableBottomPopUp from '../components/ReusableBottomPopUp';
+import { isAxiosError } from 'axios';
 
 const formatDate = (date) => {
     const options = { year: 'numeric', month: 'long', day: 'numeric' };
@@ -84,7 +85,27 @@ const getStatusAppearance = (status) => {
     }
 };
 
-const TaskCard = ({ projectName, tasks, onTaskPress }) => {
+const SkeletonTaskCard = () => {
+    return (
+        <View style={styles.taskCard}>
+            <View style={[styles.skeletonText, { width: '75%', height: 30 }]} />
+            {[...Array(3)].map((_, index) => (
+                <View style={styles.taskSection} key={index}>
+                    <View style={[styles.taskItem]}>
+                        <View style={styles.taskInfo}>
+                            <View style={[styles.skeletonText, { width: "70%", height: 20, marginBottom:5 }]} />
+                            <View style={[styles.skeletonText, { width: "40%", height: 20 }]} />
+                        </View>
+                        <View style={[styles.skeletonText, { width: 50, height: 20 }]}/>
+                    </View>
+                    <View style={[styles.skeletonText, { width: "50%", height: 20, marginTop:5 }]} />
+                </View>
+            ))}
+        </View>
+    );
+};
+
+const TaskCard = ({ projectName, tasks }) => {
     const truncateText = (text, maxLength) => {
         return text.length > maxLength ? text.substring(0, maxLength - 3) + '...' : text;
     };
@@ -129,15 +150,26 @@ const TaskCard = ({ projectName, tasks, onTaskPress }) => {
     );
 };
 
-const StatisticCard = ({ value, description, color, icon }) => (
-    <View style={[styles.statisticCard, { borderColor: color }]}>
-        <View style={styles.textContainer}>
-            <Text style={styles.valueText}>{value}</Text>
-            <Text style={styles.descriptionText}>{description}</Text>
+const StatisticSkeleton = () => (
+    <View style={[styles.statisticCard, { borderColor: '#e0e0e0' }]}>
+        <View style={[styles.textContainer, { gap: 5, display: 'flex', flexDirection: 'column', marginRight: 10 }]}>
+            <View style={[styles.skeletonText, { width: 60, height: 25, marginRight: 5 }]} />
+            <View style={[styles.skeletonText, { width: 50, height: 20 }]} />
         </View>
-        <Feather name={icon} size={30} color={color} style={styles.icon} />
+        <View style={[styles.skeletonText, { marginLeft: 5, width: 50, height: 55 }]} />
     </View>
 );
+
+const StatisticCard = ({ value, description, color, icon, }) =>
+ (
+        <View style={[styles.statisticCard, { borderColor: color }]}>
+            <View style={styles.textContainer}>
+                <Text style={styles.valueText}>{value}</Text>
+                <Text style={styles.descriptionText}>{description}</Text>
+            </View>
+            <Feather name={icon} size={30} color={color} style={styles.icon} />
+        </View>
+    );
 
 const MenuButton = ({ icon, description }) => (
     <View style={styles.menuButtonContainer}>
@@ -174,7 +206,7 @@ const Home = () => {
     const [greeting, setGreeting] = useState(getGreeting());
     const navigation = useNavigation();
     const [refreshing, setRefreshing] = useState(false);
-    const [isLoading, setIsLoading] = useState(false);
+    const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState(null);
     const [alert, setAlert] = useState({ show: false, type: 'success', message: '' });
     const [projects, setProjects] = useState([]);
@@ -255,6 +287,7 @@ const Home = () => {
 
     const fetchHomeData = useCallback(async () => {
         if (!employeeData.companyId || !employeeData.id || !employeeData.roleId || !employeeData.token) return;
+        setIsLoading(true);
         try {
             const response = await getHomeData(
                 employeeData.companyId,
@@ -266,14 +299,18 @@ const Home = () => {
         } catch (error) {
             console.error('Error fetching home data:', error);
             showAlert('Failed to fetch home data', 'error');
+        } finally {
+            setIsLoading(false);
         }
     }, [employeeData]);
 
     const onRefresh = useCallback(async () => {
         setRefreshing(true);
+        setIsLoading(true);
         await checkTokenExpiration();
         await Promise.all([fetchTasks(), fetchHomeData()]);
         setRefreshing(false);
+        setIsLoading(false);
     }, [fetchHomeData]);
 
     useEffect(() => {
@@ -375,33 +412,13 @@ const Home = () => {
                 }
             >
                 <View style={styles.upperGridContainer}>
-                    {dashboardData &&
-                        [
-                            {
-                                description: 'Projek Dalam Pengerjaan',
-                                value: dashboardData.total_projects_working_on_it,
-                                color: '#FAA1A7',
-                                icon: 'monitor',
-                            },
-                            {
-                                description: 'Total Projek Selesai',
-                                value: dashboardData.total_projects_complete,
-                                color: '#3E84CF',
-                                icon: 'check-circle',
-                            },
-                            {
-                                description: 'Total Dalam Pengerjaan',
-                                value: dashboardData.total_tasks_working_on_it,
-                                color: '#DD9968',
-                                icon: 'rotate-cw',
-                            },
-                            {
-                                description: 'Tugas Selesai',
-                                value: dashboardData.total_tasks_completed,
-                                color: '#3AD665',
-                                icon: 'check-square',
-                            },
-                        ].map((stat, index) => <StatisticCard key={index} {...stat} />)}
+                    {statistics.map((stat, index) => ( 
+                    isLoading ? (
+          <StatisticSkeleton key={index} color={stat.color} />
+        ) : (
+          <StatisticCard key={index} {...stat} />
+        )
+      ))}
                 </View>
 
                 <View style={styles.lowerContainer}>
@@ -413,7 +430,16 @@ const Home = () => {
                     </View>
 
                     <View style={styles.tasksContainer}>
-                        {groupedTasks && Object.keys(groupedTasks).length > 0 ? (
+                        {isLoading ? ( 
+                        <>
+                                {Object.keys(groupedTasks)
+                                    .slice(0, 3)
+                                    .map((projectName, index) => (
+                                        <SkeletonTaskCard />
+                                    ))}
+                            </>
+                        ) :
+                         groupedTasks && Object.keys(groupedTasks).length > 0 ? (
                             <>
                                 {Object.keys(groupedTasks)
                                     .slice(0, 3)
@@ -684,6 +710,10 @@ const styles = StyleSheet.create({
         color: '#1C1C1E',
         fontFamily: 'Poppins-Medium',
         textAlign: 'center',
+    },
+    skeletonText: {
+        backgroundColor: '#e0e0e0',
+        borderRadius: 4,
     },
 });
 

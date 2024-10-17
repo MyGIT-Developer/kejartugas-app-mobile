@@ -19,42 +19,46 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { LinearGradient } from 'expo-linear-gradient';
 import * as Progress from 'react-native-progress';
 import { Feather } from '@expo/vector-icons';
-import { addNewTask } from '../api/task';
+import { addNewTask, updateTask } from '../api/task';
 import ReusableBottomPopUp from '../components/ReusableBottomPopUp';
 import Icon from 'react-native-vector-icons/MaterialIcons'; 
 import { launchImageLibrary } from 'react-native-image-picker';
 
-const AddTaskForm = () => {
+const TaskForm = () => {
     const route = useRoute();
-    const { projectData } = route.params;
+    const { mode = 'create', initialTaskData = null, projectData } = route.params;
+
     const [companyId, setCompanyId] = useState('');
     const [employeeId, setEmployeeId] = useState('');
+    const [jobId, setJobId] = useState('');
+    
     const navigation = useNavigation();
     const [formData, setFormData] = useState({
         project_id: projectData.id,
         company_id: companyId,
-        task_name: "",
-        assign_by: employeeId,
-        assign_to: [],
-        start_date: new Date(),
-        end_date: new Date(),
-        task_description: "",
-        task_label: "",
-        description_images: "",
-      });
+        task_name: initialTaskData?.task_name || "",
+        assign_by: initialTaskData?.assign_by || employeeId,
+        assign_to: initialTaskData?.assign_to || [],
+        start_date: initialTaskData?.start_date ? new Date(initialTaskData.start_date) : new Date(),
+        end_date: initialTaskData?.end_date ? new Date(initialTaskData.end_date) : new Date(),
+        task_description: initialTaskData?.task_description || "",
+        task_label: initialTaskData?.task_label || "",
+        description_images: initialTaskData?.description_images || "",
+    });
       const [image, setImage] = useState(null);
     const [assignedEmployees, setAssignedEmployees] = useState([]);
-
-    useEffect(() => {
-        const assignedEmployeesInProject = projectData.assignedEmployees;
-        setAssignedEmployees(assignedEmployeesInProject);
-    }, [projectData]);
-
     const [showStartPicker, setShowStartPicker] = useState(false);
     const [showEndPicker, setShowEndPicker] = useState(false);
     const [alert, setAlert] = useState({ show: false, type: 'success', message: '' });
     const [availableEmployees, setAvailableEmployees] = useState([]);
 
+    // Initialize assigned employees from project data
+    useEffect(() => {
+        const assignedEmployeesInProject = projectData.assignedEmployees;
+        setAssignedEmployees(assignedEmployeesInProject);
+    }, [projectData]);
+
+    // Update available employees when assigned employees or form data changes
     useEffect(() => {
         if (assignedEmployees.length > 0) {
             setAvailableEmployees(assignedEmployees.filter((emp) => !formData.assign_to.includes(emp.id)));
@@ -72,8 +76,10 @@ const AddTaskForm = () => {
                 const employeeId = await AsyncStorage.getItem('employeeId');
                 const jobsId = await AsyncStorage.getItem('userJob');
                 const roleId = await AsyncStorage.getItem('userRole');
+                
                 setCompanyId(companyId);
                 setEmployeeId(employeeId);
+                setJobId(jobsId);
                 setFormData((prev) => ({
                     ...prev,
                     company_id: companyId,
@@ -256,20 +262,52 @@ const AddTaskForm = () => {
         });
     }, []);
 
+    const validateForm = () => {
+        if (mode === 'create') {
+            if (!formData.task_name || !formData.assign_to.length) {
+                throw new Error('Harap isi semua field yang wajib');
+            }
+        }
+        return true;
+    };
+
+    // const handleSubmit = useCallback(async () => {
+    //     try {
+    //         const response = await addNewTask(formData);
+    //         setAlert({ show: true, type: 'success', message: response.message });
+
+    //         setTimeout(() => {
+    //             navigation.goBack();
+    //         }, 2000);
+    //     } catch (error) {
+    //         console.log('Error creating task:', error);
+    //         setAlert({ show: true, type: 'error', message: error.message });
+    //     }
+    //     console.log(formData);
+    // }, [formData, companyId]);
+
     const handleSubmit = useCallback(async () => {
         try {
-            const response = await addNewTask(formData);
-            setAlert({ show: true, type: 'success', message: response.message });
+            validateForm();
+
+            const response = mode === 'create' 
+                ? await addNewTask(formData)
+                : await updateTask(initialTaskData.id, formData, jobId);
+                
+            setAlert({ 
+                show: true, 
+                type: 'success', 
+                message: response.message || `Tugas berhasil ${mode === 'create' ? 'dibuat' : 'diperbarui'}`
+            });
 
             setTimeout(() => {
                 navigation.goBack();
             }, 2000);
         } catch (error) {
-            console.log('Error creating task:', error);
+            console.log(`Error ${mode === 'create' ? 'creating' : 'updating'} task:`, error);
             setAlert({ show: true, type: 'error', message: error.message });
         }
-        console.log(formData);
-    }, [formData, companyId]);
+    }, [formData, mode, initialTaskData]);
 
     const handleImagePick = () => {
         launchImageLibrary({ mediaType: 'photo' }, (response) => {
@@ -289,17 +327,21 @@ const AddTaskForm = () => {
                 start={{ x: 0, y: 0 }}
                 end={{ x: 1, y: 1 }}
             />
-            <View style={styles.headerSection}>
+           <View style={styles.headerSection}>
                 <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
                     <Feather name="chevron-left" size={28} color="white" />
                 </TouchableOpacity>
-                <Text style={styles.header}>Tugas Baru</Text>
+                <Text style={styles.header}>
+                    {mode === 'create' ? 'Tugas Baru' : 'Update Tugas'}
+                </Text>
             </View>
             <View style={styles.formContainer}>
-                <View style={styles.fieldGroup}>
-                    <Text style={styles.labelText}>Nama Tugas</Text>
+            <View style={styles.fieldGroup}>
+                    <Text style={styles.labelText}>
+                        Nama Tugas {mode === 'create' && <Text style={styles.required}>*</Text>}
+                    </Text>
                     <TextInput
-                        style={styles.input}
+                        style={[styles.input, mode === 'create' && !formData.task_name && styles.requiredField]}
                         placeholder="Masukkan Nama Tugas"
                         value={formData.task_name}
                         onChangeText={(value) => updateFormField('task_name', value)}
@@ -322,19 +364,55 @@ const AddTaskForm = () => {
                 </View>
 
                 {/* {renderPicker('assign_by', 'Ditugaskan oleh', assignedEmployees.map(emp => ({ label: emp.employee_name, value: emp.id })))} */}
-                {renderPicker(
+                {/* {renderPicker(
                     'assign_to',
                     'Ditugaskan Kepada',
                     availableEmployees.map((emp) => ({ label: emp.employee_name, value: emp.id })),
                     true,
-                )}
-
+                )} */}
+<View style={styles.fieldGroup}>
+                    <Text style={styles.labelText}>
+                        Ditugaskan Kepada {mode === 'create' && <Text style={styles.required}>*</Text>}
+                    </Text>
+                    <View style={styles.multiPickerContainer}>
+                        <SelectedEmployees
+                            selectedIds={formData.assign_to}
+                            employees={assignedEmployees}
+                            onRemove={handleAssignToChange}
+                        />
+                        <FlatList
+                            style={styles.flatListContainer}
+                            data={availableEmployees}
+                            keyExtractor={(item) => item.id.toString()}
+                            renderItem={({ item }) => (
+                                <TouchableOpacity
+                                    onPress={() => handleAssignToChange(item.id)}
+                                    style={styles.contactItem}
+                                >
+                                    <View style={[styles.initialsCircle, { 
+                                        backgroundColor: getColorForInitials(item.employee_name) 
+                                    }]}>
+                                        <Text style={styles.initialsText}>
+                                            {getInitials(item.employee_name)}
+                                        </Text>
+                                    </View>
+                                    <View style={styles.contactInfo}>
+                                        <Text style={styles.contactName}>{item.employee_name}</Text>
+                                        <Text>{item.job_name}</Text>
+                                    </View>
+                                </TouchableOpacity>
+                            )}
+                            scrollEnabled={true}
+                            nestedScrollEnabled={true}
+                        />
+                    </View>
+                </View>
 
                 <View style={styles.fieldGroup}>
                     <Text style={styles.labelText}>Keterangan</Text>
                     <TextInput
                         style={[styles.input, styles.textArea]}
-                        placeholder="Masukkan Keterangan Proyek"
+                        placeholder="Masukkan Keterangan Tugas"
                         value={formData.task_description}
                         onChangeText={(value) => updateFormField('task_description', value)}
                         multiline
@@ -354,7 +432,9 @@ const AddTaskForm = () => {
 
                 <View style={styles.buttonContainer}>
                     <TouchableOpacity style={styles.button} onPress={handleSubmit}>
-                        <Text style={styles.buttonText}>Simpan</Text>
+                        <Text style={styles.buttonText}>
+                            {mode === 'create' ? 'Simpan' : 'Update'}
+                        </Text>
                     </TouchableOpacity>
                 </View>
             </View>
@@ -580,6 +660,14 @@ const styles = StyleSheet.create({
     removeButton: {
         padding: 2,
     },
+    required: {
+        color: 'red',
+        fontSize: 16,
+    },
+    requiredField: {
+        borderColor: 'red',
+    },
+
 });
 
-export default AddTaskForm;
+export default TaskForm;

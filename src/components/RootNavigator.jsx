@@ -15,9 +15,9 @@ import TaskOnReview from '../screens/TaskOnReview';
 import ProjectOnWorking from '../screens/ProjectOnWorking';
 import SubmitTugas from '../screens/SubmitTugas';
 import DetailTaskSection from '../screens/DetailTaskSection';
-import AddProjectForm from '../screens/AddProjectForm';
+import ProjectForm from '../screens/ProjectForm';
 import ChatInterface from '../screens/ChatInterface';
-import AddTaskForm from '../screens/AddTaskForm';
+import TaskForm from '../screens/TaskForm';
 
 const Stack = createStackNavigator();
 
@@ -43,8 +43,8 @@ const screens = [
     { name: 'ProjectOnWorking', component: ProjectOnWorking },
     { name: 'SubmitTugas', component: SubmitTugas },
     { name: 'DetailTaskSection', component: DetailTaskSection },
-    { name: 'AddProjectForm', component: AddProjectForm },
-    { name: 'AddTaskForm', component: AddTaskForm },
+    { name: 'ProjectForm', component: ProjectForm },
+    { name: 'TaskForm', component: TaskForm },
     { name: 'ChatInterface', component: ChatInterface },
 ];
 
