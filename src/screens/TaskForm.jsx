@@ -21,7 +21,7 @@ import * as Progress from 'react-native-progress';
 import { Feather } from '@expo/vector-icons';
 import { addNewTask, updateTask } from '../api/task';
 import ReusableBottomPopUp from '../components/ReusableBottomPopUp';
-import Icon from 'react-native-vector-icons/MaterialIcons'; 
+import Icon from 'react-native-vector-icons/MaterialIcons';
 import { launchImageLibrary } from 'react-native-image-picker';
 
 const TaskForm = () => {
@@ -31,21 +31,21 @@ const TaskForm = () => {
     const [companyId, setCompanyId] = useState('');
     const [employeeId, setEmployeeId] = useState('');
     const [jobId, setJobId] = useState('');
-    
+
     const navigation = useNavigation();
     const [formData, setFormData] = useState({
         project_id: projectData.id,
         company_id: companyId,
-        task_name: initialTaskData?.task_name || "",
+        task_name: initialTaskData?.task_name || '',
         assign_by: initialTaskData?.assign_by || employeeId,
         assign_to: initialTaskData?.assign_to || [],
         start_date: initialTaskData?.start_date ? new Date(initialTaskData.start_date) : new Date(),
         end_date: initialTaskData?.end_date ? new Date(initialTaskData.end_date) : new Date(),
-        task_description: initialTaskData?.task_description || "",
-        task_label: initialTaskData?.task_label || "",
-        description_images: initialTaskData?.description_images || "",
+        task_description: initialTaskData?.task_description || '',
+        task_label: initialTaskData?.task_label || '',
+        description_images: initialTaskData?.description_images || '',
     });
-      const [image, setImage] = useState(null);
+    const [image, setImage] = useState(null);
     const [assignedEmployees, setAssignedEmployees] = useState([]);
     const [showStartPicker, setShowStartPicker] = useState(false);
     const [showEndPicker, setShowEndPicker] = useState(false);
@@ -76,7 +76,7 @@ const TaskForm = () => {
                 const employeeId = await AsyncStorage.getItem('employeeId');
                 const jobsId = await AsyncStorage.getItem('userJob');
                 const roleId = await AsyncStorage.getItem('userRole');
-                
+
                 setCompanyId(companyId);
                 setEmployeeId(employeeId);
                 setJobId(jobsId);
@@ -141,27 +141,27 @@ const TaskForm = () => {
     );
 
     const SelectedEmployees = ({ selectedIds, employees, onRemove }) => (
-        <ScrollView 
-          horizontal={false} 
-          style={styles.scrollView}
-          contentContainerStyle={styles.selectedEmployeesContainer}
+        <ScrollView
+            horizontal={false}
+            style={styles.scrollView}
+            contentContainerStyle={styles.selectedEmployeesContainer}
         >
-          {selectedIds.map(id => {
-            const employee = employees.find(emp => emp.id === id);
-            if (!employee) return null;
-            return (
-              <View key={id} style={styles.selectedEmployee}>
-                <Text style={styles.selectedEmployeeName} numberOfLines={1} ellipsizeMode="tail">
-                  {employee.employee_name}
-                </Text>
-                <TouchableOpacity onPress={() => onRemove(id)} style={styles.removeButton}>
-                  <Icon name="close" size={18} color="#666" />
-                </TouchableOpacity>
-              </View>
-            );
-          })}
+            {selectedIds.map((id) => {
+                const employee = employees.find((emp) => emp.id === id);
+                if (!employee) return null;
+                return (
+                    <View key={id} style={styles.selectedEmployee}>
+                        <Text style={styles.selectedEmployeeName} numberOfLines={1} ellipsizeMode="tail">
+                            {employee.employee_name}
+                        </Text>
+                        <TouchableOpacity onPress={() => onRemove(id)} style={styles.removeButton}>
+                            <Icon name="close" size={18} color="#666" />
+                        </TouchableOpacity>
+                    </View>
+                );
+            })}
         </ScrollView>
-      );
+    );
 
     const renderPicker = useCallback(
         (field, label, options, isMulti = false) => (
@@ -177,34 +177,34 @@ const TaskForm = () => {
                     )}
                     {isMulti ? (
                         // <View style={styles.flatListContainer}>
-                            <FlatList
+                        <FlatList
                             style={styles.flatListContainer}
-                                data={availableEmployees}
-                                keyExtractor={(item) => item.id.toString()}
-                                renderItem={({ item }) => (
-                                    <TouchableOpacity
-                                        onPress={() => handleAssignToChange(item.id)}
-                                        style={styles.contactItem}
+                            data={availableEmployees}
+                            keyExtractor={(item) => item.id.toString()}
+                            renderItem={({ item }) => (
+                                <TouchableOpacity
+                                    onPress={() => handleAssignToChange(item.id)}
+                                    style={styles.contactItem}
+                                >
+                                    <View
+                                        style={[
+                                            styles.initialsCircle,
+                                            { backgroundColor: getColorForInitials(item.employee_name) },
+                                        ]}
                                     >
-                                        <View
-                                            style={[
-                                                styles.initialsCircle,
-                                                { backgroundColor: getColorForInitials(item.employee_name) },
-                                            ]}
-                                        >
-                                            <Text style={styles.initialsText}>{getInitials(item.employee_name)}</Text>
-                                        </View>
-                                        <View style={styles.contactInfo}>
-                                            <Text style={styles.contactName}>{item.employee_name}</Text>
-                                            <Text>{item.job_name}</Text>
-                                        </View>
-                                    </TouchableOpacity>
-                                )}
-                                scrollEnabled={true}
-                                nestedScrollEnabled={true}
-                            />
-                        // </View>
+                                        <Text style={styles.initialsText}>{getInitials(item.employee_name)}</Text>
+                                    </View>
+                                    <View style={styles.contactInfo}>
+                                        <Text style={styles.contactName}>{item.employee_name}</Text>
+                                        <Text>{item.job_name}</Text>
+                                    </View>
+                                </TouchableOpacity>
+                            )}
+                            scrollEnabled={true}
+                            nestedScrollEnabled={true}
+                        />
                     ) : (
+                        // </View>
                         <Picker
                             selectedValue={formData[field]}
                             onValueChange={(itemValue) => {
@@ -290,14 +290,13 @@ const TaskForm = () => {
         try {
             validateForm();
 
-            const response = mode === 'create' 
-                ? await addNewTask(formData)
-                : await updateTask(initialTaskData.id, formData, jobId);
-                
-            setAlert({ 
-                show: true, 
-                type: 'success', 
-                message: response.message || `Tugas berhasil ${mode === 'create' ? 'dibuat' : 'diperbarui'}`
+            const response =
+                mode === 'create' ? await addNewTask(formData) : await updateTask(initialTaskData.id, formData, jobId);
+
+            setAlert({
+                show: true,
+                type: 'success',
+                message: response.message || `Tugas berhasil ${mode === 'create' ? 'dibuat' : 'diperbarui'}`,
             });
 
             setTimeout(() => {
@@ -327,16 +326,14 @@ const TaskForm = () => {
                 start={{ x: 0, y: 0 }}
                 end={{ x: 1, y: 1 }}
             />
-           <View style={styles.headerSection}>
+            <View style={styles.headerSection}>
                 <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
                     <Feather name="chevron-left" size={28} color="white" />
                 </TouchableOpacity>
-                <Text style={styles.header}>
-                    {mode === 'create' ? 'Tugas Baru' : 'Update Tugas'}
-                </Text>
+                <Text style={styles.header}>{mode === 'create' ? 'Tugas Baru' : 'Update Tugas'}</Text>
             </View>
             <View style={styles.formContainer}>
-            <View style={styles.fieldGroup}>
+                <View style={styles.fieldGroup}>
                     <Text style={styles.labelText}>
                         Nama Tugas {mode === 'create' && <Text style={styles.required}>*</Text>}
                     </Text>
@@ -370,7 +367,7 @@ const TaskForm = () => {
                     availableEmployees.map((emp) => ({ label: emp.employee_name, value: emp.id })),
                     true,
                 )} */}
-<View style={styles.fieldGroup}>
+                <View style={styles.fieldGroup}>
                     <Text style={styles.labelText}>
                         Ditugaskan Kepada {mode === 'create' && <Text style={styles.required}>*</Text>}
                     </Text>
@@ -389,12 +386,15 @@ const TaskForm = () => {
                                     onPress={() => handleAssignToChange(item.id)}
                                     style={styles.contactItem}
                                 >
-                                    <View style={[styles.initialsCircle, { 
-                                        backgroundColor: getColorForInitials(item.employee_name) 
-                                    }]}>
-                                        <Text style={styles.initialsText}>
-                                            {getInitials(item.employee_name)}
-                                        </Text>
+                                    <View
+                                        style={[
+                                            styles.initialsCircle,
+                                            {
+                                                backgroundColor: getColorForInitials(item.employee_name),
+                                            },
+                                        ]}
+                                    >
+                                        <Text style={styles.initialsText}>{getInitials(item.employee_name)}</Text>
                                     </View>
                                     <View style={styles.contactInfo}>
                                         <Text style={styles.contactName}>{item.employee_name}</Text>
@@ -425,16 +425,12 @@ const TaskForm = () => {
                     <TouchableOpacity style={styles.uploadButton} onPress={handleImagePick}>
                         <Text style={styles.uploadButtonText}>Pilih Gambar</Text>
                     </TouchableOpacity>
-                    {image && (
-                        <Image source={{ uri: image }} style={styles.imagePreview} />
-                    )}
+                    {image && <Image source={{ uri: image }} style={styles.imagePreview} />}
                 </View>
 
                 <View style={styles.buttonContainer}>
                     <TouchableOpacity style={styles.button} onPress={handleSubmit}>
-                        <Text style={styles.buttonText}>
-                            {mode === 'create' ? 'Simpan' : 'Update'}
-                        </Text>
+                        <Text style={styles.buttonText}>{mode === 'create' ? 'Simpan' : 'Update'}</Text>
                     </TouchableOpacity>
                 </View>
             </View>
@@ -569,7 +565,7 @@ const styles = StyleSheet.create({
     picker: {
         height: 54,
         width: '100%', // Ensure full width
-        fontFamily:"Poppins-Medium",
+        fontFamily: 'Poppins-Medium',
     },
     multiSelectContainer: {
         flexDirection: 'row',
@@ -667,7 +663,6 @@ const styles = StyleSheet.create({
     requiredField: {
         borderColor: 'red',
     },
-
 });
 
 export default TaskForm;

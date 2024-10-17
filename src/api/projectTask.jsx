@@ -43,6 +43,25 @@ export const CreateProject = async (formdata) => {
     }
 }
 
+export const UpdateProject = async (projectId, formdata) => {
+    console.log('Updating project with formData:', formdata);
+    console.log('Updating project with projectId:', projectId);
+    try {
+        const response = await apiService.put(
+            `/projects/${projectId}`,
+            formdata,
+            {
+                headers: {
+                    Authorization: `Bearer ${await AsyncStorage.getItem('token')}`
+                }
+            }
+          );
+        return response.data;
+    } catch (error) {
+        throw new Error(error || 'Creating project failed');
+    }
+}
+
 export const getTask = async (companyId) => {
     try {
         const response = await apiService.get(`/tasks`, {

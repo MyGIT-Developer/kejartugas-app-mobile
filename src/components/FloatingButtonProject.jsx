@@ -6,14 +6,11 @@ import { useNavigation } from '@react-navigation/native';
 
 const FloatingButtonProject = () => {
     const navigator = useNavigation();
-    const [isOpen, setIsOpen] = useState(false);
-
-    const toggleMenu = () => {
-        setIsOpen(!isOpen);
-    };
 
     const handleGoToCreate = () => {
-        navigator.navigate('AddProjectForm');
+        navigator.navigate('ProjectForm',
+            {mode:'create'}
+        );
     };
 
     return (

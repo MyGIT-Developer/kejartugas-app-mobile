@@ -152,6 +152,13 @@ const DetailProjek = ({ route }) => {
     }
 
     const percentageProject = projectData.percentage / 100;
+    
+    const handleGoToUpdate = () => {
+        navigation.navigate('ProjectForm', {
+            mode: 'update',
+            initialProjectData: projectData,
+        });
+    };
 
     return (
         <View style={styles.container}>
@@ -196,9 +203,7 @@ const DetailProjek = ({ route }) => {
                         >
                             <View style={styles.menuContainer}>
                                 <Pressable
-                                    onPress={() => {
-                                        togglePopover();
-                                    }}
+                                    onPress={() => handleGoToUpdate()}
                                     style={styles.menuItem}
                                 >
                                     <View style={[styles.optionIcon, { backgroundColor: '#277594' }]}>

@@ -19,33 +19,33 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { LinearGradient } from 'expo-linear-gradient';
 import * as Progress from 'react-native-progress';
 import { Feather } from '@expo/vector-icons';
-import { CreateProject } from '../api/projectTask';
+import { CreateProject, UpdateProject } from '../api/projectTask';
 import { getEmployeeByCompany, getTeamsByCompany } from '../api/general';
 import ReusableBottomPopUp from '../components/ReusableBottomPopUp';
 const { height, width: SCREEN_WIDTH } = Dimensions.get('window');
 import Icon from 'react-native-vector-icons/MaterialIcons'; // Or any other icon library
 
-const AddProjectForm = () => {
+const ProjectForm = () => {
     const route = useRoute();
-    const { mode = 'create', initialTaskData = null } = route.params;
+    const { mode = 'create', initialProjectData = null } = route.params;
 
     const [companyId, setCompanyId] = useState('');
     const [employeeId, setEmployeeId] = useState('');
     const [jobsId, setJobsId] = useState('');
     const [roleId, setRoleId] = useState('');
     const navigation = useNavigation();
-    const [formState, setFormState] = useState({
+    const [formData, setFormData] = useState({
         company_id: companyId,
-        project_name: initialTaskData?.project_name || "",
-        role_id: initialTaskData?.role_id || employeeId,
-        jobs_id: initialTaskData?.jobs_id || employeeId,
-        team_id: initialTaskData?.team_id || employeeId,
-        assign_by: initialTaskData?.assign_by || employeeId,
-        assign_to: [],
-        start_date: new Date(),
-        end_date: new Date(),
-        project_desc: '',
-        project_type: '',
+        project_name: initialProjectData?.project_name || "",
+        role_id: initialProjectData?.role_id || jobsId,
+        jobs_id: initialProjectData?.jobs_id || jobsId,
+        team_id: initialProjectData?.team_id || "",
+        assign_by: initialProjectData?.assign_by || employeeId,
+        assign_to: initialProjectData?.assign_to || [],
+        start_date: initialProjectData?.start_date ? new Date(initialProjectData.start_date) : new Date(),
+        end_date: initialProjectData?.end_date ? new Date(initialProjectData.end_date) : new Date(),
+        project_desc: initialProjectData?.project_desc || "",
+        project_type: initialProjectData?.project_type || "",
     });
     const [employees, setEmployees] = useState([]);
     const [teams, setTeams] = useState([]);
@@ -59,15 +59,15 @@ const AddProjectForm = () => {
         if (employees.length > 0) {
             setAvailableEmployees(
                 employees.filter((emp) => 
-                    !formState.assign_to.includes(emp.id) && emp.id != employeeId
+                    !formData.assign_to.includes(emp.id) && emp.id != employeeId
                 )
             );
         }
-    }, [employees, formState.assign_to, employeeId]);
+    }, [employees, formData.assign_to, employeeId]);
     
 
     const updateFormField = useCallback((field, value) => {
-        setFormState((prevState) => ({ ...prevState, [field]: value }));
+        setFormData((prevState) => ({ ...prevState, [field]: value }));
     }, []);
 
     useEffect(() => {
@@ -81,7 +81,7 @@ const AddProjectForm = () => {
                 setEmployeeId(employeeId);
                 setJobsId(jobsId);
                 setRoleId(roleId);
-                setFormState((prev) => ({
+                setFormData((prev) => ({
                     ...prev,
                     company_id: companyId,
                     role_id: roleId,
@@ -122,11 +122,11 @@ const AddProjectForm = () => {
 
     const handleDateChange = useCallback(
         (field, event, selectedDate) => {
-            const currentDate = selectedDate || formState[field];
-            setFormState((prevState) => ({ ...prevState, [field]: currentDate }));
+            const currentDate = selectedDate || formData[field];
+            setFormData((prevState) => ({ ...prevState, [field]: currentDate }));
             field === 'start_date' ? setShowStartPicker(false) : setShowEndPicker(false);
         },
-        [formState],
+        [formData],
     );
 
     const renderDatePicker = useCallback(
@@ -139,8 +139,8 @@ const AddProjectForm = () => {
                             style={styles.dateInput}
                             placeholder="Pilih Tanggal"
                             value={
-                                formState[field]
-                                    ? formState[field].toLocaleDateString('id-ID', {
+                                formData[field]
+                                    ? formData[field].toLocaleDateString('id-ID', {
                                           year: 'numeric',
                                           month: 'long',
                                           day: 'numeric',
@@ -153,7 +153,7 @@ const AddProjectForm = () => {
                     </TouchableOpacity>
                     {showPicker && (
                         <DateTimePicker
-                            value={formState[field] || new Date()}
+                            value={formData[field] || new Date()}
                             mode="date"
                             display="default"
                             borderRadius={25}
@@ -163,7 +163,7 @@ const AddProjectForm = () => {
                 </View>
             </View>
         ),
-        [formState, handleDateChange],
+        [formData, handleDateChange],
     );
 
     const SelectedEmployees = ({ selectedIds, employees, onRemove }) => (
@@ -196,7 +196,7 @@ const AddProjectForm = () => {
                 <View style={isMulti ? styles.multiPickerContainer : styles.pickerContainer}>
                     {isMulti && (
                         <SelectedEmployees
-                            selectedIds={formState.assign_to}
+                            selectedIds={formData.assign_to}
                             employees={employees}
                             onRemove={handleAssignToChange}
                         />
@@ -232,7 +232,7 @@ const AddProjectForm = () => {
                         // </View>
                     ) : (
                         <Picker
-                            selectedValue={formState[field]}
+                            selectedValue={formData[field]}
                             onValueChange={(itemValue) => {
                                 field === 'assign_by'
                                     ? handleAssignByChange(itemValue)
@@ -249,7 +249,7 @@ const AddProjectForm = () => {
                 </View>
             </View>
         ),
-        [formState.assign_to, employees, availableEmployees, handleAssignToChange],
+        [formData.assign_to, employees, availableEmployees, handleAssignToChange],
     );
 
     const getInitials = (name) => {
@@ -279,7 +279,7 @@ const AddProjectForm = () => {
     );
 
     const handleAssignToChange = useCallback((value) => {
-        setFormState((prevState) => {
+        setFormData((prevState) => {
             const updatedAssignTo = prevState.assign_to.includes(value)
                 ? prevState.assign_to.filter((item) => item !== value)
                 : [...prevState.assign_to, value];
@@ -288,20 +288,52 @@ const AddProjectForm = () => {
         });
     }, []);
 
+    const validateForm = () => {
+        if (mode === 'create') {
+            if (!formData.project_name || !formData.assign_to.length) {
+                throw new Error('Harap isi semua field yang wajib');
+            }
+        }
+        return true;
+    };
+
+    // const handleSubmit = useCallback(async () => {
+    //     try {
+    //         const response = await CreateProject(formData);
+    //         setAlert({ show: true, type: 'success', message: response.message });
+
+    //         setTimeout(() => {
+    //             navigation.goBack();
+    //         }, 2000);
+    //     } catch (error) {
+    //         console.log('Error creating project:', error);
+    //         setAlert({ show: true, type: 'error', message: error.message });
+    //     }
+    //     console.log(formData);
+    // }, [formData, companyId]);
+
     const handleSubmit = useCallback(async () => {
         try {
-            const response = await CreateProject(formState);
-            setAlert({ show: true, type: 'success', message: response.message });
+            validateForm();
+
+            const response = mode === 'create' 
+                ? await CreateProject(formData)
+                : await UpdateProject(initialProjectData.id, formData);
+                
+            setAlert({ 
+                show: true, 
+                type: 'success', 
+                message: response.message || `Projek berhasil ${mode === 'create' ? 'dibuat' : 'diperbarui'}`
+            });
 
             setTimeout(() => {
                 navigation.goBack();
             }, 2000);
         } catch (error) {
-            console.log('Error creating project:', error);
+            console.log(`Error ${mode === 'create' ? 'creating' : 'updating'} task:`, error);
             setAlert({ show: true, type: 'error', message: error.message });
         }
-        console.log(formState);
-    }, [formState, companyId]);
+    }, [formData, mode, initialProjectData]);
 
     return (
         <ScrollView contentContainerStyle={styles.container}>
@@ -315,15 +347,19 @@ const AddProjectForm = () => {
                 <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
                     <Feather name="chevron-left" size={28} color="white" />
                 </TouchableOpacity>
-                <Text style={styles.header}>Projek Baru</Text>
+                <Text style={styles.header}>
+                    {mode === 'create' ? 'Projek Baru' : 'Update Projek'}
+                </Text>
             </View>
             <View style={styles.formContainer}>
                 <View style={styles.fieldGroup}>
-                    <Text style={styles.labelText}>Nama Proyek</Text>
+                <Text style={styles.labelText}>
+                        Nama Proyek {mode === 'create' && <Text style={styles.required}>*</Text>}
+                    </Text>
                     <TextInput
-                        style={styles.input}
+                        style={[styles.input, mode === 'create' && !formData.project_name && styles.requiredField]}
                         placeholder="Masukkan Nama Proyek"
-                        value={formState.project_name}
+                        value={formData.project_name}
                         onChangeText={(value) => updateFormField('project_name', value)}
                     />
                 </View>
@@ -356,15 +392,18 @@ const AddProjectForm = () => {
                     <TextInput
                         style={[styles.input, styles.textArea]}
                         placeholder="Masukkan Keterangan Proyek"
-                        value={formState.project_desc}
+                        value={formData.project_desc}
                         onChangeText={(value) => updateFormField('project_desc', value)}
                         multiline
                         numberOfLines={4}
                     />
                 </View>
+                
                 <View style={styles.buttonContainer}>
                     <TouchableOpacity style={styles.button} onPress={handleSubmit}>
-                        <Text style={styles.buttonText}>Simpan</Text>
+                        <Text style={styles.buttonText}>
+                            {mode === 'create' ? 'Simpan' : 'Update'}
+                        </Text>
                     </TouchableOpacity>
                 </View>
             </View>
@@ -590,6 +629,13 @@ const styles = StyleSheet.create({
     removeButton: {
         padding: 2,
     },
+    required: {
+        color: 'red',
+        fontSize: 16,
+    },
+    requiredField: {
+        borderColor: 'red',
+    },
 });
 
-export default AddProjectForm;
+export default ProjectForm;
