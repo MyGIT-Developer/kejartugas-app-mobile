@@ -4,40 +4,22 @@ import Icon from 'react-native-vector-icons/Feather';
 import * as Animatable from 'react-native-animatable';
 import { useNavigation } from '@react-navigation/native';
 
-const FloatingButtonTask = () => {
+const FloatingButtonTask = ({ projectData }) => {
     const navigator = useNavigation();
-    const [isOpen, setIsOpen] = useState(false);
-
-    const toggleMenu = () => {
-        setIsOpen(!isOpen);
-    };
-
+    
     const handleGoToCreate = () => {
-        navigator.navigate('AddProjectForm');
+        navigator.navigate('AddTaskForm', { projectData }); // Pass projectData as a parameter
     };
 
     return (
         <View style={styles.container}>
-            {isOpen && (
-                <View style={styles.menu}>
-                    <Animatable.View animation="bounceIn" style={styles.button}>
-                        <TouchableOpacity onPress={() => alert('Create')}>
-                            <Icon name="plus" size={26} color="#148FFF" onPress={handleGoToCreate}/>
-                        </TouchableOpacity>
-                    </Animatable.View>
-                    <Animatable.View animation="bounceIn" style={styles.button}>
-                        <TouchableOpacity onPress={() => alert('Update')}>
-                            <Icon name="refresh-cw" size={26} color="#148FFF" />
-                        </TouchableOpacity>
-                    </Animatable.View>
-                </View>
-            )}
-            <TouchableOpacity onPress={toggleMenu} style={styles.floatingButton}>
-                <Icon name={isOpen ? 'x' : 'plus'} size={26} color="#148FFF" />
+            <TouchableOpacity onPress={handleGoToCreate} style={styles.floatingButton}>
+                <Icon name="plus" size={26} color="#148FFF" />
             </TouchableOpacity>
         </View>
     );
 };
+
 
 const styles = StyleSheet.create({
     container: {

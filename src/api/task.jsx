@@ -14,6 +14,25 @@ export const fetchTotalTasksForEmployee = async (employeeId) => {
         throw new Error(error.response?.data?.message || 'Fetching total tasks failed');
     }
 };
+
+export const addNewTask = async (formData) => {
+    console.log('Adding new task with formData:', formData);    
+    try {
+        const token = await AsyncStorage.getItem('token');
+        const response = await apiService.post(`/tasks`,
+            formData,
+            {
+              headers: {
+                Authorization: `Bearer ${token}`,
+              },
+            }
+          );
+        return response.data;
+    } catch (error) {
+        throw new Error(error || 'Adding new task failed');
+    }
+}
+
 export const submitTask = async (taskId, payload) => {
     try {
         const token = await AsyncStorage.getItem('token');

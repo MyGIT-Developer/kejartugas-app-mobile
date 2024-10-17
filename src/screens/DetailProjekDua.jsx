@@ -1,12 +1,12 @@
 import React, { useState, useCallback, useMemo, useEffect } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Dimensions, ScrollView, Button } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Dimensions, ScrollView, Button, SafeAreaView } from 'react-native';
 import { Feather } from '@expo/vector-icons';
-import FloatingButtonProject from '../components/FloatingButtonProject';
 import DraggableModalTask from '../components/DraggableModalTask';
 import ReusableModalSuccess from '../components/TaskModalSuccess';
 import { fetchTaskById } from '../api/task'; // Import the fetchTaskById function
 import AsyncStorage from '@react-native-async-storage/async-storage';
 const { height } = Dimensions.get('window');
+import FloatingButtonTask from '../components/FloatingButtonTask';
 
 const STATUS_MAPPING = {
     Completed: { text: 'Selesai', bgColor: '#C9F8C1', textColor: '#0A642E' },
@@ -270,7 +270,7 @@ const DetailProjekDua = ({ data }) => {
     };
 
     return (
-        <>
+        <SafeAreaView>
             <ScrollView contentContainerStyle={styles.container}>
                 <ScrollView style={styles.table}>
                     <View style={styles.tableHeader}>
@@ -308,8 +308,10 @@ const DetailProjekDua = ({ data }) => {
                         taskDetails={selectedTask || {}}
                     />
                 )}
+
             </ScrollView>
-        </>
+            <FloatingButtonTask projectData={data}/>
+        </SafeAreaView>
     );
 };
 

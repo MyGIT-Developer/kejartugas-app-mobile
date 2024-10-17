@@ -17,7 +17,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { LinearGradient } from 'expo-linear-gradient';
 import * as Progress from 'react-native-progress';
 import { Feather } from '@expo/vector-icons';
-
+import ReusableBottomPopUp from '../components/ReusableBottomPopUp';
 import { getProjectById, deleteProject } from '../api/projectTask';
 import SlidingButton from '../components/SlidingButton';
 import SlidingFragment from '../components/SlidingFragment';
@@ -36,6 +36,8 @@ const DetailProjek = ({ route }) => {
     const [visible, setVisible] = useState(false);
     const [isExpanded, setIsExpanded] = useState(false);
     const [jobsId, setJobsId] = useState(null);
+    const [alert, setAlert] = useState({ show: false, type: 'success', message: '' });
+    const [isPressed, setIsPressed] = useState(false);
 
     const toggleExpand = () => {
         setIsExpanded(!isExpanded);
@@ -70,15 +72,21 @@ const DetailProjek = ({ route }) => {
     );
 
     const deleteProjectHandler = async () => {
-        const jobsId = AsyncStorage.getItem('userJob');
+        setLoading(true);
+        const jobsId = await AsyncStorage.getItem('userJob');
         try {
             const response = await deleteProject(projectId, jobsId);
 
-            if (response.status === 200) {
-                navigation.navigate('ProjectList');
-            }
-        } catch (err) {
-            console.error('Error deleting project:', err);
+            setAlert({ show: true, type: 'success', message: response.message });
+
+            setTimeout(() => {
+                navigation.navigate('ProjectDashboard');
+            }, 2000);
+        } catch (error) {
+            console.log('Error creating project:', error);
+            setAlert({ show: true, type: 'error', message: error.message });
+        } finally {
+            setLoading(false);
         }
     };
 
@@ -127,15 +135,6 @@ const DetailProjek = ({ route }) => {
         }
     };
 
-    const handleSwipe = useCallback(
-        (index) => {
-            if (index >= 0 && index < fragments.length) {
-                setActiveFragment(index);
-            }
-        },
-        [fragments.length],
-    );
-
     if (loading) {
         return (
             <View style={styles.centeredContainer}>
@@ -153,6 +152,7 @@ const DetailProjek = ({ route }) => {
     }
 
     const percentageProject = projectData.percentage / 100;
+
     return (
         <View style={styles.container}>
             <View style={styles.backgroundBox}>
@@ -183,7 +183,28 @@ const DetailProjek = ({ route }) => {
                     <View style={styles.projectHeaderContainer}>
                         <Text style={{ fontFamily: 'Poppins-Regular' }}>Nama Proyek</Text>
 
-                        <Popover
+                        <Pressable
+                                    style={[
+                                        styles.menuItem,
+                                        isPressed && styles.pressedItem, // Apply a different style when pressed
+                                    ]}
+                                    onPressIn={() => setIsPressed(true)}
+                                    onPressOut={() => setIsPressed(false)}
+                                    onPress={() => deleteProjectHandler()}
+                                >
+                                    <View
+                                        style={[
+                                            styles.optionIcon,
+                                            { backgroundColor: isPressed ? '#C43B54' : '#DF4E6E' },
+                                        ]}
+                                    >
+                                        <Feather name="trash-2" size={20} color="#fff" />
+                                    </View>
+                                    {/* <Text style={[styles.optionText, { color: isPressed ? 'gray' : 'black' }]}>
+                                        Hapus
+                                    </Text> */}
+                                </Pressable>
+                        {/* <Popover
                             isVisible={visible}
                             onRequestClose={togglePopover}
                             from={
@@ -193,7 +214,7 @@ const DetailProjek = ({ route }) => {
                             }
                             placement="bottom"
                         >
-                            <View style={styles.menuContainer}>
+                            <View style={styles.menuContainer}> */}
                                 {/* <Pressable
                                     onPress={() => {
                                         togglePopover();
@@ -230,17 +251,9 @@ const DetailProjek = ({ route }) => {
 
                                     <Text style={[styles.optionText, { color: 'black' }]}>Bagikan</Text>
                                 </Pressable> */}
-                                <Pressable
-                                    onPress={() => deleteProjectHandler()}
-                                    style={styles.menuItem}
-                                >
-                                    <View style={[styles.optionIcon, { backgroundColor: '#DF4E6E' }]}>
-                                        <Feather name="trash-2" size={20} color="#fff" />
-                                    </View>
-                                    <Text style={[styles.optionText, { color: 'black' }]}>Hapus</Text>
-                                </Pressable>
-                            </View>
-                        </Popover>
+                                
+                            {/* </View>
+                        </Popover> */}
                     </View>
                     <View style={styles.projectInfoContainer}>
                         <View style={styles.projectTextContainer}>
@@ -283,8 +296,13 @@ const DetailProjek = ({ route }) => {
                 </View>
 
                 <SlidingFragment fragments={fragments} activeFragment={activeFragment} data={projectData} />
-                
             </ScrollView>
+            <ReusableBottomPopUp
+                show={alert.show}
+                alertType={alert.type}
+                message={alert.message}
+                onConfirm={() => setAlert((prev) => ({ ...prev, show: false }))}
+            />
         </View>
     );
 };
@@ -384,20 +402,13 @@ const styles = StyleSheet.create({
         justifyContent: 'center',
         alignItems: 'center',
     },
-    popover: {
-        width: 220,
-        borderRadius: 30,
-        padding: 10,
-    },
     menuContainer: {
         width: '100%',
-        padding: 20,
-        top: 0,
+        padding: 10,
     },
     menuItem: {
         flexDirection: 'row',
         alignItems: 'center',
-        paddingVertical: 10,
         gap: 10,
     },
     menuText: {
