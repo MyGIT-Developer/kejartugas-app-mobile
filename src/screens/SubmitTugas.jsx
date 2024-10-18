@@ -8,7 +8,6 @@ import ReusableAlertBottomPopUp from '../components/ReusableBottomPopUp';
 import { submitTask } from '../api/task';
 import * as ImagePicker from 'expo-image-picker'; // Import Image Picker
 import * as FileSystem from 'expo-file-system'; // Import FileSystem
-import * as Permissions from 'expo-permissions'; // Import Permissions
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const SubmitTugas = ({ route }) => {
@@ -26,10 +25,10 @@ const SubmitTugas = ({ route }) => {
         return <Text>Error: Task ID is missing!</Text>; // Fallback UI
     }
     const requestPermissions = async () => {
-        const { status: cameraStatus } = await ImagePicker.requestCameraPermissionsAsync();
-        const { status: libraryStatus } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+        const cameraStatus = await ImagePicker.requestCameraPermissionsAsync();
+        const libraryStatus = await ImagePicker.requestMediaLibraryPermissionsAsync();
 
-        if (cameraStatus !== 'granted' || libraryStatus !== 'granted') {
+        if (cameraStatus.status !== 'granted' || libraryStatus.status !== 'granted') {
             Alert.alert('Permission Required', 'Camera and media library access is required to use this feature.');
             return false;
         }
@@ -44,13 +43,13 @@ const SubmitTugas = ({ route }) => {
                 mediaTypes: ImagePicker.MediaTypeOptions.Images,
                 allowsEditing: true,
                 aspect: [4, 3],
-                quality: 0.5, // Reduce quality to 50%
-                base64: true, // Request base64 data directly
+                quality: 0.5,
+                base64: true,
             });
 
             if (!result.canceled && result.assets && result.assets.length > 0) {
                 setImageUri(result.assets[0].uri);
-                return result.assets[0].base64; // Return base64 data
+                return result.assets[0].base64;
             }
         } catch (error) {
             console.error('Error picking image:', error);
@@ -84,7 +83,6 @@ const SubmitTugas = ({ route }) => {
             if (imageUri) {
                 const fileInfo = await FileSystem.getInfoAsync(imageUri);
                 if (fileInfo.size > 1024 * 1024) {
-                    // If larger than 1MB
                     Alert.alert('File too large', 'Please choose a smaller image (max 1MB).');
                     setIsLoading(false);
                     return;
