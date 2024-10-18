@@ -44,8 +44,6 @@ export const CreateProject = async (formdata) => {
 }
 
 export const UpdateProject = async (projectId, formdata) => {
-    console.log('Updating project with formData:', formdata);
-    console.log('Updating project with projectId:', projectId);
     try {
         const response = await apiService.put(
             `/projects/${projectId}`,

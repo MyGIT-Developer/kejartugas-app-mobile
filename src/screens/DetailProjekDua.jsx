@@ -1,5 +1,5 @@
 import React, { useState, useCallback, useMemo, useEffect } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Dimensions, ScrollView, Alert , SafeAreaView } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Dimensions, ScrollView, Alert, SafeAreaView } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import DraggableModalTask from '../components/DraggableModalTask';
 import ReusableModalSuccess from '../components/TaskModalSuccess';
@@ -16,7 +16,7 @@ const STATUS_MAPPING = {
     rejected: { text: 'Ditolak', bgColor: '#F69292', textColor: '#811616' },
     onReview: { text: 'Dalam Peninjauan', bgColor: '#f6e092', textColor: '#ee9000' },
     onHold: { text: 'Ditunda', bgColor: '#F69292', textColor: '#811616' },
-    onPending: { text: 'Tersedia', bgColor: 'yellow.300', textColor: 'gray' },
+    onPending: { text: 'Tersedia', bgColor: '#FEEE91', textColor: 'gray' },
     earlyFinish: { text: 'Early Finish', bgColor: '#C9F8C1', textColor: '#0A642E' },
     finish: { text: 'On Time', bgColor: '#95d6fc', textColor: '#0b4b76' },
     'finish in delay': { text: 'Finish Delay', bgColor: '#f6e092', textColor: '#ee9000' },
@@ -117,43 +117,43 @@ const TableRow = React.memo(({ item, index, onTaskPress, projectData, fetchProje
 
     const handleDeleteTask = useCallback((taskId) => {
         const deleteTaskHandler = async () => {
-          try {
-            const response = await deleteTask(taskId);
-            setAlert({
-              show: true,
-              type: 'success',
-              message: response.message,
-            });
-          } catch (error) {
-            console.error('Error deleting task:', error);
-            setAlert({
-              show: true,
-              type: 'error',
-              message: 'Gagal menghapus tugas. Coba lagi.',
-            });
-          } finally {
-            fetchProjectData();
-          }
-        };
-      
-        Alert.alert(
-          "Konfirmasi Hapus",
-          "Apakah Anda yakin ingin menghapus tugas ini?",
-          [
-            {
-              text: "Batal",
-              style: "cancel"
-            },
-            {
-              text: "Hapus",
-              onPress: deleteTaskHandler,
-              style: "destructive"
+            try {
+                const response = await deleteTask(taskId);
+                setAlert({
+                    show: true,
+                    type: 'success',
+                    message: response.message,
+                });
+            } catch (error) {
+                console.error('Error deleting task:', error);
+                setAlert({
+                    show: true,
+                    type: 'error',
+                    message: 'Gagal menghapus tugas. Coba lagi.',
+                });
+            } finally {
+                fetchProjectData();
             }
-          ],
-          { cancelable: false }
+        };
+
+        Alert.alert(
+            'Konfirmasi Hapus',
+            'Apakah Anda yakin ingin menghapus tugas ini?',
+            [
+                {
+                    text: 'Batal',
+                    style: 'cancel',
+                },
+                {
+                    text: 'Hapus',
+                    onPress: deleteTaskHandler,
+                    style: 'destructive',
+                },
+            ],
+            { cancelable: false },
         );
-      }, []);
-      
+    }, []);
+
     return (
         <ScrollView contentContainerStyle={styles.rowContainer}>
             {item.task_name == 'No data available' ? (
@@ -212,13 +212,13 @@ const TableRow = React.memo(({ item, index, onTaskPress, projectData, fetchProje
                                         <Text style={[styles.expandedText, { color: '#0E509E' }]}>Detail</Text>
                                         <Feather name={'eye'} color="blue" />
                                     </TouchableOpacity>
-                                    <TouchableOpacity
+                                    {/* <TouchableOpacity
                                         onPress={() => handleGoToUpdate()}
                                         style={[styles.buttonAction, { backgroundColor: 'none' }]}
                                     >
                                         <Text style={[styles.expandedText, { color: '#0E509E' }]}>Edit</Text>
                                         <Feather name={'edit'} color="black" />
-                                    </TouchableOpacity>
+                                    </TouchableOpacity> */}
                                     <TouchableOpacity
                                         onPress={() => handleDeleteTask(item.id)}
                                         style={[styles.buttonAction, { backgroundColor: 'none' }]}
@@ -238,12 +238,12 @@ const TableRow = React.memo(({ item, index, onTaskPress, projectData, fetchProje
                             </View>
                         </View>
                     )}
-                     <ReusableBottomPopUp
-                show={alert.show}
-                alertType={alert.type}
-                message={alert.message}
-                onConfirm={() => setAlert((prev) => ({ ...prev, show: false }))}
-            />
+                    <ReusableBottomPopUp
+                        show={alert.show}
+                        alertType={alert.type}
+                        message={alert.message}
+                        onConfirm={() => setAlert((prev) => ({ ...prev, show: false }))}
+                    />
                 </>
             )}
         </ScrollView>
@@ -255,8 +255,6 @@ const DetailProjekDua = ({ data, onFetch }) => {
     const [modalType, setModalType] = useState('default'); // Initialize modalType state
     const [selectedTask, setSelectedTask] = useState(null);
     const [draggableModalVisible, setDraggableModalVisible] = useState(false);
-    const [loading, setLoading] = useState(true);
-    const [error, setError] = useState(null);
 
     const handleTaskDetailPress = async (task) => {
         const baseUrl = 'http://202.10.36.103:8000/';
@@ -270,7 +268,8 @@ const DetailProjekDua = ({ data, onFetch }) => {
                 title: taskDetails.task_name,
                 startDate: taskDetails.start_date,
                 endDate: taskDetails.end_date,
-                assignedBy: taskDetails.assign_by ? taskDetails.assign_by.name : 'N/A', // Accessing nested object
+                assignedById: taskDetails.assign_by ? taskDetails.assign_by.id : 'N/A', // Accessing nested object
+                assignedByName: taskDetails.assign_by ? taskDetails.assign_by.name : 'N/A', // Accessing nested object
                 description: taskDetails.task_desc || 'N/A',
                 progress: taskDetails.percentage_task || 0,
                 status: taskDetails.task_status,
@@ -358,10 +357,7 @@ const DetailProjekDua = ({ data, onFetch }) => {
                 )}
             </ScrollView>
             <FloatingButtonTask projectData={data} />
-
-          
         </SafeAreaView>
-
     );
 };
 

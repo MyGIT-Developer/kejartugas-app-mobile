@@ -80,7 +80,7 @@ const DetailProjek = ({ route }) => {
             setAlert({ show: true, type: 'success', message: response.message });
 
             setTimeout(() => {
-                navigation.navigate('ProjectDashboard');
+                navigation.navigate('ProjectList');
             }, 2000);
         } catch (error) {
             console.log('Error creating project:', error);
@@ -151,7 +151,7 @@ const DetailProjek = ({ route }) => {
         );
     }
 
-    const percentageProject = projectData.percentage / 100;
+    const percentageProject = Math.round(projectData.percentage).toFixed(0);
     
     const handleGoToUpdate = () => {
         navigation.navigate('ProjectForm', {
@@ -202,7 +202,7 @@ const DetailProjek = ({ route }) => {
                             placement="bottom"
                         >
                             <View style={styles.menuContainer}>
-                                <Pressable
+                                {/* <Pressable
                                     onPress={() => handleGoToUpdate()}
                                     style={styles.menuItem}
                                 >
@@ -211,7 +211,7 @@ const DetailProjek = ({ route }) => {
                                     </View>
 
                                     <Text style={[styles.optionText, { color: 'black' }]}>Edit Proyek</Text>
-                                </Pressable>
+                                </Pressable> */}
                                 {/* <Pressable
                                     onPress={() => {
                                         togglePopover();
@@ -288,7 +288,7 @@ const DetailProjek = ({ route }) => {
                                 </Text>
                             </View>
                         </View>
-                        <Progress.Circle
+                        {/* <Progress.Circle
                             size={80}
                             progress={percentageProject}
                             thickness={8}
@@ -296,7 +296,37 @@ const DetailProjek = ({ route }) => {
                             color="#27B44E"
                             borderWidth={2}
                             borderColor="#E8F5E9"
-                        />
+                        /> */}
+                        <Progress.Circle
+                                size={75}
+                                progress={percentageProject}
+                                thickness={6}
+                                color={
+                                    percentageProject === 0
+                                        ? '#E0E0E0'
+                                        :percentageProject < 50
+                                        ? '#F69292'
+                                        : percentageProject < 75
+                                        ? '#F0E08A'
+                                        : '#C9F8C1'
+                                }
+                                unfilledColor="#E8F5E9"
+                                borderWidth={0}
+                                showsText={true}
+                                formatText={() => `${percentageProject}%`}
+                                textStyle={{
+                                    fontFamily: 'Poppins-SemiBold',
+                                    fontSize: 14,
+                                    color:
+                                    percentageProject === 0
+                                            ? '#000000'
+                                            :percentageProject < 50
+                                            ? '#811616'
+                                            :percentageProject < 75
+                                            ? '#656218'
+                                            : '#0A642E', // Text color based on progress
+                                }}
+                            />
                     </View>
                 </View>
 
@@ -410,6 +440,7 @@ const styles = StyleSheet.create({
     menuContainer: {
         width: '100%',
         padding: 10,
+        gap: 10,
     },
     menuItem: {
         flexDirection: 'row',

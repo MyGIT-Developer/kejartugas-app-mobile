@@ -257,7 +257,8 @@ const ProjectOnWorking = () => {
                 title: taskDetails.task_name,
                 startDate: taskDetails.start_date,
                 endDate: taskDetails.end_date,
-                assignedBy: taskDetails.assign_by ? taskDetails.assign_by.name : 'N/A', // Accessing nested object
+                assignedById: taskDetails.assign_by ? taskDetails.assign_by.id : 'N/A', // Accessing nested object
+                assignedByName: taskDetails.assign_by ? taskDetails.assign_by.name : 'N/A', // Accessing nested object
                 description: taskDetails.task_desc || 'N/A',
                 progress: taskDetails.percentage_task || 0,
                 status: taskDetails.task_status,

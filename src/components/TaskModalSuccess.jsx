@@ -2,7 +2,7 @@ import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Modal, Dimensions, Image } from 'react-native';
 import { useFonts } from '../utils/UseFonts';
 import * as Progress from 'react-native-progress';
-import { useNavigation } from '@react-navigation/native'; 
+import { useNavigation } from '@react-navigation/native';
 
 const { height: SCREEN_HEIGHT } = Dimensions.get('window');
 
@@ -26,6 +26,11 @@ const TaskModalSuccess = ({ visible, onClose, taskDetails }) => {
             console.log(error);
         }
     };
+
+    const formatDate = (date) => {
+        const options = { year: 'numeric', month: 'long', day: 'numeric' };
+        return new Date(date).toLocaleDateString('id-ID', options);
+    };
     return (
         <Modal animationType="slide" transparent={true} visible={visible} onRequestClose={onClose}>
             <View style={styles.modalContainer}>
@@ -48,7 +53,15 @@ const TaskModalSuccess = ({ visible, onClose, taskDetails }) => {
                                 size={60}
                                 progress={taskDetails.progress / 100}
                                 thickness={6}
-                                color={taskDetails.progress === 0 ? "#E0E0E0" : taskDetails.progress < 50 ? "#F69292" : taskDetails.progress < 75 ? "#F0E08A" : "#C9F8C1"} 
+                                color={
+                                    taskDetails.progress === 0
+                                        ? '#E0E0E0'
+                                        : taskDetails.progress < 50
+                                        ? '#F69292'
+                                        : taskDetails.progress < 75
+                                        ? '#F0E08A'
+                                        : '#C9F8C1'
+                                }
                                 unfilledColor="#E8F5E9"
                                 borderWidth={0}
                                 showsText={true}
@@ -56,22 +69,27 @@ const TaskModalSuccess = ({ visible, onClose, taskDetails }) => {
                                 textStyle={{
                                     fontFamily: 'Poppins-SemiBold',
                                     fontSize: 14,
-                                    color: taskDetails.progress === 0 ? "#000000" : taskDetails.progress < 50 ? "#811616" : taskDetails.progress < 75 ? "#656218" : "#0A642E" // Text color based on progress
+                                    color:
+                                        taskDetails.progress === 0
+                                            ? '#000000'
+                                            : taskDetails.progress < 50
+                                            ? '#811616'
+                                            : taskDetails.progress < 75
+                                            ? '#656218'
+                                            : '#0A642E', // Text color based on progress
                                 }}
                             />
-
-
                         </View>
                         <View style={styles.infoContainer}>
                             {/* General Information */}
                             <View style={styles.infoRow}>
                                 <View style={styles.infoColumn}>
                                     <Text style={styles.infoLabel}>Tanggal Mulai</Text>
-                                    <Text style={styles.infoValue}>{taskDetails.startDate}</Text>
+                                    <Text style={styles.infoValue}>{formatDate(taskDetails.startDate)}</Text>
                                 </View>
                                 <View style={styles.infoColumn}>
                                     <Text style={styles.infoLabel}>Tanggal Selesai</Text>
-                                    <Text style={styles.infoValue}>{taskDetails.endDate}</Text>
+                                    <Text style={styles.infoValue}>{formatDate(taskDetails.endDate)}</Text>
                                 </View>
                             </View>
                             <View style={styles.infoRow}>
@@ -93,7 +111,7 @@ const TaskModalSuccess = ({ visible, onClose, taskDetails }) => {
                             <View style={styles.infoRow}>
                                 <View style={styles.infoColumn}>
                                     <Text style={styles.infoLabel}>Tanggal Pengumpulan</Text>
-                                    <Text style={styles.infoValue}>{taskDetails.collectionDate}</Text>
+                                    <Text style={styles.infoValue}>{formatDate(taskDetails.collectionDate)}</Text>
                                 </View>
                                 <View style={styles.infoColumn}>
                                     <Text style={styles.infoLabel}>Status Pengumpulan</Text>

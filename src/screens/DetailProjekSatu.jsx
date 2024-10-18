@@ -28,6 +28,7 @@ const CountContainer = ({ label, value, borderColor }) => (
 );
 
 const DetailProjekSatu = ({ data }) => {
+    console.log(data);
     return (
         <ScrollView contentContainerStyle={styles.container}>
             <View style={styles.infoContainer}>

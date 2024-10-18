@@ -136,3 +136,35 @@ export const deleteTask = async (taskId) => {
         throw new Error(error.response?.data?.message || 'Deleting task failed');
     }
 }
+
+export const approveTask = async (taskId) => {
+    try {
+        const token = await AsyncStorage.getItem('token');
+        const response = await apiService.put(`/tasks/${taskId}/review`,  {
+            isAccepted: true,
+          }, {
+            headers: {
+                Authorization: `Bearer ${token}`,
+            },
+        });
+        return response.data; // Return the data field directly
+    } catch (error) {
+        throw new Error(error.response?.data?.message || 'Approving task failed');
+    }
+}
+
+export const rejectTask = async (taskId) => {
+    try {
+        const token = await AsyncStorage.getItem('token');
+        const response = await apiService.put(`/tasks/${taskId}/review`,  {
+            isAccepted: false,
+          }, {
+            headers: {
+                Authorization: `Bearer ${token}`,
+            },
+        });
+        return response.data; // Return the data field directly
+    } catch (error) {
+        throw new Error(error.response?.data?.message || 'Rejecting task failed');
+    }
+}
