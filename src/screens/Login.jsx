@@ -15,7 +15,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useNavigation } from '@react-navigation/native';
 import { jwtDecode } from 'jwt-decode';
 import { loginMobile } from '../api/auth';
-import LogoKTApp from '../../assets/images/Meotrik_PM_Logo.png';
+import LogoKTApp from '../../assets/images/logo-KT.png';
 import BackgroundImage from '../../assets/images/kt_city_scapes.png';
 import ReusableAlert from '../components/ReusableAlert';
 import { useFonts } from '../utils/UseFonts';

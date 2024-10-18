@@ -5,7 +5,7 @@ import { useNavigation } from '@react-navigation/native';
 import { useFonts } from '../utils/UseFonts';
 import * as SplashScreen from 'expo-splash-screen';
 
-const SPLASH_DELAY = 3000;
+const SPLASH_DELAY = 3000; // Delay 3 detik
 const AUTH_KEYS = ['userData', 'token', 'userJob', 'employeeId', 'companyId', 'expiredToken', 'access_permissions'];
 
 // Prevent the splash screen from auto-hiding
@@ -70,6 +70,7 @@ export default function SplashScreenWrapper() {
             }
         };
 
+        // Delay untuk memeriksa autentikasi (3 detik)
         const timer = setTimeout(checkAuthentication, SPLASH_DELAY);
         return () => clearTimeout(timer);
     }, [clearAuthData, navigateTo]);
