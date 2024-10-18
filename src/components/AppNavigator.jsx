@@ -29,8 +29,8 @@ const AppNavigator = () => {
             headerShown: false,
             tabBarStyle: {
                 ...styles.tabBar,
-                bottom: Platform.OS === 'ios' ? 5 + insets.bottom : 25, // Adjusted for Android
-                height: Platform.OS === 'ios' ? 80 : 70, // Reduced height for Android
+                bottom: Platform.OS === 'ios' ? -10 + insets.bottom : 25, // Adjusted for Android
+                height: Platform.OS === 'ios' ? 75 : 70, // Reduced height for Android
                 transform: [
                     {
                         translateY: tabBarVisibility.interpolate({
@@ -102,6 +102,7 @@ const styles = StyleSheet.create({
     iconContainer: {
         alignItems: 'center',
         justifyContent: 'center',
+        marginBottom: Platform.OS === 'ios' ? -30 : 0, // -30 untuk iOS, 0 untuk Android
         width: 50,
         height: 50,
     },

@@ -7,6 +7,7 @@ import { useNavigation, useRoute } from '@react-navigation/native';
 import { launchCameraAsync, MediaTypeOptions } from 'expo-image-picker';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { checkIn } from '../api/absent';
+import * as ImageManipulator from 'expo-image-manipulator';
 import Shimmer from '../components/Shimmer'; // Sesuaikan path jika diperlukan
 import MyMap from '../components/Maps';
 import ReusableBottomPopUp from '../components/ReusableBottomPopUp';
@@ -22,8 +23,10 @@ const DetailKehadiran = () => {
     const [companyId, setCompanyId] = useState(null);
     const [isWFH, setIsWFH] = useState(false);
     const [capturedImage, setCapturedImage] = useState(null);
+    const [capturedImageBase64, setCapturedImageBase64] = useState(null);
     const [alert, setAlert] = useState({ show: false, type: 'success', message: '' });
     const [reasonInput, setReasonInput] = useState('');
+    const [isUploading, setIsUploading] = useState(false);
 
     const [latitude, longitude] = location.split(',').map((coord) => parseFloat(coord.trim()));
 
@@ -65,7 +68,19 @@ const DetailKehadiran = () => {
     }, [jamTelat]);
 
     const isUserLate = calculateLateStatus();
-
+    const compressAndConvertToBase64 = async (uri) => {
+        try {
+            const manipulatedImage = await ImageManipulator.manipulateAsync(
+                uri,
+                [{ resize: { width: 1000 } }], // Resize to max width of 1000px
+                { compress: 0.8, format: ImageManipulator.SaveFormat.JPEG, base64: true },
+            );
+            return manipulatedImage.base64;
+        } catch (error) {
+            console.error('Error compressing image:', error);
+            throw error;
+        }
+    };
     const triggerCamera = async () => {
         try {
             const { status } = await Camera.requestCameraPermissionsAsync();
@@ -78,22 +93,23 @@ const DetailKehadiran = () => {
                 mediaTypes: MediaTypeOptions.Images,
                 allowsEditing: false,
                 quality: 1,
-                base64: true,
             });
 
             if (!result.canceled && result.assets && result.assets[0].uri) {
+                const compressedBase64 = await compressAndConvertToBase64(result.assets[0].uri);
                 setCapturedImage(result.assets[0].uri);
+                setCapturedImageBase64(compressedBase64);
             } else {
                 showAlert('Kamera dibatalkan atau tidak ada gambar yang diambil.', 'error');
             }
         } catch (error) {
             console.error('Error menggunakan kamera:', error);
-            // showAlert(`Error saat menggunakan kamera: ${error.message || 'Error tidak diketahui'}`, 'error');
+            showAlert(`Error saat menggunakan kamera: ${error.message || 'Error tidak diketahui'}`, 'error');
         }
     };
 
     const handleClockIn = async () => {
-        if (!capturedImage) {
+        if (!capturedImageBase64) {
             showAlert('Silahkan mengambil foto terlebih dahulu!', 'error');
             return;
         }
@@ -103,16 +119,27 @@ const DetailKehadiran = () => {
             return;
         }
 
+        setIsUploading(true);
         try {
-            await checkIn(employeeId, companyId, isUserLate ? reasonInput : null, capturedImage, location, isWFH);
+            const response = await checkIn(
+                employeeId,
+                companyId,
+                isUserLate ? reasonInput : null,
+                capturedImageBase64,
+                location,
+                isWFH,
+            );
+            console.log('Check-in response:', response); // Log the server response
             showAlert('Anda berhasil check-in!', 'success');
             setTimeout(() => {
                 setAlert((prev) => ({ ...prev, show: false }));
                 navigation.navigate('App', { screen: 'Kehadiran' });
             }, 1500);
         } catch (error) {
-            console.error('Check-in error:', error.message);
+            console.error('Check-in error:', error);
             showAlert(`Error when checking in: ${error.message || 'Unknown error'}`, 'error');
+        } finally {
+            setIsUploading(false);
         }
     };
 
@@ -183,12 +210,12 @@ const DetailKehadiran = () => {
                 <TouchableOpacity
                     style={[
                         styles.checkInButton,
-                        (!capturedImage || (isUserLate && !reasonInput)) && styles.disabledButton,
+                        (isUploading || !capturedImage || (isUserLate && !reasonInput)) && styles.disabledButton,
                     ]}
                     onPress={handleClockIn}
-                    disabled={!capturedImage || (isUserLate && !reasonInput)}
+                    disabled={isUploading || !capturedImage || (isUserLate && !reasonInput)}
                 >
-                    <Text style={styles.buttonText}>Clock In</Text>
+                    <Text style={styles.buttonText}>{isUploading ? 'Uploading...' : 'Clock In'}</Text>
                 </TouchableOpacity>
             </View>
 

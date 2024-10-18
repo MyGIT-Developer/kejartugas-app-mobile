@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useCallback } from 'react';
-import { View, Text, SafeAreaView, Dimensions, StyleSheet, RefreshControl } from 'react-native';
+import { View, Text, SafeAreaView, Dimensions, StyleSheet, RefreshControl, Platform, StatusBar } from 'react-native';
 import FloatingButton from '../components/FloatingButtonProject';
 import { getProject } from '../api/projectTask';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -227,6 +227,7 @@ const ProjectDashboard = () => {
 
     return (
         <SafeAreaView style={styles.safeArea}>
+            <StatusBar barStyle="light-content" backgroundColor="#0E509E" hidden={true} />
             <ScrollView
                 style={styles.container}
                 contentContainerStyle={styles.contentContainer}
@@ -243,8 +244,13 @@ const ProjectDashboard = () => {
                 <View style={styles.headerSection}>
                     <Text style={styles.headerTitle}>Projek</Text>
                     <View style={styles.searchSection}>
-                        <Feather name="search" />
-                        <TextInput style={styles.input} placeholder="Pencarian" underlineColorAndroid="transparent" />
+                        <Feather name="search" size={20} color="#A7AFB1" style={styles.searchIcon} />
+                        <TextInput
+                            style={styles.input}
+                            placeholder="Pencarian"
+                            placeholderTextColor="#A7AFB1"
+                            underlineColorAndroid="transparent"
+                        />
                     </View>
                 </View>
 
@@ -258,13 +264,15 @@ const ProjectDashboard = () => {
 const styles = StyleSheet.create({
     safeArea: {
         flex: 1,
+        backgroundColor: 'transparent', // Match the starting color of the gradient
     },
     container: {
         flex: 1,
+        backgroundColor: 'transparent', // Light background for the main content
     },
     contentContainer: {
         flexGrow: 1,
-        paddingBottom: 100, // Add padding at the bottom
+        paddingBottom: 100,
     },
     errorContainer: {
         flex: 1,
@@ -272,14 +280,16 @@ const styles = StyleSheet.create({
         alignItems: 'center',
     },
     backgroundBox: {
+        height: Platform.OS === 'ios' ? 175 : 155,
+        width: '100%',
         position: 'absolute',
         top: 0,
         left: 0,
-        right: 0,
-        bottom: 0,
     },
     linearGradient: {
         flex: 1,
+        borderBottomLeftRadius: 30,
+        borderBottomRightRadius: 30,
     },
     cardContainer: {
         marginHorizontal: 20,
@@ -329,41 +339,50 @@ const styles = StyleSheet.create({
         borderBottomRightRadius: 30,
     },
     headerSection: {
-        display: 'flex',
         flexDirection: 'column',
-        justifyContent: 'center',
+        justifyContent: 'flex-start',
         alignItems: 'center',
         padding: 10,
         width: SCREEN_WIDTH,
-        gap: 10,
+        paddingTop: Platform.OS === 'ios' ? 50 : 30, // Adjusted to move content up
     },
     headerTitle: {
         fontSize: 24,
         color: 'white',
-        alignSelf: 'center',
         fontFamily: 'Poppins-Bold',
         letterSpacing: -0.3,
-        lineHeight: 30,
-        marginTop: 50,
+        marginBottom: 15, // Add some space between title and search bar
     },
+
     searchSection: {
         flexDirection: 'row',
         backgroundColor: 'white',
         borderRadius: 30,
         margin: 10,
         alignItems: 'center',
-        paddingHorizontal: 10,
+        paddingHorizontal: 15,
+        ...Platform.select({
+            ios: {
+                shadowColor: '#000',
+                shadowOffset: { width: 0, height: 2 },
+                shadowOpacity: 0.1,
+                shadowRadius: 4,
+            },
+            android: {
+                elevation: 4,
+            },
+        }),
     },
     searchIcon: {
         padding: 10,
     },
     input: {
         flex: 1,
-        backgroundColor: 'white',
-        color: '#A7AFB1',
-        textAlign: 'center',
-        letterSpacing: -1,
-        fontWeight: 'semibold',
+        paddingVertical: Platform.OS === 'ios' ? 12 : 8,
+        paddingHorizontal: 5,
+        color: '#333',
+        fontFamily: Platform.OS === 'ios' ? 'Poppins-Regular' : 'Poppins-Regular',
+        fontSize: 14,
     },
     sectionContainer: {
         flex: 1,
