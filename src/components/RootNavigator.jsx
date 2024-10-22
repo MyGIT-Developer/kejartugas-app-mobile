@@ -18,6 +18,7 @@ import DetailTaskSection from '../screens/DetailTaskSection';
 import ProjectForm from '../screens/ProjectForm';
 import ChatInterface from '../screens/ChatInterface';
 import TaskForm from '../screens/TaskForm';
+import AdhocDashboard from '../screens/AdhocDashboard';
 
 const Stack = createStackNavigator();
 
@@ -46,6 +47,7 @@ const screens = [
     { name: 'ProjectForm', component: ProjectForm },
     { name: 'TaskForm', component: TaskForm },
     { name: 'ChatInterface', component: ChatInterface },
+    { name: 'AdhocDashboard', component: AdhocDashboard },
 ];
 
 const RootNavigator = () => (

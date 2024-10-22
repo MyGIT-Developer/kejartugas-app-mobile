@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, SafeAreaView, RefreshControl } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import Shimmer from '../components/Shimmer';
-import DetailProyekModal from '../components/ReusableBottomModal';
+import DetailProyekModal from '../components/DetailProjectModal';
 import DraggableModalTask from '../components/DraggableModalTask';
 import ReusableModalSuccess from '../components/TaskModalSuccess';
 import { MaterialIcons } from '@expo/vector-icons';

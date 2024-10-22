@@ -93,12 +93,12 @@ const SkeletonTaskCard = () => {
                 <View style={styles.taskSection} key={index}>
                     <View style={[styles.taskItem]}>
                         <View style={styles.taskInfo}>
-                            <View style={[styles.skeletonText, { width: "70%", height: 20, marginBottom:5 }]} />
-                            <View style={[styles.skeletonText, { width: "40%", height: 20 }]} />
+                            <View style={[styles.skeletonText, { width: '70%', height: 20, marginBottom: 5 }]} />
+                            <View style={[styles.skeletonText, { width: '40%', height: 20 }]} />
                         </View>
-                        <View style={[styles.skeletonText, { width: 50, height: 20 }]}/>
+                        <View style={[styles.skeletonText, { width: 50, height: 20 }]} />
                     </View>
-                    <View style={[styles.skeletonText, { width: "50%", height: 20, marginTop:5 }]} />
+                    <View style={[styles.skeletonText, { width: '50%', height: 20, marginTop: 5 }]} />
                 </View>
             ))}
         </View>
@@ -160,16 +160,15 @@ const StatisticSkeleton = () => (
     </View>
 );
 
-const StatisticCard = ({ value, description, color, icon, }) =>
- (
-        <View style={[styles.statisticCard, { borderColor: color }]}>
-            <View style={styles.textContainer}>
-                <Text style={styles.valueText}>{value}</Text>
-                <Text style={styles.descriptionText}>{description}</Text>
-            </View>
-            <Feather name={icon} size={30} color={color} style={styles.icon} />
+const StatisticCard = ({ value, description, color, icon }) => (
+    <View style={[styles.statisticCard, { borderColor: color }]}>
+        <View style={styles.textContainer}>
+            <Text style={styles.valueText}>{value}</Text>
+            <Text style={styles.descriptionText}>{description}</Text>
         </View>
-    );
+        <Feather name={icon} size={30} color={color} style={styles.icon} />
+    </View>
+);
 
 const MenuButton = ({ icon, description }) => (
     <View style={styles.menuButtonContainer}>
@@ -356,6 +355,29 @@ const Home = () => {
         { id: 3, icon: 'check-circle', description: 'Klaim' },
     ];
 
+    const MenuButton = ({ icon, description, onPress }) => (
+        <TouchableOpacity style={styles.menuButtonContainer} onPress={onPress}>
+            <View style={styles.statCard}>
+                <Feather name={icon} size={24} color="#148FFF" />
+            </View>
+            <Text style={styles.menuButtonText}>{description}</Text>
+        </TouchableOpacity>
+    );
+    const handleButtonPress = (buttonId) => {
+        switch (buttonId) {
+            case 1:
+                navigation.navigate('AdhocDashboard');
+                break;
+            case 2:
+                // Navigasi untuk Cuti
+                break;
+            case 3:
+                // Navigasi untuk Klaim
+                break;
+            default:
+                break;
+        }
+    };
     const statistics = dashboardData
         ? [
               {
@@ -412,15 +434,26 @@ const Home = () => {
                 }
             >
                 <View style={styles.upperGridContainer}>
-                    {statistics.map((stat, index) => ( 
-                    isLoading ? (
-          <StatisticSkeleton key={index} color={stat.color} />
-        ) : (
-          <StatisticCard key={index} {...stat} />
-        )
-      ))}
+                    {statistics.map((stat, index) =>
+                        isLoading ? (
+                            <StatisticSkeleton key={index} color={stat.color} />
+                        ) : (
+                            <StatisticCard key={index} {...stat} />
+                        ),
+                    )}
                 </View>
-
+                <View style={styles.midContainer}>
+                    <View style={styles.buttonGridContainer}>
+                        {ButtonList.map((button) => (
+                            <MenuButton
+                                key={button.id}
+                                icon={button.icon}
+                                description={button.description}
+                                onPress={() => handleButtonPress(button.id)}
+                            />
+                        ))}
+                    </View>
+                </View>
                 <View style={styles.lowerContainer}>
                     <View style={styles.sectionHeader}>
                         <Text style={styles.sectionTitle}>Tugas Saya</Text>
@@ -430,16 +463,15 @@ const Home = () => {
                     </View>
 
                     <View style={styles.tasksContainer}>
-                        {isLoading ? ( 
-                        <>
+                        {isLoading ? (
+                            <>
                                 {Object.keys(groupedTasks)
                                     .slice(0, 3)
                                     .map((projectName, index) => (
                                         <SkeletonTaskCard />
                                     ))}
                             </>
-                        ) :
-                         groupedTasks && Object.keys(groupedTasks).length > 0 ? (
+                        ) : groupedTasks && Object.keys(groupedTasks).length > 0 ? (
                             <>
                                 {Object.keys(groupedTasks)
                                     .slice(0, 3)

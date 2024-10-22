@@ -38,6 +38,7 @@ const ChatInterface = ({ route, navigation }) => {
     const [refreshing, setRefreshing] = useState(false);
     const [isLoading, setIsLoading] = useState(true);
     const [isGeminiMode, setIsGeminiMode] = useState(false);
+    const [waitingForYesNo, setWaitingForYesNo] = useState(false);
 
     const flatListRef = useRef(null);
 
@@ -108,9 +109,10 @@ const ChatInterface = ({ route, navigation }) => {
 
         if (inputText.toLowerCase() === '/gemini' && !isGeminiMode) {
             setIsGeminiMode(true);
+            setWaitingForYesNo(true);
             const geminiMessage = {
                 id: Date.now().toString(),
-                message: 'Halo! Saya adalah Gemini AI. Apa yang ingin Anda tanyakan?',
+                message: `Halo! Saya adalah Gemini AI. Apakah Anda ingin bertanya tentang ${taskDetails.title}?`,
                 employee_name: 'Gemini AI',
                 employee_id: 'gemini',
                 time: new Date().toISOString(),
@@ -123,6 +125,7 @@ const ChatInterface = ({ route, navigation }) => {
 
         if (inputText.toLowerCase() === '/quit' && isGeminiMode) {
             setIsGeminiMode(false);
+            setWaitingForYesNo(false);
             const quitMessage = {
                 id: Date.now().toString(),
                 message: 'Terima kasih telah menggunakan Gemini AI. Kembali ke mode chat normal.',
@@ -134,6 +137,67 @@ const ChatInterface = ({ route, navigation }) => {
             setMessages((prevMessages) => [...prevMessages, quitMessage]);
             setInputText('');
             return;
+        }
+
+        if (isGeminiMode && waitingForYesNo) {
+            if (inputText.toLowerCase().includes('ya') || inputText.toLowerCase().includes('iya')) {
+                setWaitingForYesNo(false);
+                const prompt = `Tolong jelaskan langkah-langkah detail cara mengerjakan atau menyelesaikan "${
+                    taskDetails.title
+                }". ${taskDetails.subtitle ? `Konteks tambahan: ${taskDetails.subtitle}` : ''}`;
+
+                const userMessage = {
+                    id: Date.now().toString(),
+                    message: inputText,
+                    employee_name: 'You',
+                    employee_id: 'user',
+                    time: new Date().toISOString(),
+                    status: 'sent',
+                };
+                setMessages((prev) => [...prev, userMessage]);
+                setInputText('');
+
+                try {
+                    const response = await fetch(
+                        'https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key=AIzaSyCbw7k1d60bhz7fHM9xgPZNql6LqQLxizM',
+                        {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                            },
+                            body: JSON.stringify({
+                                contents: [
+                                    {
+                                        parts: [
+                                            {
+                                                text: prompt,
+                                            },
+                                        ],
+                                    },
+                                ],
+                            }),
+                        },
+                    );
+
+                    const data = await response.json();
+                    const geminiResponse = data.candidates[0].content.parts[0].text;
+
+                    const geminiMessage = {
+                        id: Date.now().toString(),
+                        message: geminiResponse,
+                        employee_name: 'Gemini AI',
+                        employee_id: 'gemini',
+                        time: new Date().toISOString(),
+                        status: 'sent',
+                    };
+
+                    setMessages((prev) => [...prev, geminiMessage]);
+                } catch (error) {
+                    Alert.alert('Error', 'Failed to get response from Gemini AI');
+                }
+                return;
+            }
+            setWaitingForYesNo(false);
         }
 
         const newMessage = {
@@ -151,7 +215,6 @@ const ChatInterface = ({ route, navigation }) => {
 
         try {
             if (isGeminiMode) {
-                // Call Gemini AI API
                 const response = await fetch(
                     'https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key=AIzaSyCbw7k1d60bhz7fHM9xgPZNql6LqQLxizM',
                     {
@@ -187,7 +250,6 @@ const ChatInterface = ({ route, navigation }) => {
 
                 setMessages((prevMessages) => [...prevMessages, geminiMessage]);
             } else {
-                // Existing chat logic
                 const response = await sendChatMessage(employeeId, taskId, inputText.trim(), companyId);
 
                 if (response && response.id) {
