@@ -8,11 +8,21 @@ import {
     SafeAreaView,
     StatusBar,
     Dimensions,
+    ActivityIndicator,
+    Image,
 } from 'react-native';
 import { Feather, MaterialIcons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useFonts } from '../utils/UseFonts';
 import ReusableModalBottom from '../components/ReusableModalBottom';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import {
+    getAllAdhocTasks,
+    getAdhocTaskDetail,
+    getMyAdhocTasks,
+    getPendingApprovalTasks,
+    getHistoryTasks,
+} from '../api/adhocTask';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
@@ -23,6 +33,77 @@ const calculateFontSize = (size) => {
     return Math.round(newSize);
 };
 
+const formatDate = (dateString) => {
+    const options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
+    const date = new Date(dateString);
+    return date.toLocaleDateString('id-ID', options);
+};
+
+// Helper function to truncate text
+const truncateText = (text, maxLength) => {
+    if (text.length <= maxLength) return text;
+    return text.substr(0, maxLength - 3) + '...';
+};
+
+// Helper function to format date more concisely
+const formatDateConcise = (dateString) => {
+    const options = { day: 'numeric', month: 'short', year: 'numeric' };
+    const date = new Date(dateString);
+    return date.toLocaleDateString('id-ID', options);
+};
+// Helper functions for status colors and text
+const getStatusColor = (status) => {
+    switch (status) {
+        case 'working_on_it':
+            return '#FFF9C4'; // Light yellow
+        case 'completed':
+            return '#E8F5E9'; // Light green
+        case 'waiting_for_approval':
+            return '#E3F2FD'; // Light blue
+        case 'rejected':
+            return '#FFCDD2'; // Light red
+        case 'cancelled':
+            return '#FFEBEE'; // Light red
+        default:
+            return '#F5F5F5'; // Light grey
+    }
+};
+
+const getStatusTextColor = (status) => {
+    switch (status) {
+        case 'working_on_it':
+            return '#FBC02D'; // Dark yellow
+        case 'completed':
+            return '#4CAF50'; // Green
+        case 'waiting_for_approval':
+            return '#2196F3'; // Blue
+        case 'rejected':
+            return '#D32F2F'; // Dark red
+        case 'cancelled':
+            return '#D32F2F'; // Dark red
+        default:
+            return '#757575'; // Grey
+    }
+};
+
+const getStatusText = (status) => {
+    switch (status) {
+        case 'working_on_it':
+            return 'Sedang Dikerjakan';
+        case 'completed':
+            return 'Selesai';
+        case 'waiting_for_approval':
+            return 'Menunggu Persetujuan';
+        case 'rejected':
+            return 'Ditolak'; // Rejected
+        case 'cancelled':
+            return 'Dibatalkan'; // Cancelled
+        default:
+            return 'Unknown';
+    }
+};
+const BASE_URL = 'http://202.10.36.103:8000/';
+
 const AdhocDashboard = ({ navigation }) => {
     const [activeTab, setActiveTab] = useState('Tugas Dibuat');
     const [selectedTask, setSelectedTask] = useState(null);
@@ -30,6 +111,129 @@ const AdhocDashboard = ({ navigation }) => {
     const [expandedSection, setExpandedSection] = useState(null);
     const tabs = ['Tugas Dibuat', 'Tugas Saya', 'Persetujuan', 'Riwayat'];
     const fontsLoaded = useFonts();
+    const [adhocTasks, setAdhocTasks] = useState([]);
+    const [myTasks, setMyTasks] = useState([]);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState(null);
+    const [selectedTaskDetail, setSelectedTaskDetail] = useState(null);
+    const [employeeId, setEmployeeId] = useState(null);
+    const [pendingApprovalTasks, setPendingApprovalTasks] = useState([]);
+    const [historyTasks, setHistoryTasks] = useState([]); // New state for history tasks
+
+    useEffect(() => {
+        getEmployeeId();
+    }, []);
+
+    useEffect(() => {
+        if (employeeId) {
+            if (activeTab === 'Tugas Dibuat') {
+                fetchAdhocTasks();
+            } else if (activeTab === 'Tugas Saya') {
+                fetchMyTasks();
+            } else if (activeTab === 'Persetujuan') {
+                fetchPendingApprovalTasks();
+            }
+        }
+    }, [activeTab, employeeId]);
+
+    useEffect(() => {
+        if (employeeId) {
+            fetchHistoryTasks(); // Fetch history tasks when employeeId is available
+        }
+    }, [employeeId]);
+
+    const getEmployeeId = async () => {
+        const id = await AsyncStorage.getItem('employeeId');
+        setEmployeeId(id);
+    };
+
+    const fetchAdhocTasks = async () => {
+        setLoading(true);
+        setError(null);
+        try {
+            const companyId = await AsyncStorage.getItem('companyId');
+            const response = await getAllAdhocTasks(companyId, employeeId);
+            if (response.status === 'success') {
+                setAdhocTasks(response.data);
+            } else {
+                setError(response.message || 'An error occurred');
+            }
+        } catch (error) {
+            // console.error('Error fetching adhoc tasks:', error);
+            setError('You do not have access to monitor adhoc tasks');
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const fetchMyTasks = async () => {
+        setLoading(true);
+        setError(null);
+        try {
+            const response = await getMyAdhocTasks(employeeId);
+            if (response.status === 'success') {
+                setMyTasks(response.data);
+            } else {
+                setError(response.message || 'An error occurred');
+            }
+        } catch (error) {
+            console.error('Error fetching my tasks:', error);
+            setError('Failed to fetch your tasks');
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const fetchTaskDetail = async (adhocId) => {
+        try {
+            const response = await getAdhocTaskDetail(adhocId);
+            if (response.status === 'success') {
+                setSelectedTaskDetail(response.data);
+                setIsDetailModalVisible(true);
+            } else {
+                console.error('Error fetching task detail:', response.message);
+            }
+        } catch (error) {
+            console.error('Error fetching task detail:', error);
+        }
+    };
+
+    const fetchPendingApprovalTasks = async () => {
+        setLoading(true);
+        setError(null);
+        try {
+            const response = await getPendingApprovalTasks(employeeId);
+            if (response.status === 'success') {
+                setPendingApprovalTasks(response.data);
+            } else {
+                setError(response.message || 'An error occurred');
+            }
+        } catch (error) {
+            console.error('Error fetching pending approval tasks:', error);
+            setError('Failed to fetch pending approval tasks');
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const fetchHistoryTasks = async () => {
+        setLoading(true);
+        setError(null);
+        try {
+            const response = await getHistoryTasks(employeeId);
+            if (response.status === 'success') {
+                // Set history tasks based on the response structure
+                setHistoryTasks(response); // Store the entire response
+            } else {
+                setError(response.message || 'An error occurred');
+            }
+        } catch (error) {
+            console.error('Error fetching history tasks:', error);
+            setError('Failed to fetch history tasks');
+        } finally {
+            setLoading(false);
+        }
+    };
 
     useEffect(() => {
         if (fontsLoaded) {
@@ -62,23 +266,23 @@ const AdhocDashboard = ({ navigation }) => {
         </View>
     );
 
-    const renderTaskItem = (index) => {
-        const isSelected = selectedTask === index;
+    const renderTaskItem = (task) => {
+        const isSelected = selectedTask === task.id;
 
         return (
-            <View style={[styles.taskItem, isSelected && styles.selectedTaskItem]} key={index}>
+            <View style={[styles.taskItem, isSelected && styles.selectedTaskItem]} key={task.id}>
                 <View style={styles.taskContent}>
                     <Text style={[styles.taskTitle, fontsLoaded ? { fontFamily: 'Poppins-SemiBold' } : null]}>
-                        KejarTugas Maintenance
+                        {task.adhoc_name}
                     </Text>
                     <View style={styles.taskActions}>
                         <TouchableOpacity
                             style={styles.moreButton}
-                            onPress={() => setSelectedTask(isSelected ? null : index)}
+                            onPress={() => setSelectedTask(isSelected ? null : task.id)}
                         >
                             <Feather name="more-horizontal" size={24} color="#000" />
                         </TouchableOpacity>
-                        <TouchableOpacity style={styles.detailButton} onPress={() => setIsDetailModalVisible(true)}>
+                        <TouchableOpacity style={styles.detailButton} onPress={() => fetchTaskDetail(task.id)}>
                             <Text
                                 style={[
                                     styles.detailButtonText,
@@ -116,201 +320,182 @@ const AdhocDashboard = ({ navigation }) => {
         );
     };
 
-    const renderDetailModalContent = () => (
-        <View style={styles.myTaskDetailContent}>
-            {/* Task Header Section */}
-            <View style={styles.taskHeaderSection}>
-                <View style={styles.taskTitleWrapper}>
-                    <Text style={styles.taskMainTitle}>KejarTugas Maintenance</Text>
-                    <View style={[styles.statusBadge, { backgroundColor: '#E8F5E9' }]}>
-                        <Text style={[styles.statusText, { color: '#4CAF50' }]}>Selesai</Text>
-                    </View>
-                </View>
-                <View style={styles.assignerInfo}>
-                    <Feather name="user" size={16} color="#666" />
-                    <Text style={styles.assignerText}>Ditugaskan oleh John Doe</Text>
-                </View>
-            </View>
+    const renderDetailModalContent = () => {
+        if (!selectedTaskDetail) return null;
 
-            {/* Timeline Section */}
-            <View style={styles.timelineSection}>
-                <Text style={styles.sectionTitle}>Timeline</Text>
-                <View style={styles.timelineContainer}>
-                    <View style={styles.timelineItem}>
-                        <View style={styles.timelineDot} />
-                        <View style={styles.timelineContent}>
-                            <Text style={styles.timelineLabel}>Mulai</Text>
-                            <Text style={styles.timelineDate}>03 Sep 2024</Text>
+        const {
+            adhoc_name,
+            adhoc_desc,
+            adhoc_start_date,
+            adhoc_end_date,
+            adhoc_status,
+            assign_by,
+            employee_tasks,
+            task_approvals,
+            adhoc_image,
+        } = selectedTaskDetail;
+
+        const isAssigner = employeeId === String(selectedTaskDetail.adhoc_assign_by);
+        const isAssignee = employee_tasks.some((task) => String(task.employee_id) === employeeId);
+        const showSubmitButton = adhoc_status === 'working_on_it' && !isAssigner && isAssignee;
+        const showApprovalButtons = adhoc_status === 'waiting_for_approval' && !isAssigner && !isAssignee;
+
+        return (
+            <ScrollView style={styles.myTaskDetailContent}>
+                <View style={styles.taskHeaderSection}>
+                    <View style={styles.taskTitleWrapper}>
+                        <Text style={styles.taskMainTitle}>{adhoc_name}</Text>
+                        <View style={[styles.statusBadge, { backgroundColor: getStatusColor(adhoc_status) }]}>
+                            <Text style={[styles.statusText, { color: getStatusTextColor(adhoc_status) }]}>
+                                {getStatusText(adhoc_status)}
+                            </Text>
                         </View>
                     </View>
-                    <View style={styles.timelineConnector} />
-                    <View style={styles.timelineItem}>
-                        <View style={[styles.timelineDot, { backgroundColor: '#FF5252' }]} />
-                        <View style={styles.timelineContent}>
-                            <Text style={styles.timelineLabel}>Tenggat</Text>
-                            <Text style={styles.timelineDate}>07 Sep 2024</Text>
+                    <View style={styles.assignerInfo}>
+                        <Feather name="user" size={16} color="#666" />
+                        <Text style={styles.assignerText}>Ditugaskan oleh {assign_by.employee_name}</Text>
+                    </View>
+                </View>
+
+                <View style={styles.timelineSection}>
+                    <Text style={styles.sectionTitle}>Timeline</Text>
+                    <View style={styles.timelineContainer}>
+                        <View style={styles.timelineItem}>
+                            <View style={styles.timelineDotContainer}>
+                                <View style={styles.timelineDot} />
+                            </View>
+                            <View style={styles.timelineContent}>
+                                <Text style={styles.timelineLabel}>Mulai</Text>
+                                <Text style={styles.timelineDate}>{formatDate(adhoc_start_date)}</Text>
+                            </View>
+                        </View>
+                        <View style={styles.timelineConnector} />
+                        <View style={styles.timelineItem}>
+                            <View style={styles.timelineDotContainer}>
+                                <View style={[styles.timelineDot, { backgroundColor: '#FF5252' }]} />
+                            </View>
+                            <View style={styles.timelineContent}>
+                                <Text style={styles.timelineLabel}>Tenggat</Text>
+                                <Text style={styles.timelineDate}>{formatDate(adhoc_end_date)}</Text>
+                            </View>
                         </View>
                     </View>
                 </View>
-            </View>
 
-            {/* Description Section */}
-            <View style={styles.descriptionSection}>
-                <Text style={styles.sectionTitle}>Deskripsi Tugas</Text>
-                <View style={styles.descriptionCard}>
-                    <Text style={styles.descriptionText}>
-                        Melakukan maintenance rutin pada sistem KejarTugas termasuk:
-                    </Text>
-                    <View style={styles.bulletPoints}>
-                        <View style={styles.bulletPoint}>
-                            <View style={styles.bullet} />
-                            <Text style={styles.bulletText}>Pembaruan database sistem</Text>
-                        </View>
-                        <View style={styles.bulletPoint}>
-                            <View style={styles.bullet} />
-                            <Text style={styles.bulletText}>Optimisasi performa aplikasi</Text>
-                        </View>
-                        <View style={styles.bulletPoint}>
-                            <View style={styles.bullet} />
-                            <Text style={styles.bulletText}>Pemeriksaan keamanan sistem</Text>
-                        </View>
+                <View style={styles.descriptionSection}>
+                    <Text style={styles.sectionTitle}>Deskripsi Tugas</Text>
+                    <View style={styles.descriptionCard}>
+                        <Text style={styles.descriptionText}>{adhoc_desc}</Text>
                     </View>
                 </View>
-            </View>
 
-            {/* Attachments Section */}
-            <View style={styles.attachmentsSection}>
-                <Text style={styles.sectionTitle}>Lampiran</Text>
-                <View style={styles.attachmentCard}>
-                    <View style={styles.attachmentItem}>
-                        <View style={styles.attachmentIcon}>
-                            <Feather name="file-text" size={20} color="#4A90E2" />
-                        </View>
-                        <View style={styles.attachmentInfo}>
-                            <Text style={styles.attachmentName}>Documentation.pdf</Text>
-                            <Text style={styles.attachmentSize}>2.5 MB</Text>
-                        </View>
-                        <TouchableOpacity style={styles.downloadButton}>
-                            <Feather name="download" size={20} color="#4A90E2" />
+                <View style={styles.assigneeSection}>
+                    <Text style={styles.sectionTitle}>Ditugaskan kepada</Text>
+                    <View style={styles.assigneeList}>
+                        {employee_tasks.map((task, index) => (
+                            <View key={index} style={styles.assigneeItem}>
+                                <View style={styles.assigneeAvatar}>
+                                    <Text style={styles.assigneeInitial}>{task.employee.employee_name.charAt(0)}</Text>
+                                </View>
+                                <Text style={styles.assigneeName}>{task.employee.employee_name}</Text>
+                            </View>
+                        ))}
+                    </View>
+                </View>
+
+                {adhoc_image && (
+                    <View style={styles.attachmentSection}>
+                        <Text style={styles.sectionTitle}>Lampiran</Text>
+                        <Image
+                            source={{ uri: BASE_URL + adhoc_image }} // Prepend the base URL
+                            style={styles.attachmentImage}
+                            resizeMode="contain"
+                        />
+                    </View>
+                )}
+
+                {showSubmitButton && (
+                    <TouchableOpacity style={styles.submitButton}>
+                        <Text style={styles.submitButtonText}>Submit Tugas</Text>
+                    </TouchableOpacity>
+                )}
+
+                {showApprovalButtons && (
+                    <View style={styles.approvalButtonsContainer}>
+                        <TouchableOpacity style={styles.rejectButton}>
+                            <Text style={styles.rejectButtonText}>Reject</Text>
+                        </TouchableOpacity>
+                        <TouchableOpacity style={styles.approveButton}>
+                            <Text style={styles.approveButtonText}>Approve</Text>
                         </TouchableOpacity>
                     </View>
-                </View>
-            </View>
+                )}
+            </ScrollView>
+        );
+    };
 
-            {/* Action Button */}
-            <TouchableOpacity style={styles.submitButton}>
-                <Text style={styles.submitButtonText}>Submit Tugas</Text>
-            </TouchableOpacity>
-        </View>
-    );
-
-    const renderMyTaskItem = (index) => {
+    const renderMyTaskItem = (task) => {
         return (
-            <TouchableOpacity style={styles.myTaskItem} key={index} onPress={() => setIsDetailModalVisible(true)}>
+            <TouchableOpacity style={styles.myTaskItem} key={task.id} onPress={() => fetchTaskDetail(task.id)}>
                 <View style={styles.myTaskHeader}>
                     <Text style={[styles.myTaskTitle, fontsLoaded ? { fontFamily: 'Poppins-SemiBold' } : null]}>
-                        KejarTugas Maintenance
+                        {truncateText(task.adhoc_name, 30)}
                     </Text>
-                    <View style={[styles.statusBadge, { backgroundColor: '#E8F5E9' }]}>
-                        <Text style={[styles.statusText, { color: '#4CAF50' }]}>Selesai</Text>
+                    <View style={[styles.statusBadge, { backgroundColor: getStatusColor(task.adhoc_status) }]}>
+                        <Text style={[styles.statusText, { color: getStatusTextColor(task.adhoc_status) }]}>
+                            {getStatusText(task.adhoc_status)}
+                        </Text>
                     </View>
                 </View>
 
                 <View style={styles.myTaskInfo}>
                     <View style={styles.infoItem}>
                         <Feather name="calendar" size={16} color="#666" />
-                        <Text style={styles.infoText}>Deadline: 7 Sep 2024</Text>
+                        <Text style={styles.infoText} numberOfLines={1} ellipsizeMode="tail">
+                            Deadline: {formatDateConcise(task.adhoc_end_date)}
+                        </Text>
                     </View>
                     <View style={styles.infoItem}>
                         <Feather name="user" size={16} color="#666" />
-                        <Text style={styles.infoText}>Dari: John Doe</Text>
+                        <Text style={styles.infoText} numberOfLines={1} ellipsizeMode="tail">
+                            Ditugaskan oleh:{' '}
+                            {truncateText(task.task_approvals[0]?.employee?.employee_name || 'Unknown', 20)}
+                        </Text>
                     </View>
                 </View>
             </TouchableOpacity>
         );
     };
 
-    const renderApprovalItem = (item) => {
+    const renderApprovalTaskItem = (task) => {
         return (
-            <View style={styles.approvalItem}>
-                {/* Header */}
-                <View style={styles.approvalHeader}>
-                    <View style={styles.approvalTitleContainer}>
-                        <Text style={styles.approvalTitle}>{item.title}</Text>
-                        <View style={styles.statusContainer}>
-                            <Text style={styles.statusText}>Menunggu Persetujuan</Text>
-                        </View>
+            <TouchableOpacity style={styles.approvalTaskItem} key={task.id} onPress={() => fetchTaskDetail(task.id)}>
+                <View style={styles.approvalTaskHeader}>
+                    <Text style={[styles.approvalTaskTitle, fontsLoaded ? { fontFamily: 'Poppins-SemiBold' } : null]}>
+                        {truncateText(task.adhoc_name, 30)}
+                    </Text>
+                    <View style={[styles.statusBadge, { backgroundColor: '#E3F2FD' }]}>
+                        <Text style={[styles.statusText, { color: '#2196F3' }]}>Menunggu Persetujuan</Text>
                     </View>
                 </View>
 
-                {/* Content */}
-                <View style={styles.approvalContent}>
-                    {/* Assignment and Deadline Row */}
-                    <View style={styles.infoRow}>
-                        <View style={styles.infoItemHalf}>
-                            <Text style={styles.infoLabel}>Ditugaskan kepada</Text>
-                            <View style={styles.infoValueContainer}>
-                                <MaterialIcons name="person" size={20} color="#666" style={styles.infoIcon} />
-                                <Text style={styles.infoValue} numberOfLines={1}>
-                                    {item.assignedTo}
-                                </Text>
-                            </View>
-                        </View>
-
-                        <View style={styles.infoItemHalf}>
-                            <Text style={styles.infoLabel}>Tenggat waktu</Text>
-                            <View style={styles.infoValueContainer}>
-                                <MaterialIcons name="calendar-today" size={20} color="#666" style={styles.infoIcon} />
-                                <Text style={styles.infoValue}>{item.deadline}</Text>
-                            </View>
-                        </View>
+                <View style={styles.approvalTaskInfo}>
+                    <View style={styles.infoItem}>
+                        <Feather name="calendar" size={16} color="#666" />
+                        <Text style={styles.infoText} numberOfLines={1} ellipsizeMode="tail">
+                            Submitted: {formatDateConcise(task.adhoc_submitted_date)}
+                        </Text>
                     </View>
-
-                    {/* Description */}
-                    <View style={styles.descriptionContainer}>
-                        <Text style={styles.descriptionLabel}>Deskripsi tugas:</Text>
-                        <Text style={styles.approvalDescription}>{item.description}</Text>
-                    </View>
-
-                    <View style={styles.divider} />
-
-                    {/* Action Buttons */}
-                    <View style={styles.approvalActions}>
-                        <TouchableOpacity style={styles.rejectButton}>
-                            <MaterialIcons name="close" size={20} color="#FFF" />
-                            <Text style={styles.rejectButtonText}>Tolak</Text>
-                        </TouchableOpacity>
-
-                        <TouchableOpacity style={styles.approveButton}>
-                            <MaterialIcons name="check" size={20} color="#FFF" />
-                            <Text style={styles.approveButtonText}>Setujui</Text>
-                        </TouchableOpacity>
+                    <View style={styles.infoItem}>
+                        <Feather name="user" size={16} color="#666" />
+                        <Text style={styles.infoText} numberOfLines={1} ellipsizeMode="tail">
+                            Dari: {truncateText(task.employee_tasks[0]?.employee?.employee_name || 'Unknown', 20)}
+                        </Text>
                     </View>
                 </View>
-            </View>
+            </TouchableOpacity>
         );
     };
-
-    const approvalItems = [
-        {
-            title: 'Oracle DBA',
-            description: 'Melanjutkan penyusunan FSD dan menyelesaikan Review',
-            assignedTo: 'Jefri Doe',
-            deadline: '07/10/2024',
-        },
-        {
-            title: 'Kejar Tugas AI',
-            description: 'Testing dan Documentation',
-            assignedTo: 'Jefri Doe',
-            deadline: '07/10/2024',
-        },
-        {
-            title: 'Splunk',
-            description: 'Upgrade Splunk v 2.0',
-            assignedTo: 'Jefri Doe',
-            deadline: '07/10/2024',
-        },
-    ];
 
     const renderHistoryItem = (section) => {
         const isExpanded = expandedSection === section.title;
@@ -321,7 +506,7 @@ const AdhocDashboard = ({ navigation }) => {
                     <View style={styles.historySectionTitleContainer}>
                         <Text style={styles.historySectionTitle}>{section.title}</Text>
                         <View style={styles.historySectionBadge}>
-                            <Text style={styles.historySectionBadgeText}>5</Text>
+                            <Text style={styles.historySectionBadgeText}>{section.items.length}</Text>
                         </View>
                     </View>
                     <TouchableOpacity
@@ -333,26 +518,93 @@ const AdhocDashboard = ({ navigation }) => {
                     </TouchableOpacity>
                 </View>
 
-                {isExpanded ? (
-                    <DetailList items={section.detailItems} />
-                ) : (
-                    <View style={styles.historyPreviewContainer}>
-                        {section.items.map((item, index) => (
-                            <TouchableOpacity key={index} style={styles.historyPreviewItem} activeOpacity={0.7}>
-                                <View style={styles.historyPreviewContent}>
-                                    <View style={styles.historyIconContainer}>
-                                        <Feather name="file-text" size={24} color="#4A90E2" />
-                                    </View>
-                                    <View style={styles.historyPreviewInfo}>
-                                        <Text style={styles.historyPreviewTitle}>{item.documentation}</Text>
-                                        <Text style={styles.historyPreviewDate}>Last updated: Today, 14:30</Text>
-                                    </View>
-                                    <Feather name="chevron-right" size={20} color="#C5C5C5" />
-                                </View>
-                            </TouchableOpacity>
-                        ))}
-                    </View>
-                )}
+                <View style={styles.historyPreviewContainer}>
+                    {isExpanded
+                        ? section.items.map((item, index) => (
+                              <TouchableOpacity key={index} style={styles.historyPreviewItem} activeOpacity={0.7}>
+                                  <View style={styles.historyPreviewContent}>
+                                      <View style={styles.historyIconContainer}>
+                                          <Feather name="file-text" size={24} color="#4A90E2" />
+                                      </View>
+                                      <View style={styles.historyPreviewInfo}>
+                                          <Text style={styles.historyPreviewTitle}>{item.adhoc_name}</Text>
+                                          <Text style={styles.historyPreviewDate}>
+                                              {item.adhoc_status === 'cancelled'
+                                                  ? `Dibatalkan pada: ${formatDateConcise(item.updated_at)}`
+                                                  : item.adhoc_status === 'rejected'
+                                                  ? `Ditolak pada: ${formatDateConcise(item.updated_at)}`
+                                                  : `Selesai Pada: ${formatDateConcise(
+                                                        item.adhoc_completed_date,
+                                                    )}`}{' '}
+                                              {/* Use formatDateConcise */}
+                                          </Text>
+                                          {/* Status Box */}
+                                          <View
+                                              style={{
+                                                  backgroundColor: getStatusColor(item.adhoc_status), // Get color based on status
+                                                  padding: 5,
+                                                  borderRadius: 5,
+                                                  marginTop: 5,
+                                                  alignItems: 'center', // Center the text
+                                              }}
+                                          >
+                                              <Text
+                                                  style={{
+                                                      color: getStatusTextColor(item.adhoc_status), // Get text color based on status
+                                                      fontWeight: 'bold',
+                                                  }}
+                                              >
+                                                  {getStatusText(item.adhoc_status)} {/* Get status text */}
+                                              </Text>
+                                          </View>
+                                      </View>
+                                      <Feather name="chevron-right" size={20} color="#C5C5C5" />
+                                  </View>
+                              </TouchableOpacity>
+                          ))
+                        : section.items.slice(0, 1).map((item, index) => (
+                              <TouchableOpacity key={index} style={styles.historyPreviewItem} activeOpacity={0.7}>
+                                  <View style={styles.historyPreviewContent}>
+                                      <View style={styles.historyIconContainer}>
+                                          <Feather name="file-text" size={24} color="#4A90E2" />
+                                      </View>
+                                      <View style={styles.historyPreviewInfo}>
+                                          <Text style={styles.historyPreviewTitle}>{item.adhoc_name}</Text>
+                                          <Text style={styles.historyPreviewDate}>
+                                              {item.adhoc_status === 'cancelled'
+                                                  ? `Dibatalkan pada: ${formatDateConcise(item.updated_at)}`
+                                                  : item.adhoc_status === 'rejected'
+                                                  ? `Ditolak pada: ${formatDateConcise(item.updated_at)}`
+                                                  : `Last updated: ${formatDateConcise(
+                                                        item.adhoc_completed_date,
+                                                    )}`}{' '}
+                                              {/* Use formatDateConcise */}
+                                          </Text>
+                                          {/* Status Box */}
+                                          <View
+                                              style={{
+                                                  backgroundColor: getStatusColor(item.adhoc_status), // Get color based on status
+                                                  padding: 5,
+                                                  borderRadius: 5,
+                                                  marginTop: 5,
+                                                  alignItems: 'center', // Center the text
+                                              }}
+                                          >
+                                              <Text
+                                                  style={{
+                                                      color: getStatusTextColor(item.adhoc_status), // Get text color based on status
+                                                      fontWeight: 'bold',
+                                                  }}
+                                              >
+                                                  {getStatusText(item.adhoc_status)} {/* Get status text */}
+                                              </Text>
+                                          </View>
+                                      </View>
+                                      <Feather name="chevron-right" size={20} color="#C5C5C5" />
+                                  </View>
+                              </TouchableOpacity>
+                          ))}
+                </View>
                 <View style={styles.historySeparator} />
             </View>
         );
@@ -361,62 +613,81 @@ const AdhocDashboard = ({ navigation }) => {
     const historyItems = [
         {
             title: 'Tugas Dibuat',
-            items: [{ documentation: '& documentation', report: 'Laporan' }],
-            detailItems: [
-                { title: 'Testing & documentation' },
-                { title: 'Testing & documentation' },
-                { title: 'Testing & documentation' },
-                { title: 'Testing & documentation' },
-                { title: 'Testing & documentation' },
-            ],
+            items: Array.isArray(historyTasks.assigner) ? historyTasks.assigner : [], // Ensure it's an array
+            detailItems: Array.isArray(historyTasks.assigner) ? historyTasks.assigner : [], // Use the same for detail
         },
         {
             title: 'Tugas Saya',
-            items: [{ documentation: '& documentation', report: 'Laporan' }],
-            detailItems: [
-                { title: 'Testing & documentation' },
-                { title: 'Testing & documentation' },
-                { title: 'Testing & documentation' },
-                { title: 'Testing & documentation' },
-                { title: 'Testing & documentation' },
-            ],
+            items: Array.isArray(historyTasks.assignee) ? historyTasks.assignee : [], // Ensure it's an array
+            detailItems: Array.isArray(historyTasks.assignee) ? historyTasks.assignee : [], // Use the same for detail
         },
         {
             title: 'Tugas Persetujuan',
-            items: [{ documentation: '& documentation', report: 'Laporan' }],
-            detailItems: [
-                { title: 'Testing & documentation' },
-                { title: 'Testing & documentation' },
-                { title: 'Testing & documentation' },
-                { title: 'Testing & documentation' },
-                { title: 'Testing & documentation' },
-            ],
+            items: Array.isArray(historyTasks.approver) ? historyTasks.approver : [], // Ensure it's an array
+            detailItems: Array.isArray(historyTasks.approver) ? historyTasks.approver : [], // Use the same for detail
         },
     ];
 
     const DetailList = ({ items }) => (
         <View style={styles.detailList}>
             {items.map((item, index) => (
-                <TouchableOpacity key={index} style={styles.detailItem} activeOpacity={0.7}>
-                    <View style={styles.detailItemContent}>
-                        <View style={styles.detailItemIcon}>
-                            <Feather name="file-text" size={20} color="#4A90E2" />
-                        </View>
-                        <View style={styles.detailItemInfo}>
-                            <Text style={styles.detailItemTitle}>{item.title}</Text>
-                            <Text style={styles.detailItemDate}>Created: Sep 15, 2024</Text>
-                        </View>
-                        <View style={styles.detailItemStatus}>
-                            <View style={styles.detailItemStatusBadge}>
-                                <Text style={styles.detailItemStatusText}>Completed</Text>
-                            </View>
-                            <Feather name="chevron-right" size={20} color="#C5C5C5" />
-                        </View>
-                    </View>
-                </TouchableOpacity>
+                <View key={index} style={styles.detailItem}>
+                    <Text>{item.title}</Text>
+                </View>
             ))}
         </View>
     );
+
+    const renderTasks = () => {
+        let tasks;
+        let renderFunction;
+
+        switch (activeTab) {
+            case 'Tugas Dibuat':
+                tasks = adhocTasks;
+                renderFunction = renderTaskItem;
+                break;
+            case 'Tugas Saya':
+                tasks = myTasks;
+                renderFunction = renderMyTaskItem;
+                break;
+            case 'Persetujuan':
+                tasks = pendingApprovalTasks;
+                renderFunction = renderApprovalTaskItem;
+                break;
+            case 'Riwayat':
+                return historyItems.map(renderHistoryItem);
+            default:
+                tasks = [];
+                renderFunction = () => null;
+        }
+
+        if (loading) {
+            return (
+                <View style={styles.centerContent}>
+                    <ActivityIndicator size="large" color="#4A90E2" />
+                </View>
+            );
+        }
+
+        if (error) {
+            return (
+                <View style={styles.centerContent}>
+                    <Text style={styles.errorText}>{error}</Text>
+                </View>
+            );
+        }
+
+        if (tasks.length === 0) {
+            return (
+                <View style={styles.centerContent}>
+                    <Text style={styles.noTasksText}>No tasks available</Text>
+                </View>
+            );
+        }
+
+        return tasks.map(renderFunction);
+    };
 
     return (
         <SafeAreaView style={styles.container}>
@@ -435,12 +706,9 @@ const AdhocDashboard = ({ navigation }) => {
             </LinearGradient>
             <View style={styles.content}>
                 <ScrollView style={styles.taskList} contentContainerStyle={styles.taskListContent}>
-                    {activeTab === 'Tugas Dibuat' && [...Array(6)].map((_, index) => renderTaskItem(index))}
-                    {activeTab === 'Tugas Saya' && [...Array(6)].map((_, index) => renderMyTaskItem(index))}
-                    {activeTab === 'Persetujuan' && approvalItems.map((item, index) => renderApprovalItem(item, index))}
-                    {activeTab === 'Riwayat' && historyItems.map((section) => renderHistoryItem(section))}
+                    {renderTasks()}
                 </ScrollView>
-                {activeTab === 'Tugas Dibuat' && (
+                {activeTab === 'Tugas Dibuat' && !error && (
                     <TouchableOpacity style={styles.addButton}>
                         <Feather name="plus" size={24} color="#4A90E2" />
                     </TouchableOpacity>
@@ -654,18 +922,18 @@ const styles = StyleSheet.create({
         marginRight: 8,
     },
     myTaskInfo: {
-        flexDirection: 'row',
-        justifyContent: 'space-between',
+        marginTop: 8,
     },
     infoItem: {
         flexDirection: 'row',
         alignItems: 'center',
-        gap: 6,
+        marginBottom: 4,
     },
     infoText: {
-        fontSize: calculateFontSize(12),
+        marginLeft: 8,
+        fontSize: 12,
         color: '#666',
-        fontFamily: 'Poppins-Regular',
+        flex: 1, // This allows the text to shrink if needed
     },
     approvalItem: {
         backgroundColor: '#FFF',
@@ -933,6 +1201,302 @@ const styles = StyleSheet.create({
         color: '#4CAF50',
         fontSize: calculateFontSize(12),
         fontFamily: 'Poppins-Medium',
+    },
+    myTaskDetailContent: {
+        paddingHorizontal: 20,
+        paddingBottom: 24,
+    },
+    taskHeaderSection: {
+        marginBottom: 24,
+    },
+    taskTitleWrapper: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        marginBottom: 12,
+    },
+    taskMainTitle: {
+        fontSize: calculateFontSize(18),
+        color: '#333',
+        fontFamily: 'Poppins-SemiBold',
+        flex: 1,
+    },
+    assignerInfo: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 8,
+    },
+    assignerText: {
+        fontSize: calculateFontSize(14),
+        color: '#666',
+        fontFamily: 'Poppins-Regular',
+    },
+    sectionTitle: {
+        fontSize: calculateFontSize(16),
+        color: '#333',
+        fontFamily: 'Poppins-SemiBold',
+        marginBottom: 16,
+    },
+    timelineSection: {
+        marginBottom: 24,
+    },
+    timelineContainer: {
+        backgroundColor: '#F8F9FA',
+        borderRadius: 12,
+        padding: 16,
+    },
+    timelineItem: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        height: 48,
+    },
+    timelineDotContainer: {
+        width: 24,
+        alignItems: 'center',
+    },
+    timelineDot: {
+        width: 12,
+        height: 12,
+        borderRadius: 6,
+        backgroundColor: '#4CAF50',
+    },
+    timelineConnector: {
+        width: 2,
+        height: 24,
+        backgroundColor: '#E0E0E0',
+        marginLeft: 11,
+    },
+    timelineContent: {
+        marginLeft: 12,
+    },
+    timelineLabel: {
+        fontSize: calculateFontSize(14),
+        color: '#333',
+        fontFamily: 'Poppins-Medium',
+    },
+    timelineDate: {
+        fontSize: calculateFontSize(12),
+        color: '#666',
+        fontFamily: 'Poppins-Regular',
+        marginTop: 2,
+    },
+    descriptionSection: {
+        marginBottom: 24,
+    },
+    descriptionCard: {
+        backgroundColor: '#F8F9FA',
+        borderRadius: 12,
+        padding: 16,
+    },
+    descriptionText: {
+        fontSize: calculateFontSize(14),
+        color: '#333',
+        fontFamily: 'Poppins-Regular',
+        marginBottom: 12,
+    },
+    bulletPoints: {
+        gap: 8,
+    },
+    bulletPoint: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 12,
+    },
+    bullet: {
+        width: 6,
+        height: 6,
+        borderRadius: 3,
+        backgroundColor: '#4A90E2',
+    },
+    bulletText: {
+        fontSize: calculateFontSize(14),
+        color: '#333',
+        fontFamily: 'Poppins-Regular',
+    },
+    attachmentsSection: {
+        marginBottom: 24,
+    },
+    attachmentCard: {
+        backgroundColor: '#F8F9FA',
+        borderRadius: 12,
+        padding: 16,
+    },
+    attachmentItem: {
+        flexDirection: 'row',
+        alignItems: 'center',
+    },
+    attachmentIcon: {
+        width: 40,
+        height: 40,
+        borderRadius: 20,
+        backgroundColor: '#E3F2FD',
+        justifyContent: 'center',
+        alignItems: 'center',
+    },
+    attachmentInfo: {
+        flex: 1,
+        marginLeft: 12,
+    },
+    attachmentName: {
+        fontSize: calculateFontSize(14),
+        color: '#333',
+        fontFamily: 'Poppins-Medium',
+    },
+    attachmentSize: {
+        fontSize: calculateFontSize(12),
+        color: '#666',
+        fontFamily: 'Poppins-Regular',
+        marginTop: 2,
+    },
+    downloadButton: {
+        padding: 8,
+    },
+    submitButton: {
+        backgroundColor: '#4A90E2',
+        borderRadius: 12,
+        padding: 16,
+        alignItems: 'center',
+    },
+    submitButtonText: {
+        color: '#FFF',
+        fontSize: calculateFontSize(16),
+        fontFamily: 'Poppins-SemiBold',
+    },
+    centerContent: {
+        flex: 1,
+        justifyContent: 'center',
+        alignItems: 'center',
+        paddingHorizontal: 20,
+    },
+    errorText: {
+        fontSize: 16,
+        color: '#FF6B6B',
+        textAlign: 'center',
+        fontFamily: 'Poppins-Medium',
+    },
+    noTasksText: {
+        fontSize: 16,
+        color: '#666',
+        textAlign: 'center',
+        fontFamily: 'Poppins-Medium',
+    },
+    assigneeItem: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        marginBottom: 16, // Menambah jarak antar item
+    },
+    assigneeAvatar: {
+        width: 40,
+        height: 40,
+        borderRadius: 20,
+        backgroundColor: '#E0E0E0', // Warna avatar
+        justifyContent: 'center',
+        alignItems: 'center',
+        marginRight: 12, // Jarak antara avatar dan teks
+    },
+    assigneeInitial: {
+        fontSize: 18,
+        color: '#333',
+        fontFamily: 'Poppins-Bold',
+    },
+    assigneeName: {
+        fontSize: 16,
+        color: '#333',
+        fontFamily: 'Poppins-Regular',
+    },
+    approvalCard: {
+        backgroundColor: '#F8F9FA',
+        borderRadius: 12,
+        padding: 16,
+        flexDirection: 'column', // Mengubah ke kolom agar status berada di bawah jumlah persetujuan
+        justifyContent: 'flex-start',
+        alignItems: 'flex-start', // Teks akan sejajar ke kiri
+        marginBottom: 16,
+    },
+    approvalInfo: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        marginBottom: 8, // Tambahkan jarak antara jumlah persetujuan dan status
+    },
+    approvalLabel: {
+        fontSize: 14,
+        color: '#333',
+        fontFamily: 'Poppins-SemiBold',
+        marginRight: 8,
+    },
+    approvalCount: {
+        fontSize: 14,
+        color: '#4A90E2',
+        fontFamily: 'Poppins-Bold',
+    },
+    approvalStatus: {
+        backgroundColor: '#F69292',
+        paddingVertical: 4,
+        paddingHorizontal: 8,
+        borderRadius: 8,
+    },
+    approvalStatusText: {
+        fontSize: 14,
+        color: '#811616',
+        fontFamily: 'Poppins-SemiBold',
+    },
+    approvalTaskItem: {
+        backgroundColor: '#FFFFFF',
+        borderRadius: 8,
+        padding: 16,
+        marginBottom: 16,
+        elevation: 2,
+    },
+    approvalTaskHeader: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        marginBottom: 8,
+    },
+    approvalTaskTitle: {
+        fontSize: 16,
+        fontWeight: 'bold',
+        flex: 1,
+        marginRight: 8,
+    },
+    approvalTaskInfo: {
+        marginTop: 8,
+    },
+    attachmentSection: {
+        marginTop: 20,
+    },
+    attachmentImage: {
+        width: '100%',
+        height: 200,
+        borderRadius: 8,
+    },
+    approvalButtonsContainer: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        marginTop: 20,
+    },
+    rejectButton: {
+        backgroundColor: '#FF5252',
+        padding: 12,
+        borderRadius: 8,
+        flex: 1,
+        marginRight: 8,
+        alignItems: 'center',
+    },
+    approveButton: {
+        backgroundColor: '#4CAF50',
+        padding: 12,
+        borderRadius: 8,
+        flex: 1,
+        marginLeft: 8,
+        alignItems: 'center',
+    },
+    rejectButtonText: {
+        color: '#FFFFFF',
+        fontWeight: 'bold',
+    },
+    approveButtonText: {
+        color: '#FFFFFF',
+        fontWeight: 'bold',
     },
 });
 
