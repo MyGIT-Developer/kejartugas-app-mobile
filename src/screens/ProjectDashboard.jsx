@@ -80,8 +80,9 @@ const ProjectSection = ({ title, projects, status, handleGoTo, handleGoToDetail 
                 <Text style={styles.seeAllText}>Lihat semua</Text>
             </TouchableOpacity>
         </View>
+
         {status === 'all' ? (
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ flex: 1, flexDirection: 'row' }}>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.horizontalScroll}>
                 {projects && Array.isArray(projects) ? (
                     projects
                         .sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
@@ -90,25 +91,8 @@ const ProjectSection = ({ title, projects, status, handleGoTo, handleGoToDetail 
                             <ProjectCard key={index} item={item} handleGoToDetail={handleGoToDetail} />
                         ))
                 ) : (
-                    <View
-                        style={{
-                            backgroundColor: 'white',
-                            borderRadius: 19,
-                            padding: 15,
-                            height: 125,
-                            width: 312,
-                            shadowColor: '#000',
-                            shadowOffset: { width: 0, height: 2 },
-                            shadowOpacity: 0.1,
-                            shadowRadius: 4,
-                            elevation: 5,
-                            textAlign: 'center',
-                            justifyContent: 'center',
-                        }}
-                    >
-                        <Text style={{ fontSize: 10, fontFamily: 'Poppins-Medium', letterSpacing: -0.3 }}>
-                            No projects found
-                        </Text>
+                    <View style={styles.noProjectContainer}>
+                        <Text style={styles.noProjectText}>No projects found</Text>
                     </View>
                 )}
             </ScrollView>
@@ -229,7 +213,6 @@ const ProjectDashboard = () => {
         <SafeAreaView style={styles.safeArea}>
             <StatusBar barStyle="light-content" backgroundColor="#0E509E" hidden={true} />
             <ScrollView
-                style={styles.container}
                 contentContainerStyle={styles.contentContainer}
                 refreshControl={<RefreshControl refreshing={refreshing} onRefresh={fetchProject} />}
             >
@@ -254,7 +237,8 @@ const ProjectDashboard = () => {
                     </View>
                 </View>
 
-                <ScrollView>{renderContent()}</ScrollView>
+                {/* Render Content */}
+                {renderContent()}
             </ScrollView>
             <FloatingButton />
         </SafeAreaView>
@@ -266,18 +250,9 @@ const styles = StyleSheet.create({
         flex: 1,
         backgroundColor: 'transparent', // Match the starting color of the gradient
     },
-    container: {
-        flex: 1,
-        backgroundColor: 'transparent', // Light background for the main content
-    },
     contentContainer: {
         flexGrow: 1,
         paddingBottom: 100,
-    },
-    errorContainer: {
-        flex: 1,
-        justifyContent: 'center',
-        alignItems: 'center',
     },
     backgroundBox: {
         height: Platform.OS === 'ios' ? 175 : 155,
@@ -285,6 +260,11 @@ const styles = StyleSheet.create({
         position: 'absolute',
         top: 0,
         left: 0,
+    },
+    errorContainer: {
+        flex: 1,
+        justifyContent: 'center',
+        alignItems: 'center',
     },
     linearGradient: {
         flex: 1,
@@ -325,18 +305,6 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         alignItems: 'center',
         gap: 10,
-    },
-    backgroundBox: {
-        height: 155, // Set your desired height
-        width: '100%', // Set your desired width
-        position: 'absolute', // Position it behind other elements
-        top: 0,
-        left: 0,
-    },
-    linearGradient: {
-        flex: 1, // Ensure the gradient covers the entire view
-        borderBottomLeftRadius: 30,
-        borderBottomRightRadius: 30,
     },
     headerSection: {
         flexDirection: 'column',
@@ -410,6 +378,25 @@ const styles = StyleSheet.create({
     skeletonText: {
         backgroundColor: '#e0e0e0',
         borderRadius: 4,
+    },
+    noProjectContainer: {
+        backgroundColor: 'white',
+        borderRadius: 19,
+        padding: 15,
+        height: 125,
+        width: 312,
+        justifyContent: 'center',
+        alignItems: 'center',
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.1,
+        shadowRadius: 4,
+        elevation: 5,
+    },
+    noProjectText: {
+        fontSize: 10,
+        fontFamily: 'Poppins-Medium',
+        letterSpacing: -0.3,
     },
 });
 

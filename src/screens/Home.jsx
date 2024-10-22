@@ -9,7 +9,7 @@ const { width } = Dimensions.get('window');
 const cardWidth = (width - 60) / 2;
 import { fetchTaskById, fetchTotalTasksForEmployee } from '../api/task'; // Import the fetchTaskById function
 import ReusableBottomPopUp from '../components/ReusableBottomPopUp';
-import { isAxiosError } from 'axios';
+import Shimmer from '../components/Shimmer';
 
 const formatDate = (date) => {
     const options = { year: 'numeric', month: 'long', day: 'numeric' };
@@ -88,17 +88,17 @@ const getStatusAppearance = (status) => {
 const SkeletonTaskCard = () => {
     return (
         <View style={styles.taskCard}>
-            <View style={[styles.skeletonText, { width: '75%', height: 30 }]} />
+            <Shimmer width={200} height={30} style={styles.shimmerTitle} />
             {[...Array(3)].map((_, index) => (
                 <View style={styles.taskSection} key={index}>
                     <View style={[styles.taskItem]}>
                         <View style={styles.taskInfo}>
-                            <View style={[styles.skeletonText, { width: '70%', height: 20, marginBottom: 5 }]} />
-                            <View style={[styles.skeletonText, { width: '40%', height: 20 }]} />
+                            <Shimmer width={170} height={20} style={styles.shimmerTitle} />
+                            <Shimmer width={140} height={20} style={styles.shimmerTitle} />
                         </View>
-                        <View style={[styles.skeletonText, { width: 50, height: 20 }]} />
+                        <Shimmer width={50} height={20} style={styles.shimmerStatus} />
                     </View>
-                    <View style={[styles.skeletonText, { width: '50%', height: 20, marginTop: 5 }]} />
+                    <Shimmer width={150} height={20} style={styles.shimmerTitle} />
                 </View>
             ))}
         </View>
@@ -153,10 +153,10 @@ const TaskCard = ({ projectName, tasks }) => {
 const StatisticSkeleton = () => (
     <View style={[styles.statisticCard, { borderColor: '#e0e0e0' }]}>
         <View style={[styles.textContainer, { gap: 5, display: 'flex', flexDirection: 'column', marginRight: 10 }]}>
-            <View style={[styles.skeletonText, { width: 60, height: 25, marginRight: 5 }]} />
-            <View style={[styles.skeletonText, { width: 50, height: 20 }]} />
+            <Shimmer width={60} height={25} style={styles.shimmerTitle} />
+            <Shimmer width={50} height={20} style={styles.shimmerTitle} />
         </View>
-        <View style={[styles.skeletonText, { marginLeft: 5, width: 50, height: 55 }]} />
+        <Shimmer width={50} height={55} style={styles.shimmerTitle} />
     </View>
 );
 
@@ -434,25 +434,13 @@ const Home = () => {
                 }
             >
                 <View style={styles.upperGridContainer}>
-                    {statistics.map((stat, index) =>
-                        isLoading ? (
-                            <StatisticSkeleton key={index} color={stat.color} />
-                        ) : (
-                            <StatisticCard key={index} {...stat} />
-                        ),
-                    )}
-                </View>
-                <View style={styles.midContainer}>
-                    <View style={styles.buttonGridContainer}>
-                        {ButtonList.map((button) => (
-                            <MenuButton
-                                key={button.id}
-                                icon={button.icon}
-                                description={button.description}
-                                onPress={() => handleButtonPress(button.id)}
-                            />
-                        ))}
-                    </View>
+                    {statistics.map((stat, index) => ( 
+                    isLoading ? (
+          <StatisticSkeleton key={index} color={stat.color} />
+        ) : (
+          <StatisticCard key={index} {...stat} />
+        )
+      ))}
                 </View>
                 <View style={styles.lowerContainer}>
                     <View style={styles.sectionHeader}>
@@ -619,7 +607,7 @@ const styles = StyleSheet.create({
     menuButtonText: {
         textAlign: 'center',
         marginTop: 5,
-        fontWeight: '600',
+        fontFamily: 'Poppins-Medium',
     },
     lowerContainer: {
         marginTop: 20,
@@ -663,25 +651,26 @@ const styles = StyleSheet.create({
     },
     projectTitle: {
         fontSize: 18,
-        fontWeight: 'bold',
         marginBottom: 12,
         color: '#1C1C1E',
-        fontFamily: 'Poppins-SemiBold',
+        fontFamily: 'Poppins-Bold',
     },
     taskSection: {
         marginBottom: 12,
         paddingVertical: 8,
         borderBottomWidth: 1,
         borderBottomColor: '#E9E9EB',
+        gap: 10,
     },
     taskItem: {
         flexDirection: 'row',
         justifyContent: 'space-between',
-        alignItems: 'center',
+        alignItems: 'flex-start',
     },
     taskInfo: {
         flex: 1,
         marginRight: 10,
+        gap: 10,
     },
     taskName: {
         fontSize: 16,
@@ -743,9 +732,20 @@ const styles = StyleSheet.create({
         fontFamily: 'Poppins-Medium',
         textAlign: 'center',
     },
-    skeletonText: {
-        backgroundColor: '#e0e0e0',
+    shimmerTitle: {
         borderRadius: 4,
+    },
+    shimmerSubtitle: {
+        marginBottom: 15,
+    },
+    shimmerStatus: {
+        top: 0,
+        borderRadius: 4,
+    },
+    shimmerButton: {
+        position: 'absolute',
+        bottom: 20,
+        left: 20,
     },
 });
 

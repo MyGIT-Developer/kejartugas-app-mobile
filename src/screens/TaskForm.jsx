@@ -10,6 +10,8 @@ import {
     TextInput,
     TouchableOpacity,
     FlatList,
+    Alert,
+    Image,
 } from 'react-native';
 import CheckBox from '@react-native-community/checkbox'; // External CheckBox component
 import DateTimePicker from '@react-native-community/datetimepicker';
@@ -17,7 +19,8 @@ import { Picker } from '@react-native-picker/picker';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { LinearGradient } from 'expo-linear-gradient';
-import * as Progress from 'react-native-progress';
+import * as ImagePicker from 'expo-image-picker'; // Import Image Picker
+import * as FileSystem from 'expo-file-system'; // Import FileSystem
 import { Feather } from '@expo/vector-icons';
 import { addNewTask, updateTask } from '../api/task';
 import ReusableBottomPopUp from '../components/ReusableBottomPopUp';
@@ -27,10 +30,11 @@ import { launchImageLibrary } from 'react-native-image-picker';
 const TaskForm = () => {
     const route = useRoute();
     const { mode = 'create', initialTaskData = null, projectData } = route.params;
-
+    console.log('Initial task data:', initialTaskData);
     const [companyId, setCompanyId] = useState('');
     const [employeeId, setEmployeeId] = useState('');
     const [jobId, setJobId] = useState('');
+    const [imageUri, setImageUri] = useState(null);
 
     const navigation = useNavigation();
     const [formData, setFormData] = useState({
@@ -38,7 +42,7 @@ const TaskForm = () => {
         company_id: companyId,
         task_name: initialTaskData?.task_name || '',
         assign_by: initialTaskData?.assign_by || employeeId,
-        assign_to: initialTaskData?.assign_to || [],
+        assign_to: initialTaskData?.assigned_employees.map((employee) => employee.employee_id) || [],
         start_date: initialTaskData?.start_date ? new Date(initialTaskData.start_date) : new Date(),
         end_date: initialTaskData?.end_date ? new Date(initialTaskData.end_date) : new Date(),
         task_description: initialTaskData?.task_description || '',
@@ -271,6 +275,48 @@ const TaskForm = () => {
         return true;
     };
 
+    const requestPermissions = async () => {
+        const cameraStatus = await ImagePicker.requestCameraPermissionsAsync();
+        const libraryStatus = await ImagePicker.requestMediaLibraryPermissionsAsync();
+
+        if (cameraStatus.status !== 'granted' || libraryStatus.status !== 'granted') {
+            Alert.alert('Permission Required', 'Camera and media library access is required to use this feature.');
+            return false;
+        }
+        return true;
+    };
+
+    const pickImage = async (sourceType) => {
+        if (!(await requestPermissions())) return;
+
+        try {
+            const result = await ImagePicker.launchImageLibraryAsync({
+                mediaTypes: ImagePicker.MediaTypeOptions.Images,
+                allowsEditing: true,
+                aspect: [4, 3],
+                quality: 0.5,
+                base64: true,
+            });
+
+            if (!result.canceled && result.assets && result.assets.length > 0) {
+                setImageUri(result.assets[0].uri);
+                return result.assets[0].base64;
+            }
+        } catch (error) {
+            console.error('Error picking image:', error);
+            Alert.alert('Error', 'Failed to pick image. Please try again.');
+        }
+        return null;
+    };
+
+    const handleUploadPress = () => {
+        Alert.alert('Pilih Sumber', 'Silakan pilih sumber gambar', [
+            { text: 'Kamera', onPress: () => pickImage(ImagePicker.launchCameraAsync) },
+            { text: 'Galeri', onPress: () => pickImage(ImagePicker.launchImageLibraryAsync) },
+            { text: 'Batal', style: 'cancel' },
+        ]);
+    };
+
     // const handleSubmit = useCallback(async () => {
     //     try {
     //         const response = await addNewTask(formData);
@@ -421,11 +467,20 @@ const TaskForm = () => {
                 </View>
 
                 <View style={styles.fieldGroup}>
-                    <Text style={styles.labelText}>Upload Gambar Keterangan</Text>
-                    <TouchableOpacity style={styles.uploadButton} onPress={handleImagePick}>
-                        <Text style={styles.uploadButtonText}>Pilih Gambar</Text>
-                    </TouchableOpacity>
-                    {image && <Image source={{ uri: image }} style={styles.imagePreview} />}
+                <Text style={styles.labelText}>Tambah Keterangan</Text>
+                    <View style={styles.uploadContainer}>
+                        <TouchableOpacity style={styles.uploadButton} onPress={handleUploadPress}>
+                            {imageUri ? (
+                                <Image source={{ uri: imageUri }} style={styles.imagePreview} />
+                            ) : (
+                                <View style={styles.iconContainer}>
+                                    <Icon name="camera" size={24} color="#999999" />
+                                    <Text style={styles.iconSeparator}>/</Text>
+                                    <Icon name="image" size={24} color="#999999" />
+                                </View>
+                            )}
+                        </TouchableOpacity>
+                    </View>
                 </View>
 
                 <View style={styles.buttonContainer}>
@@ -492,6 +547,11 @@ const styles = StyleSheet.create({
         fontWeight: '600',
         marginBottom: 10,
         color: '#333',
+    },
+    labelDescText : {
+        fontSize: 12,
+        fontWeight: '600',  
+        color: '#a0a0a0',
     },
     input: {
         height: 54,
@@ -662,6 +722,34 @@ const styles = StyleSheet.create({
     },
     requiredField: {
         borderColor: 'red',
+    },
+    iconContainer: {
+        flexDirection: 'row',
+        justifyContent: 'center',
+        alignItems: 'center',
+    },
+    iconSeparator: {
+        marginHorizontal: 8,
+        fontSize: 24,
+        color: '#999999',
+    },
+    imagePreview: {
+        width: '100%',
+        height: '100%',
+        borderRadius: 8,
+    },
+    uploadContainer: {
+        marginBottom: 16,
+    },
+    uploadButton: {
+        height: 200,
+        borderWidth: 1,
+        borderColor: '#CCCCCC',
+        borderStyle: 'dashed',
+        borderRadius: 8,
+        justifyContent: 'center',
+        alignItems: 'center',
+        flexDirection: 'row',
     },
 });
 

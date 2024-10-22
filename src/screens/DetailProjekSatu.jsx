@@ -13,10 +13,19 @@ const formatDate = (date) => {
 
 // Reusable component for info rows
 const InfoRow = ({ label, value }) => (
-    <View style={styles.infoRow}>
-        <Text style={styles.fieldText}>{label}</Text>
-        <Text style={styles.fieldValueText}>{value}</Text>
-    </View>
+    <>
+        {value ? (
+            <View style={styles.infoRow}>
+                <Text style={styles.fieldText}>{label}</Text>
+                <Text style={styles.fieldValueText}>{value}</Text>
+            </View>
+        ) : (
+            <View style={styles.infoRow}>
+                <Text style={styles.fieldText}>-</Text>
+                <Text style={styles.fieldValueText}>-</Text>
+            </View>
+        )}
+    </>
 );
 
 // Reusable component for count boxes
@@ -28,7 +37,6 @@ const CountContainer = ({ label, value, borderColor }) => (
 );
 
 const DetailProjekSatu = ({ data }) => {
-    console.log(data);
     return (
         <ScrollView contentContainerStyle={styles.container}>
             <View style={styles.infoContainer}>
@@ -53,11 +61,19 @@ const DetailProjekSatu = ({ data }) => {
             <View style={styles.midContainer}>
                 <CountContainer
                     label="Tugas Dalam Proses"
-                    value={data.total_tasks_working_on_it ? data.total_tasks_working_on_it : "0"}
+                    value={data.total_tasks_working_on_it ? data.total_tasks_working_on_it : '0'}
                     borderColor="#DD9968"
                 />
-                <CountContainer label="Semua Tugas Selesai" value={data.total_task_completed ? data.total_task_completed : "0"} borderColor="#3AD665" />
-                <CountContainer label="Total Tugas" value={data.total_task_created ? data.total_task_created : "0"} borderColor="#DD6868" />
+                <CountContainer
+                    label="Semua Tugas Selesai"
+                    value={data.total_task_completed ? data.total_task_completed : '0'}
+                    borderColor="#3AD665"
+                />
+                <CountContainer
+                    label="Total Tugas"
+                    value={data.total_task_created ? data.total_task_created : '0'}
+                    borderColor="#DD6868"
+                />
             </View>
 
             {/* <View style={styles.lowerContainer}>

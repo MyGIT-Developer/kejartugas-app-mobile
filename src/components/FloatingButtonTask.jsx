@@ -26,9 +26,11 @@ const FloatingButtonTask = ({ projectData }) => {
 const styles = StyleSheet.create({
     container: {
         position: 'absolute',
-        bottom: 100,
+        bottom: 20, // Change to 20 to ensure it stays above the bottom edge
         right: 20,
         alignItems: 'center',
+        // Optional: If you want to make it responsive on different screen sizes
+        zIndex: 1000, // Ensures the button appears above other components
     },
     floatingButton: {
         backgroundColor: '#fff',

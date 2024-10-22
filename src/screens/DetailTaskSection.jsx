@@ -298,7 +298,6 @@ const styles = StyleSheet.create({
     },
     headerTitle: {
         fontSize: 24,
-        fontWeight: 'bold',
         color: 'white',
         fontFamily: 'Poppins-Bold',
         alignSelf: 'center',
@@ -330,7 +329,6 @@ const styles = StyleSheet.create({
     },
     projectTitle: {
         fontSize: 18,
-        fontWeight: 'bold',
         marginBottom: 8,
         color: '#1C1C1E',
         fontFamily: 'Poppins-SemiBold',
@@ -412,7 +410,6 @@ const styles = StyleSheet.create({
         color: '#333',
         marginBottom: 2,
         fontFamily: 'Poppins-Medium',
-        fontWeight: 'bold',
     },
     detailValue: {
         fontSize: 14,

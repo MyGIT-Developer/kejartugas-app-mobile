@@ -10,7 +10,7 @@ const theme = {
     fonts: {
         regular: 'Poppins-Regular',
         medium: 'Poppins-Medium',
-        semiBold: 'Poppins-SemiBold',
+        semiBold: 'Poppins_600SemiBold',
         bold: 'Poppins-Bold',
         italic: 'Poppins-Italic',
     },

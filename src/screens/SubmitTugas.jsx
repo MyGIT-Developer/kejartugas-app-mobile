@@ -243,11 +243,6 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         flexDirection: 'row',
     },
-    imagePreview: {
-        width: '100%',
-        height: '100%',
-        borderRadius: 8,
-    },
     textInput: {
         height: 100,
         padding: 8,

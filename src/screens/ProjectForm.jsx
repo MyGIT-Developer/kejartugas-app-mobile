@@ -28,7 +28,6 @@ import Icon from 'react-native-vector-icons/MaterialIcons'; // Or any other icon
 const ProjectForm = () => {
     const route = useRoute();
     const { mode = 'create', initialProjectData = null } = route.params;
-
     const [companyId, setCompanyId] = useState('');
     const [employeeId, setEmployeeId] = useState('');
     const [jobsId, setJobsId] = useState('');
@@ -36,20 +35,19 @@ const ProjectForm = () => {
     const navigation = useNavigation();
     const [formData, setFormData] = useState({
         company_id: companyId,
-        project_name: initialProjectData?.project_name || "",
+        project_name: initialProjectData?.project_name || '',
         role_id: initialProjectData?.role_id || jobsId,
         jobs_id: initialProjectData?.jobs_id || jobsId,
-        team_id: initialProjectData?.team_id || "",
+        team_id: initialProjectData?.team_id || '',
         assign_by: initialProjectData?.assign_by || employeeId,
-        assign_to: initialProjectData?.assign_to || [],
+        assign_to: initialProjectData?.assignedEmployees.map(employee => employee.id) || [],
         start_date: initialProjectData?.start_date ? new Date(initialProjectData.start_date) : new Date(),
         end_date: initialProjectData?.end_date ? new Date(initialProjectData.end_date) : new Date(),
-        project_desc: initialProjectData?.project_desc || "",
-        project_type: initialProjectData?.project_type || "",
+        project_desc: initialProjectData?.project_desc || '',
+        project_type: initialProjectData?.project_type || '',
     });
     const [employees, setEmployees] = useState([]);
     const [teams, setTeams] = useState([]);
-
     const [showStartPicker, setShowStartPicker] = useState(false);
     const [showEndPicker, setShowEndPicker] = useState(false);
     const [alert, setAlert] = useState({ show: false, type: 'success', message: '' });
@@ -58,16 +56,33 @@ const ProjectForm = () => {
     useEffect(() => {
         if (employees.length > 0) {
             setAvailableEmployees(
-                employees.filter((emp) => 
-                    !formData.assign_to.includes(emp.id) && emp.id != employeeId
-                )
+                employees.filter((emp) => !formData.assign_to.includes(emp.id) && emp.id != employeeId),
             );
         }
     }, [employees, formData.assign_to, employeeId]);
-    
 
-    const updateFormField = useCallback((field, value) => {
-        setFormData((prevState) => ({ ...prevState, [field]: value }));
+    const updateFormField = (field, value) => {
+        setFormData((prevData) => ({
+            ...prevData,
+            [field]: value,
+        }));
+    };
+
+    const handleAssignByChange = (value) => {
+        setFormData((prevData) => ({
+            ...prevData,
+            assign_by: value,
+        }));
+    };
+
+    const handleAssignToChange = useCallback((value) => {
+        setFormData((prevState) => {
+            const updatedAssignTo = prevState.assign_to.includes(value)
+                ? prevState.assign_to.filter((item) => item !== value)
+                : [...prevState.assign_to, value];
+
+            return { ...prevState, assign_to: updatedAssignTo };
+        });
     }, []);
 
     useEffect(() => {
@@ -167,85 +182,98 @@ const ProjectForm = () => {
     );
 
     const SelectedEmployees = ({ selectedIds, employees, onRemove }) => (
-        <ScrollView 
-          horizontal={false} 
-          style={styles.scrollView}
-          contentContainerStyle={styles.selectedEmployeesContainer}
+        <ScrollView
+            horizontal={false}
+            style={styles.scrollView}
+            contentContainerStyle={styles.selectedEmployeesContainer}
         >
-          {selectedIds.map(id => {
-            const employee = employees.find(emp => emp.id === id);
-            if (!employee) return null;
-            return (
-              <View key={id} style={styles.selectedEmployee}>
-                <Text style={styles.selectedEmployeeName} numberOfLines={1} ellipsizeMode="tail">
-                  {employee.employee_name}
-                </Text>
-                <TouchableOpacity onPress={() => onRemove(id)} style={styles.removeButton}>
-                  <Icon name="close" size={18} color="#666" />
-                </TouchableOpacity>
-              </View>
-            );
-          })}
+            {selectedIds.map((id) => {
+                const employee = employees.find((emp) => emp.id === id);
+                if (!employee) return null;
+                return (
+                    <View key={id} style={styles.selectedEmployee}>
+                        <Text style={styles.selectedEmployeeName} numberOfLines={1} ellipsizeMode="tail">
+                            {employee.employee_name}
+                        </Text>
+                        <TouchableOpacity onPress={() => onRemove(id)} style={styles.removeButton}>
+                            <Icon name="close" size={18} color="#666" />
+                        </TouchableOpacity>
+                    </View>
+                );
+            })}
         </ScrollView>
-      );
+    );
+
+    const projectTypeOptions = useMemo(
+        () => [
+            { label: 'General', value: 'general' },
+            { label: 'Maintenance', value: 'maintenance' },
+        ],
+        [],
+    );
 
     const renderPicker = useCallback(
-        (field, label, options, isMulti = false) => (
+        (field, label, options) => (
             <View style={styles.fieldGroup}>
                 <Text style={styles.labelText}>{label}</Text>
+                <View style={styles.pickerContainer}>
+                    <Picker
+                        selectedValue={formData[field]}
+                        onValueChange={(itemValue) => {
+                            if (field === 'assign_by') {
+                                handleAssignByChange(itemValue);
+                            } else {
+                                updateFormField(field, itemValue);
+                            }
+                        }}
+                        style={styles.picker}
+                    >
+                        <Picker.Item label="Select an option" value="" />
+                        {options.map((option) => (
+                            <Picker.Item key={option.value} label={option.label} value={option.value} />
+                        ))}
+                    </Picker>
+                </View>
+            </View>
+        ),
+        [updateFormField],
+    );
+
+    const renderMultiPicker = useCallback(
+        (label, isMulti = false) => (
+            <View style={styles.fieldGroup}>
+                <Text style={styles.labelText}>{label}</Text>
+                {isMulti && (
+                    <SelectedEmployees
+                        selectedIds={formData.assign_to}
+                        employees={employees}
+                        onRemove={handleAssignToChange}
+                    />
+                )}
                 <View style={isMulti ? styles.multiPickerContainer : styles.pickerContainer}>
-                    {isMulti && (
-                        <SelectedEmployees
-                            selectedIds={formData.assign_to}
-                            employees={employees}
-                            onRemove={handleAssignToChange}
-                        />
-                    )}
-                    {isMulti ? (
-                        // <View style={styles.flatListContainer}>
-                            <FlatList
-                            style={styles.flatListContainer}
-                                data={availableEmployees}
-                                keyExtractor={(item) => item.id.toString()}
-                                renderItem={({ item }) => (
-                                    <TouchableOpacity
-                                        onPress={() => handleAssignToChange(item.id)}
-                                        style={styles.contactItem}
-                                    >
-                                        <View
-                                            style={[
-                                                styles.initialsCircle,
-                                                { backgroundColor: getColorForInitials(item.employee_name) },
-                                            ]}
-                                        >
-                                            <Text style={styles.initialsText}>{getInitials(item.employee_name)}</Text>
-                                        </View>
-                                        <View style={styles.contactInfo}>
-                                            <Text style={styles.contactName}>{item.employee_name}</Text>
-                                            <Text>{item.job_name}</Text>
-                                        </View>
-                                    </TouchableOpacity>
-                                )}
-                                scrollEnabled={true}
-                                nestedScrollEnabled={true}
-                            />
-                        // </View>
-                    ) : (
-                        <Picker
-                            selectedValue={formData[field]}
-                            onValueChange={(itemValue) => {
-                                field === 'assign_by'
-                                    ? handleAssignByChange(itemValue)
-                                    : updateFormField(field, itemValue);
-                            }}
-                            style={styles.picker}
-                        >
-                            <Picker.Item label="Select an option" value="" />
-                            {options.map((option) => (
-                                <Picker.Item key={option.value} label={option.label} value={option.value} />
-                            ))}
-                        </Picker>
-                    )}
+                    <FlatList
+                        style={styles.flatListContainer}
+                        data={availableEmployees}
+                        keyExtractor={(item) => item.id.toString()}
+                        renderItem={({ item }) => (
+                            <TouchableOpacity onPress={() => handleAssignToChange(item.id)} style={styles.contactItem}>
+                                <View
+                                    style={[
+                                        styles.initialsCircle,
+                                        { backgroundColor: getColorForInitials(item.employee_name) },
+                                    ]}
+                                >
+                                    <Text style={styles.initialsText}>{getInitials(item.employee_name)}</Text>
+                                </View>
+                                <View style={styles.contactInfo}>
+                                    <Text style={styles.contactName}>{item.employee_name}</Text>
+                                    <Text>{item.job_name}</Text>
+                                </View>
+                            </TouchableOpacity>
+                        )}
+                        scrollEnabled={true}
+                        nestedScrollEnabled={true}
+                    />
                 </View>
             </View>
         ),
@@ -270,24 +298,6 @@ const ProjectForm = () => {
         return colors[charCode % colors.length];
     };
 
-    const handleAssignByChange = useCallback(
-        (value) => {
-            updateFormField('assign_by', value);
-            updateFormField('assign_to', []);
-        },
-        [updateFormField],
-    );
-
-    const handleAssignToChange = useCallback((value) => {
-        setFormData((prevState) => {
-            const updatedAssignTo = prevState.assign_to.includes(value)
-                ? prevState.assign_to.filter((item) => item !== value)
-                : [...prevState.assign_to, value];
-
-            return { ...prevState, assign_to: updatedAssignTo };
-        });
-    }, []);
-
     const validateForm = () => {
         if (mode === 'create') {
             if (!formData.project_name || !formData.assign_to.length) {
@@ -297,33 +307,19 @@ const ProjectForm = () => {
         return true;
     };
 
-    // const handleSubmit = useCallback(async () => {
-    //     try {
-    //         const response = await CreateProject(formData);
-    //         setAlert({ show: true, type: 'success', message: response.message });
-
-    //         setTimeout(() => {
-    //             navigation.goBack();
-    //         }, 2000);
-    //     } catch (error) {
-    //         console.log('Error creating project:', error);
-    //         setAlert({ show: true, type: 'error', message: error.message });
-    //     }
-    //     console.log(formData);
-    // }, [formData, companyId]);
-
     const handleSubmit = useCallback(async () => {
         try {
             validateForm();
 
-            const response = mode === 'create' 
-                ? await CreateProject(formData)
-                : await UpdateProject(initialProjectData.id, formData);
-                
-            setAlert({ 
-                show: true, 
-                type: 'success', 
-                message: response.message || `Projek berhasil ${mode === 'create' ? 'dibuat' : 'diperbarui'}`
+            const response =
+                mode === 'create'
+                    ? await CreateProject(formData)
+                    : await UpdateProject(initialProjectData.id, formData);
+
+            setAlert({
+                show: true,
+                type: 'success',
+                message: response.message || `Projek berhasil ${mode === 'create' ? 'dibuat' : 'diperbarui'}`,
             });
 
             setTimeout(() => {
@@ -347,13 +343,11 @@ const ProjectForm = () => {
                 <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
                     <Feather name="chevron-left" size={28} color="white" />
                 </TouchableOpacity>
-                <Text style={styles.header}>
-                    {mode === 'create' ? 'Projek Baru' : 'Update Projek'}
-                </Text>
+                <Text style={styles.header}>{mode === 'create' ? 'Projek Baru' : 'Update Projek'}</Text>
             </View>
             <View style={styles.formContainer}>
                 <View style={styles.fieldGroup}>
-                <Text style={styles.labelText}>
+                    <Text style={styles.labelText}>
                         Nama Proyek {mode === 'create' && <Text style={styles.required}>*</Text>}
                     </Text>
                     <TextInput
@@ -375,17 +369,25 @@ const ProjectForm = () => {
                     {renderDatePicker('end_date', showEndPicker, setShowEndPicker)}
                 </View>
 
+                {mode === 'update' &&
+                    renderPicker(
+                        'assign_by',
+                        'Ditugaskan Oleh',
+                        employees.map((emp) => ({ label: emp.employee_name, value: emp.id })),
+                    )}
+
                 {/* {renderPicker('assign_by', 'Ditugaskan oleh', employees.map(emp => ({ label: emp.employee_name, value: emp.id })))} */}
-                {renderPicker(
-                    'assign_to',
+                {renderMultiPicker(
                     'Ditugaskan Kepada',
                     availableEmployees.map((emp) => ({ label: emp.employee_name, value: emp.id })),
                     true,
                 )}
-                {renderPicker('project_type', 'Tipe Proyek', [
-                    { label: 'General', value: 'general' },
-                    { label: 'Maintenance', value: 'maintenance' },
-                ])}
+
+                {renderPicker(
+                    'project_type',
+                    'Tipe Proyek',
+                    projectTypeOptions.map((option) => ({ label: option.label, value: option.value })),
+                )}
 
                 <View style={styles.fieldGroup}>
                     <Text style={styles.labelText}>Keterangan</Text>
@@ -398,12 +400,10 @@ const ProjectForm = () => {
                         numberOfLines={4}
                     />
                 </View>
-                
+
                 <View style={styles.buttonContainer}>
                     <TouchableOpacity style={styles.button} onPress={handleSubmit}>
-                        <Text style={styles.buttonText}>
-                            {mode === 'create' ? 'Simpan' : 'Update'}
-                        </Text>
+                        <Text style={styles.buttonText}>{mode === 'create' ? 'Simpan' : 'Update'}</Text>
                     </TouchableOpacity>
                 </View>
             </View>
@@ -538,7 +538,7 @@ const styles = StyleSheet.create({
     picker: {
         height: 54,
         width: '100%', // Ensure full width
-        fontFamily:"Poppins-Medium",
+        fontFamily: 'Poppins-Medium',
     },
     multiSelectContainer: {
         flexDirection: 'row',

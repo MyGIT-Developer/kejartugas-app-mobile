@@ -8,7 +8,8 @@ import {
     ScrollView,
     Modal,
     Image,
-    Animated,
+    Animated, 
+    Easing,
     TextInput,
 } from 'react-native';
 import * as Progress from 'react-native-progress';
@@ -18,7 +19,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Feather } from '@expo/vector-icons';
 import { approveTask, rejectTask } from '../api/task';
 import ReusableAlertBottomPopUp from './ReusableBottomPopUp';
-const { height: SCREEN_HEIGHT } = Dimensions.get('window');
+const { height: SCREEN_HEIGHT, width: SCREEN_WIDTH } = Dimensions.get('window');
 
 const getStatusBadgeColor = (status) => {
     switch (status) {
@@ -119,13 +120,45 @@ const DraggableModalTask = ({ visible, onClose, taskDetails }) => {
             }).start();
         }
     }, [visible]);
+    
+    const ANIMATION_DURATION = 600; // Increased duration for smoother effect
 
     const handleClose = () => {
-        Animated.spring(modalY, {
+        Animated.timing(modalY, {
             toValue: SCREEN_HEIGHT,
+            duration: ANIMATION_DURATION,
+            easing: Easing.out(Easing.cubic), // Changed easing function
             useNativeDriver: true,
-        }).start(() => onClose());
+        }).start(({ finished }) => {
+            if (finished) {
+                onClose();
+            }
+        });
     };
+
+// Add this listener to track the animation progress
+useEffect(() => {
+    const listener = modalY.addListener(({ value }) => {
+    });
+
+    return () => {
+        modalY.removeListener(listener);
+    };
+}, []);
+
+// Don't forget to remove the listener when the component unmounts
+useEffect(() => {
+    if (visible) {
+        modalY.setValue(SCREEN_HEIGHT);
+        Animated.spring(modalY, {
+            toValue: 0,
+            useNativeDriver: true,
+            tension: 50,
+            friction: 7,
+        }).start();
+    }
+}, [visible]);
+
     const handleCommentPress = async () => {
         try {
             // Navigate to ChatInterface and pass the taskId and taskDetails
@@ -203,6 +236,14 @@ const DraggableModalTask = ({ visible, onClose, taskDetails }) => {
         <Modal transparent={true} visible={visible} onRequestClose={handleClose}>
             <View style={styles.modalContainer}>
                 <TouchableOpacity style={styles.overlay} onPress={handleClose} />
+                <Animated.View 
+                style={[
+                    styles.bottomSheetContainer,
+                    {
+                        transform: [{ translateY: modalY }]
+                    }
+                ]}
+            >
                 <View style={styles.bottomSheet}>
                     <View style={styles.header}>
                         <Text style={styles.title}>Detail Tugas</Text>
@@ -237,7 +278,7 @@ const DraggableModalTask = ({ visible, onClose, taskDetails }) => {
                                 showsText={true}
                                 formatText={() => `${taskDetails.progress}%`}
                                 textStyle={{
-                                    fontFamily: 'Poppins-SemiBold',
+                                    fontFamily: 'Poppins-Regular',
                                     fontSize: 14,
                                     color:
                                         taskDetails.progress === 0
@@ -277,56 +318,61 @@ const DraggableModalTask = ({ visible, onClose, taskDetails }) => {
                                 </View>
                             </View>
                             {/* Collection Information */}
-                            <Text style={styles.sectionTitle}>Informasi Pengumpulan</Text>
-                            <View style={styles.infoContainer}>
-                                <View style={styles.infoRow}>
-                                    <View style={styles.infoColumn}>
-                                        <Text style={styles.infoLabel}>Tanggal Pengumpulan</Text>
-                                        <Text style={styles.infoValue}>{formatDate(taskDetails.collectionDate)}</Text>
-                                    </View>
-                                    <View style={styles.infoColumn}>
-                                        <Text style={styles.infoLabel}>Status Pengumpulan</Text>
-                                        <View
-                                            style={[
-                                                styles.statusBadge,
-                                                { backgroundColor: taskDetails.collectionStatusColor },
-                                            ]}
-                                        >
-                                            <Text
-                                                style={[
-                                                    styles.statusText,
-                                                    { color: taskDetails.collectionStatusTextColor },
-                                                ]}
-                                            >
-                                                {taskDetails.collectionStatus}
-                                            </Text>
+                             {taskDetails.status !== 'onPending' || taskDetails.status !== 'workingOnIt' || taskDetails.status !== 'rejected'  && (
+                                <>
+                                    <Text style={styles.sectionTitle}>Informasi Pengumpulan</Text>
+                                    <View style={styles.infoContainer}>
+                                        <View style={styles.infoRow}>
+                                            <View style={styles.infoColumn}>
+                                                <Text style={styles.infoLabel}>Tanggal Pengumpulan</Text>
+                                                <Text style={styles.infoValue}>
+                                                    {formatDate(taskDetails.collectionDate)}
+                                                </Text>
+                                            </View>
+                                            <View style={styles.infoColumn}>
+                                                <Text style={styles.infoLabel}>Status Pengumpulan</Text>
+                                                <View
+                                                    style={[
+                                                        styles.statusBadge,
+                                                        { backgroundColor: taskDetails.collectionStatusColor },
+                                                    ]}
+                                                >
+                                                    <Text
+                                                        style={[
+                                                            styles.statusText,
+                                                            { color: taskDetails.collectionStatusTextColor },
+                                                        ]}
+                                                    >
+                                                        {taskDetails.collectionStatus}
+                                                    </Text>
+                                                </View>
+                                            </View>
+                                        </View>
+                                        <View style={styles.infoRow}>
+                                            <View style={styles.infoColumn}>
+                                                <Text style={styles.infoLabel}>Bukti Pengumpulan</Text>
+                                                {taskDetails.task_image ? (
+                                                    <Image
+                                                        source={{ uri: taskDetails.task_image }}
+                                                        style={styles.evidenceImage}
+                                                        resizeMode="cover"
+                                                    />
+                                                ) : (
+                                                    <View style={styles.evidenceBox}>
+                                                        <Text style={styles.noImageText}>Tidak ada bukti</Text>
+                                                    </View>
+                                                )}
+                                            </View>
+                                            <View style={styles.infoColumn}>
+                                                <Text style={styles.infoLabel}>Keterangan</Text>
+                                                <Text style={styles.infoValue}>
+                                                    {taskDetails.collectionDescription ||
+                                                        'Tidak ada keterangan tersedia'}
+                                                </Text>
+                                            </View>
                                         </View>
                                     </View>
-                                </View>
-                                <View style={styles.infoRow}>
-                                    <View style={styles.infoColumn}>
-                                        <Text style={styles.infoLabel}>Bukti Pengumpulan</Text>
-                                        {taskDetails.task_image ? (
-                                            <Image
-                                                source={{ uri: taskDetails.task_image }}
-                                                style={styles.evidenceImage}
-                                                resizeMode="cover"
-                                            />
-                                        ) : (
-                                            <View style={styles.evidenceBox}>
-                                                <Text style={styles.noImageText}>Tidak ada bukti</Text>
-                                            </View>
-                                        )}
-                                    </View>
-                                    <View style={styles.infoColumn}>
-                                        <Text style={styles.infoLabel}>Keterangan</Text>
-                                        <Text style={styles.infoValue}>
-                                            {taskDetails.collectionDescription || 'Tidak ada keterangan tersedia'}
-                                        </Text>
-                                    </View>
-                                </View>
-                            </View>
-                            {/* <View
+                                    {/* <View
                                 style={[
                                     styles.buttonContainer,
                                     { paddingBottom: 10, borderBottomWidth: 1, borderBottomColor: '#a0a0a0' },
@@ -347,18 +393,25 @@ const DraggableModalTask = ({ visible, onClose, taskDetails }) => {
                                     <Text style={styles.submitButtonText}>Tunda</Text>
                                 </TouchableOpacity>
                             </View> */}
+                                </>
+                            )}
                         </View>
                         <View style={styles.actionContainer}>
                             <TouchableOpacity style={styles.commentButton} onPress={handleCommentPress}>
                                 <Feather name="message-square" size={16} color="white" />
                                 <Text style={styles.commentButtonText}>Komentar</Text>
                             </TouchableOpacity>
-                            
-                            {taskDetails.status !== 'onReview' &&
-                                taskDetails.assignedEmployees?.some((employee) => employee.employeeId === employeeId) && (
+
+
+                            {(taskDetails.status === 'workingOnIt' || taskDetails.status === 'rejected') &&
+                                taskDetails.assignedEmployees?.some(
+                                    (employee) => employee.employeeId == employeeId,
+                                ) && (
+                                    <View style={styles.reviewButtonContainer}>
                                     <TouchableOpacity style={styles.submitButton} onPress={handleSubmit}>
                                         <Text style={styles.submitButtonText}>Submit Tugas</Text>
                                     </TouchableOpacity>
+                                </View>
                                 )}
 
                             {taskDetails.status === 'onReview' && taskDetails.assignedById == employeeId && (
@@ -377,11 +430,13 @@ const DraggableModalTask = ({ visible, onClose, taskDetails }) => {
                                     </TouchableOpacity>
                                 </View>
                             )}
+                            
                         </View>
-                        
+
                         <View style={styles.bottomSpacer} />
                     </ScrollView>
                 </View>
+                </Animated.View>
             </View>
             <RejectConfirmationModal
                 visible={isRejectModalVisible}
@@ -402,10 +457,26 @@ const styles = StyleSheet.create({
         backgroundColor: 'rgba(0, 0, 0, 0.5)',
     },
     bottomSheet: {
+        position: 'absolute',
+        bottom: 0,
+        left: 0,
+        right: 0,
         backgroundColor: 'white',
         borderTopLeftRadius: 20,
         borderTopRightRadius: 20,
         maxHeight: SCREEN_HEIGHT * 0.8,
+        shadowColor: "#000",
+        shadowOffset: {
+            width: 0,
+            height: -3,
+        },
+        shadowOpacity: 0.1,
+        shadowRadius: 3,
+        elevation: 5,
+    },
+    bottomSheetContainer: {
+        height: SCREEN_HEIGHT,
+        width: SCREEN_WIDTH,
     },
     header: {
         flexDirection: 'row',
@@ -431,6 +502,7 @@ const styles = StyleSheet.create({
     },
     taskHeader: {
         flexDirection: 'column',
+        maxWidth: '60%',
     },
     taskTitle: {
         fontFamily: 'Poppins-Bold',
@@ -443,7 +515,7 @@ const styles = StyleSheet.create({
         marginBottom: 20,
     },
     statusBadge: {
-        padding: 10,
+        padding: 5,
         borderRadius: 10,
         justifyContent: 'center',
         alignItems: 'center',
@@ -517,6 +589,7 @@ const styles = StyleSheet.create({
         borderRadius: 30,
         alignItems: 'center',
         padding: 10,
+        width: '100%',
     },
     reviewButtonContainer: {
         flexDirection: 'row',
@@ -614,7 +687,7 @@ const styles = StyleSheet.create({
         textAlign: 'center',
         fontSize: 14,
     },
-    
+
     evidenceImage: {
         width: '100%',
         height: 150,

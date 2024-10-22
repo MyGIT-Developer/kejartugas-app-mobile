@@ -10,6 +10,9 @@ import {
     ScrollView,
     Alert,
     RefreshControl,
+    ActivityIndicator,
+    Modal,
+    Animated,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useNavigation } from '@react-navigation/native';
@@ -27,8 +30,10 @@ const showNotImplementedAlert = (featureName) => {
 };
 
 const Profile = () => {
+    const [isLoading, setIsLoading] = useState(false);
     const navigation = useNavigation();
     const [userData, setUserData] = useState([]);
+    const [modalVisible, setModalVisible] = useState(false); // Modal visibility state
     const [refreshing, setRefreshing] = useState(false);
     const baseUrl = 'http://202.10.36.103:8000/';
     const fetchUserData = useCallback(async () => {
@@ -40,6 +45,24 @@ const Profile = () => {
             console.error('Error fetching user data:', error);
         }
     }, []);
+
+    const [slideAnim] = useState(new Animated.Value(300)); // Start below screen
+
+    React.useEffect(() => {
+        if (modalVisible) {
+            Animated.timing(slideAnim, {
+                toValue: 0, // Slide up to its normal position
+                duration: 300,
+                useNativeDriver: true,
+            }).start();
+        } else {
+            Animated.timing(slideAnim, {
+                toValue: 300, // Slide back down
+                duration: 300,
+                useNativeDriver: true,
+            }).start();
+        }
+    }, [modalVisible]);
 
     useEffect(() => {
         const getUserData = async () => {
@@ -65,15 +88,37 @@ const Profile = () => {
     );
 
     const handleLogout = async () => {
+        setIsLoading(true); // Start loading
+    
+        // Delay function using Promise and setTimeout
+        const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+    
         try {
+            // Optional delay (e.g., 2 seconds before logging out)
+            await delay(2000); // Adjust the time in milliseconds (2000ms = 2 seconds)
+    
             await AsyncStorage.clear();
             navigation.reset({
                 index: 0,
                 routes: [{ name: 'Login' }],
             });
+    
+            // Close the modal after successful logout
+            setModalVisible(false); 
         } catch (error) {
             console.log(error);
+        } finally {
+            setIsLoading(false); // Stop loading
         }
+    };
+    
+
+    const confirmLogout = () => {
+        setModalVisible(true); // Show the confirmation modal
+    };
+
+    const cancelLogout = () => {
+        setModalVisible(false); // Hide modal
     };
 
     return (
@@ -142,9 +187,35 @@ const Profile = () => {
                     />
                 </View>
 
-                <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
-                    <Text style={styles.logoutButtonText}>Logout</Text>
-                </TouchableOpacity>
+                <View>
+                    <TouchableOpacity style={styles.logoutButton} onPress={confirmLogout}>
+                        {/* <Icon name="logout" size={24} color="#fff" style={{ transform: [{ scaleX: -1 }] }}/> */}
+                        <Text style={styles.logoutButtonText}>Logout</Text>
+                    </TouchableOpacity>
+
+                    {/* Logout Confirmation Modal */}
+                    <Modal visible={modalVisible} transparent={true} animationType="none">
+                        <View style={styles.overlay}>
+                            <Animated.View style={[styles.modalContent, { transform: [{ translateY: slideAnim }] }]}>
+                                {isLoading ? (
+                                    <ActivityIndicator size="large" color="#0000ff" />
+                                ) : (
+                                    <>
+                                        <Text style={styles.modalTitle}>Are you sure you want to logout?</Text>
+                                        <View style={styles.modalButtonContainer}>
+                                            <TouchableOpacity style={styles.confirmButton} onPress={handleLogout}>
+                                                <Text style={styles.buttonText}>Logout</Text>
+                                            </TouchableOpacity>
+                                            <TouchableOpacity style={styles.cancelButton} onPress={cancelLogout}>
+                                                <Text style={styles.buttonText}>Cancel</Text>
+                                            </TouchableOpacity>
+                                        </View>
+                                    </>
+                                )}
+                            </Animated.View>
+                        </View>
+                    </Modal>
+                </View>
             </ScrollView>
         </SafeAreaView>
     );
@@ -200,16 +271,18 @@ const styles = StyleSheet.create({
         height: 100,
         borderRadius: 50,
         marginBottom: 10,
+        borderWidth: 2,
+        borderColor: '#fff',
     },
     name: {
         fontSize: 24,
-        fontWeight: 'bold',
+        fontFamily: 'Poppins-Bold',
         color: '#333',
     },
     role: {
         fontSize: 16,
+        fontFamily: 'Poppins-Medium',
         color: '#fff',
-        marginTop: 4,
     },
     infoContainer: {
         marginTop: 20,
@@ -224,6 +297,7 @@ const styles = StyleSheet.create({
         marginLeft: 10,
         fontSize: 16,
         color: '#fff',
+        fontFamily: 'Poppins-Medium',
     },
     statsContainer: {
         flexDirection: 'row',
@@ -267,6 +341,8 @@ const styles = StyleSheet.create({
         marginLeft: 16,
         fontSize: 16,
         color: '#4A4A4A',
+        fontFamily: 'Poppins-Medium',
+        letterSpacing: -0.5,
     },
     logoutButton: {
         backgroundColor: '#e74c3c',
@@ -275,11 +351,64 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         marginHorizontal: 20,
         marginTop: 30,
+        flexDirection: 'row',
+        gap: 10,
+        justifyContent: 'center',
     },
     logoutButtonText: {
         color: '#FFF',
         fontSize: 16,
-        fontWeight: 'bold',
+        fontFamily: 'Poppins-Bold',
+    },
+    overlay: {
+        flex: 1,
+        justifyContent: 'center',
+        alignItems: 'center',
+        backgroundColor: 'rgba(0, 0, 0, 0.5)', // Semi-transparent overlay
+    },
+    modalContainer: {
+        flex: 1,
+        justifyContent: 'center',
+        alignItems: 'center',
+        backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    },
+    modalContent: {
+        width: '80%',
+        backgroundColor: 'white',
+        borderRadius: 10,
+        padding: 20,
+        alignItems: 'center',
+        position: 'absolute',
+    },
+    modalTitle: {
+        fontSize: 18,
+        fontFamily: 'Poppins-Bold',
+        marginBottom: 20,
+    },
+    modalButtonContainer: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        width: '100%',
+    },
+    confirmButton: {
+        backgroundColor: '#e74c3c',
+        padding: 10,
+        borderRadius: 5,
+        flex: 1,
+        marginRight: 10,
+        alignItems: 'center',
+    },
+    cancelButton: {
+        backgroundColor: '#808080',
+        padding: 10,
+        borderRadius: 5,
+        flex: 1,
+        alignItems: 'center',
+    },
+    buttonText: {
+        color: '#FFF',
+        fontSize: 16,
+        fontFamily: 'Poppins-Bold',
     },
 });
 

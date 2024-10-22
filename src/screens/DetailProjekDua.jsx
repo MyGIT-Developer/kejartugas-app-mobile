@@ -212,13 +212,13 @@ const TableRow = React.memo(({ item, index, onTaskPress, projectData, fetchProje
                                         <Text style={[styles.expandedText, { color: '#0E509E' }]}>Detail</Text>
                                         <Feather name={'eye'} color="blue" />
                                     </TouchableOpacity>
-                                    {/* <TouchableOpacity
+                                    <TouchableOpacity
                                         onPress={() => handleGoToUpdate()}
                                         style={[styles.buttonAction, { backgroundColor: 'none' }]}
                                     >
                                         <Text style={[styles.expandedText, { color: '#0E509E' }]}>Edit</Text>
                                         <Feather name={'edit'} color="black" />
-                                    </TouchableOpacity> */}
+                                    </TouchableOpacity>
                                     <TouchableOpacity
                                         onPress={() => handleDeleteTask(item.id)}
                                         style={[styles.buttonAction, { backgroundColor: 'none' }]}
@@ -315,56 +315,62 @@ const DetailProjekDua = ({ data, onFetch }) => {
     };
 
     return (
-        <SafeAreaView>
-            <ScrollView contentContainerStyle={styles.container}>
-                <ScrollView style={styles.table}>
-                    <View style={styles.tableHeader}>
-                        <Text style={[styles.headerCell, styles.indexHeaderCell]}>No</Text>
-                        <Text style={[styles.headerCell, styles.taskNameHeaderCell]}>Nama Tugas</Text>
-                        <Text style={[styles.headerCell, styles.statusHeaderCell]}>Status</Text>
-                    </View>
-                    {taskData && taskData.length > 0 ? (
-                        taskData.map((item, index) => (
-                            <TableRow
-                                key={item.id || index}
-                                item={item}
-                                index={index}
-                                onTaskPress={handleTaskDetailPress}
-                                projectData={data}
-                                fetchProjectData={onFetch}
-                            />
-                        ))
-                    ) : (
-                        <TableRow item={{ task_name: 'No data available' }} index={0} />
-                    )}
-                </ScrollView>
-
-                {modalType === 'default' ? (
-                    <DraggableModalTask
-                        visible={draggableModalVisible}
-                        onClose={() => {
-                            setDraggableModalVisible(false);
-                            setSelectedTask(null); // Optional: Reset selectedTask on close
-                        }}
-                        taskDetails={selectedTask || {}}
-                    />
+        <SafeAreaView style={styles.safeArea}>
+        <ScrollView contentContainerStyle={styles.container}>
+            <View style={styles.table}>
+                <View style={styles.tableHeader}>
+                    <Text style={[styles.headerCell, styles.indexHeaderCell]}>No</Text>
+                    <Text style={[styles.headerCell, styles.taskNameHeaderCell]}>Nama Tugas</Text>
+                    <Text style={[styles.headerCell, styles.statusHeaderCell]}>Status</Text>
+                </View>
+                {taskData && taskData.length > 0 ? (
+                    taskData.map((item, index) => (
+                        <TableRow
+                            key={item.id || index}
+                            item={item}
+                            index={index}
+                            onTaskPress={handleTaskDetailPress}
+                            projectData={data}
+                            fetchProjectData={onFetch}
+                        />
+                    ))
                 ) : (
-                    <ReusableModalSuccess
-                        visible={draggableModalVisible}
-                        onClose={() => setDraggableModalVisible(false)}
-                        taskDetails={selectedTask || {}}
-                    />
+                    <TableRow item={{ task_name: 'No data available' }} index={0} />
                 )}
-            </ScrollView>
+            </View>
             <FloatingButtonTask projectData={data} />
-        </SafeAreaView>
+        </ScrollView>
+
+        {modalType === 'default' ? (
+            <DraggableModalTask
+                visible={draggableModalVisible}
+                onClose={() => {
+                    setDraggableModalVisible(false);
+                    setSelectedTask(null); // Optional: Reset selectedTask on close
+                }}
+                taskDetails={selectedTask || {}}
+            />
+        ) : (
+            <ReusableModalSuccess
+                visible={draggableModalVisible}
+                onClose={() => setDraggableModalVisible(false)}
+                taskDetails={selectedTask || {}}
+            />
+        )}
+
+        {/* Floating Button positioned at the bottom right */}
+
+    </SafeAreaView>
     );
 };
 
 const styles = StyleSheet.create({
-    container: {
-        paddingHorizontal: 20,
-        marginBottom: 200,
+    safeArea: {
+        flex: 1, // Make sure SafeAreaView takes full height
+    },
+   container: {
+    paddingHorizontal: 20,
+        paddingBottom: 100, // Space for floating button, adjust as needed
     },
     table: {
         borderRadius: 15,

@@ -29,6 +29,7 @@ const ReusableBottomModal = ({ visible, onClose, projectDetails }) => {
 
     return (
         <Modal visible={visible} transparent={true} animationType="slide" onRequestClose={onClose}>
+            <View style={styles.modalContainer}>
             <View style={styles.modalOverlay}>
                 <View style={styles.modalContent}>
                     <ScrollView contentContainerStyle={styles.scrollViewContent}>
@@ -56,14 +57,18 @@ const ReusableBottomModal = ({ visible, onClose, projectDetails }) => {
                     </TouchableOpacity>
                 </View>
             </View>
+            </View>
         </Modal>
     );
 };
 
 const styles = StyleSheet.create({
-    modalOverlay: {
+    modalContainer: {
         flex: 1,
         justifyContent: 'flex-end',
+    },
+    modalOverlay: {
+        ...StyleSheet.absoluteFillObject,
         backgroundColor: 'rgba(0, 0, 0, 0.5)',
     },
     modalContent: {
@@ -73,6 +78,21 @@ const styles = StyleSheet.create({
         padding: 20,
         width: '100%',
         maxHeight: '80%', // Limit the height to 80% of screen height
+        position: 'absolute',
+        bottom: 0,
+        left: 0,
+        right: 0,
+        backgroundColor: 'white',
+        borderTopLeftRadius: 20,
+        borderTopRightRadius: 20,
+        shadowColor: '#000',
+        shadowOffset: {
+            width: 0,
+            height: -3,
+        },
+        shadowOpacity: 0.1,
+        shadowRadius: 3,
+        elevation: 5,
     },
     scrollViewContent: {
         flexGrow: 1,

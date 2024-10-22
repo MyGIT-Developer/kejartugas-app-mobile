@@ -51,17 +51,19 @@ const getStatusBadgeColor = (status, endDate) => {
 
     switch (status) {
         case 'workingOnIt':
-            return { color: '#CCC8C8', textColor: '#333333', label: 'Dalam Pengerjaan' };
+            return { color: '#aeaeae', label: 'Dalam Pengerjaan', textColor: '#000000' };
         case 'onReview':
-            return { color: '#9AE1EA', textColor: '#333333', label: 'Dalam Peninjauan' };
+            return { color: '#f6e092', label: 'Dalam Peninjauan', textColor: '#ee9000' };
         case 'rejected':
-            return { color: '#F69292', textColor: '#811616', label: 'Ditolak' };
+            return { color: '#F69292', label: 'Ditolak', textColor: '#811616' };
         case 'onHold':
-            return { color: '#F69292', textColor: '#811616', label: 'Ditunda' };
+            return { color: '#F69292', label: 'Ditunda', textColor: '#811616' };
+        case 'Completed':
+            return { color: '#C9F8C1', label: 'Selesai', textColor: '#0A642E' };
         case 'onPending':
-            return { color: '#F0E08A', textColor: '#333333', label: 'Tersedia' };
+            return { color: '#F0E08A', label: 'Tersedia', textColor: '#656218' };
         default:
-            return { color: '#E0E0E0', textColor: '#333333', label: status };
+            return { color: '#E0E0E0', label: status, textColor: '#000000' };
     }
 };
 
@@ -122,9 +124,16 @@ const TaskCard = React.memo(({ task = {}, onProjectDetailPress = () => {}, onTas
 
 const ShimmerTaskCard = () => (
     <View style={styles.taskCard}>
-        <Shimmer width={200} height={20} style={styles.shimmerTitle} />
-        <Shimmer width={150} height={15} style={styles.shimmerSubtitle} />
-        <Shimmer width={100} height={15} style={styles.shimmerButton} />
+        <View style={styles.taskContent}>
+            <Shimmer width={200} height={20} style={styles.shimmerTitle} />
+            <Shimmer width={175} height={20} style={styles.shimmerTitle} />
+        </View>
+        <Shimmer width={150} height={20} style={[styles.shimmerTitle, {marginBottom:45}]} />
+      
+        <View style={styles.buttonContainer}>
+            <Shimmer width={120} height={25} style={styles.shimmerButton} />
+            <Shimmer width={100} height={30} style={styles.shimmerButton} />
+        </View>
     </View>
 );
 
@@ -317,7 +326,8 @@ const Tugas = () => {
             subtitle: task.project_name,
             startDate: task.start_date,
             endDate: task.end_date,
-            assignedBy: task.assign_by_name,
+            assignedById: task.assign_by ? task.assign_by : 'N/A', // Accessing nested object
+            assignedByName: task.assign_by_name ? task.assign_by_name : 'N/A', // Accessing nested object
             description: task.task_desc,
             progress: task.percentage_task || 0,
             status: task.task_status,
@@ -331,6 +341,11 @@ const Tugas = () => {
             collectionStatusTextColor: collectionStatus.textColor,
             collectionDescription: task.task_desc || 'N/A',
             task_image: task.task_image ? `${baseUrl}${task.task_image}` : null,
+            assignedEmployees:
+                task.assignedEmployees.map((emp) => ({
+                    employeeId: emp.id,
+                    employeeName: emp.employee_name,
+                })) || [],
         };
 
         setSelectedTask(taskDetails);
@@ -470,7 +485,7 @@ const styles = StyleSheet.create({
     },
     headerTitle: {
         fontSize: 24,
-        fontWeight: 'bold',
+        fontFamily: 'Poppins-Bold',
         color: 'white',
         marginBottom: 10,
         alignSelf: 'center',
@@ -487,8 +502,7 @@ const styles = StyleSheet.create({
     },
     sectionTitle: {
         fontSize: 18,
-        fontWeight: 'bold',
-        fontFamily: 'Poppins-Bold',
+        fontFamily: 'Poppins-Medium',
     },
     seeAllText: {
         color: '#0E509E',
@@ -512,7 +526,6 @@ const styles = StyleSheet.create({
     },
     taskTitle: {
         fontSize: 16,
-        fontWeight: 'bold',
         color: '#000',
         marginBottom: 5,
         lineHeight: 22,
@@ -535,7 +548,6 @@ const styles = StyleSheet.create({
     },
     statusText: {
         color: '#333',
-        fontWeight: '500',
         fontSize: 12,
         fontFamily: 'Poppins-Regular',
     },
@@ -549,7 +561,6 @@ const styles = StyleSheet.create({
     },
     badgeText: {
         color: '#333',
-        fontWeight: '500',
         fontSize: 12,
         fontFamily: 'Poppins-Regular',
     },
@@ -567,7 +578,6 @@ const styles = StyleSheet.create({
     },
     detailButtonText: {
         color: '#444444',
-        fontWeight: '500',
         marginTop: 20,
         fontSize: 14,
         fontFamily: 'Poppins-Regular',
@@ -580,7 +590,6 @@ const styles = StyleSheet.create({
     },
     projectButtonText: {
         color: 'white',
-        fontWeight: '500',
         fontSize: 14,
         fontFamily: 'Poppins-Regular',
     },
@@ -602,7 +611,7 @@ const styles = StyleSheet.create({
         marginBottom: 10,
     },
     shimmerSubtitle: {
-        marginBottom: 15,
+        marginBottom: 0,
     },
     shimmerStatus: {
         position: 'absolute',
@@ -611,16 +620,14 @@ const styles = StyleSheet.create({
         borderRadius: 20,
     },
     shimmerButton: {
-        position: 'absolute',
-        bottom: 20,
-        left: 20,
+        
     },
     bottomSpacer: {
         height: 100,
     },
     title: {
         fontSize: 18,
-        fontWeight: 'bold',
+        fontFamily: 'Poppins-Bold',
         marginBottom: 10,
     },
     label: {
@@ -634,7 +641,6 @@ const styles = StyleSheet.create({
     },
     remainingDaysText: {
         color: '#0E509E',
-        fontWeight: '500',
         fontSize: 14,
         fontFamily: 'Poppins-Regular',
     },
@@ -663,7 +669,7 @@ const styles = StyleSheet.create({
     icon: {
         fontSize: 40,
         color: 'white',
-        fontWeight: 'bold',
+        fontFamily: 'Poppins-Bold',
     },
     message: {
         fontSize: 16,

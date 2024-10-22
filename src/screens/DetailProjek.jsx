@@ -202,7 +202,7 @@ const DetailProjek = ({ route }) => {
                             placement="bottom"
                         >
                             <View style={styles.menuContainer}>
-                                {/* <Pressable
+                                <Pressable
                                     onPress={() => handleGoToUpdate()}
                                     style={styles.menuItem}
                                 >
@@ -211,7 +211,7 @@ const DetailProjek = ({ route }) => {
                                     </View>
 
                                     <Text style={[styles.optionText, { color: 'black' }]}>Edit Proyek</Text>
-                                </Pressable> */}
+                                </Pressable>
                                 {/* <Pressable
                                     onPress={() => {
                                         togglePopover();

@@ -10,6 +10,7 @@ import CircularButton from '../components/CircularButton';
 import ReusableBottomPopUp from '../components/ReusableBottomPopUp';
 import { markAbsent, getAttendance, getAttendanceReport, checkOut, checkIn } from '../api/absent';
 import { getParameter } from '../api/parameter';
+import Shimmer from '../components/Shimmer';
 
 const { height } = Dimensions.get('window');
 const AccessDenied = () => {
@@ -22,6 +23,38 @@ const AccessDenied = () => {
         </View>
     );
 };
+
+const ShimmerTaskCard = () => (
+    <View style={[styles.containerPerDate, { marginBottom: 20 }]}>
+        <View style={styles.upperAbsent}>
+            <Shimmer width={100} height={15} style={styles.shimmerSubtitle} />
+            <Shimmer width={50} height={15} style={styles.shimmerSubtitle} />
+        </View>
+
+        <View style={styles.midAbsent}>
+            <View style={styles.column}>
+                <Shimmer width={70} height={15} style={styles.shimmerSubtitle} />
+                <Shimmer width={70} height={15} style={styles.shimmerSubtitle} />
+            </View>
+            <View style={styles.column}>
+                <Shimmer width={70} height={15} style={styles.shimmerSubtitle} />
+                <Shimmer width={70} height={15} style={styles.shimmerSubtitle} />
+            </View>
+            <View style={styles.column}>
+                <Shimmer width={70} height={15} style={styles.shimmerSubtitle} />
+                <Shimmer width={70} height={15} style={styles.shimmerSubtitle} />
+            </View>
+        </View>
+
+        <View style={styles.lowerAbsent}>
+            <Shimmer width={70} height={15} style={styles.shimmerSubtitle} />
+            <View>
+                <Shimmer width={70} height={15} style={styles.shimmerSubtitle} />
+            </View>
+        </View>
+    </View>
+);
+
 const Kehadiran = () => {
     const [currentTime, setCurrentTime] = useState('');
     const [locationName, setLocationName] = useState('Waiting for location...');
@@ -30,6 +63,7 @@ const Kehadiran = () => {
     const [companyId, setCompanyId] = useState(null);
     const [attendanceData, setAttendanceData] = useState([]);
     const [isCheckedIn, setIsCheckedIn] = useState(false);
+    const [isCheckedOut, setIsCheckedOut] = useState(false);
     const [jamTelat, setJamTelat] = useState('');
     const [radius, setRadius] = useState(null);
     const [refreshing, setRefreshing] = useState(false);
@@ -37,7 +71,7 @@ const Kehadiran = () => {
     const [location, setLocation] = useState(null);
     const [currentPage, setCurrentPage] = useState(0);
     const [hasAccess, setHasAccess] = useState(null);
-
+    const [isLoading, setIsLoading] = useState(true);
     const navigation = useNavigation();
 
     const itemsPerPage = 7;
@@ -47,7 +81,7 @@ const Kehadiran = () => {
 
     const fetchData = useCallback(async () => {
         if (!employeeId || !companyId) return;
-
+        setIsLoading(true);
         try {
             const [attendanceResponse, parameterResponse, locationResponse] = await Promise.all([
                 getAttendance(employeeId),
@@ -55,9 +89,14 @@ const Kehadiran = () => {
                 Location.getCurrentPositionAsync({}),
             ]);
 
+            const latestAttendance = attendanceResponse.attendance[attendanceResponse.attendance.length - 1]; // Get the latest attendance entry
+
+            // Check if the checkout field is not empty
+            const checkedOutStatus = latestAttendance && latestAttendance.checkout ? true : false;
+
             setAttendanceData(attendanceResponse.attendance);
             setIsCheckedIn(attendanceResponse.isCheckedInToday);
-
+            setIsCheckedOut(checkedOutStatus);
             setJamTelat(parameterResponse.data.jam_telat);
             setRadius(parameterResponse.data.radius);
 
@@ -73,13 +112,17 @@ const Kehadiran = () => {
             } else {
                 setLocationName('Unable to retrieve location name');
             }
+            setIsLoading(false);
         } catch (error) {
             console.error('Error fetching data:', error);
             Alert.alert('Error', 'Failed to fetch data. Please try again.');
+        } finally {
+            setIsLoading(false);
         }
     }, [employeeId, companyId]);
 
     const onRefresh = useCallback(async () => {
+        setIsLoading(true);
         setRefreshing(true);
         try {
             await fetchData();
@@ -88,6 +131,7 @@ const Kehadiran = () => {
             showAlert('Failed to refresh data. Please try again.', 'error');
         } finally {
             setRefreshing(false);
+            setIsLoading(false);
         }
     }, [fetchData]);
 
@@ -134,12 +178,20 @@ const Kehadiran = () => {
     );
 
     useEffect(() => {
+        setIsLoading(true); // Set loading to true initially
+
+        const now = new Date();
+        const time = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true });
+        setCurrentTime(time);
+        setIsLoading(false); // Set loading to false once the time is fetched
+
         const interval = setInterval(() => {
             const now = new Date();
             const time = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true });
             setCurrentTime(time);
         }, 1000);
-        return () => clearInterval(interval);
+
+        return () => clearInterval(interval); // Clean up interval on component unmount
     }, []);
 
     const showAlert = (message, type) => {
@@ -321,28 +373,53 @@ const Kehadiran = () => {
 
                 <View style={styles.mainContainer}>
                     <View style={styles.upperContainer}>
-                        <Text style={styles.timeText}>{currentTime}</Text>
+                        {isLoading ? (
+                            <View style={{ justifyContent: 'center', width: '100%', alignItems: 'center' }}>
+                                <Shimmer width={125} height={35} style={[styles.shimmerTitle]} />
+                            </View>
+                        ) : (
+                            <Text style={styles.timeText}>{currentTime}</Text>
+                        )}
                         <Text style={styles.locationText}>{errorMsg || locationName}</Text>
 
                         <View style={styles.buttonContainer}>
-                            {isCheckedIn ? (
+                            {isLoading ? (
+                                <CircularButton
+                                    title="Loading..."
+                                    colors={['#d9d9d9', '#b8b8b8', '#a1a1a1']}
+                                    disabled={true}
+                                />
+                            ) : isCheckedOut ? ( // If user is checked out, disable clock in button
+                                <CircularButton title="Clock In" colors={['#d9d9d9', '#b8b8b8', '#a1a1a1']} />
+                            ) : isCheckedIn ? ( // If user is checked in, show clock out button
                                 <CircularButton
                                     title="Clock Out"
                                     onPress={handleClockOut}
                                     colors={['#E11414', '#EA4545', '#EA8F8F']}
-                                    disabled={!!attendanceData.checkout}
                                 />
                             ) : (
+                                // If none checked in or checked out, show disabled clock out button
                                 <CircularButton
                                     title="Clock In"
                                     onPress={handleClockIn}
-                                    colors={['#0E509E', '#5FA0DC', '#9FD2FF']}
+                                    colors={['#d9d9d9', '#b8b8b8', '#a1a1a1']}
+                                    disabled={false}
                                 />
                             )}
                         </View>
                     </View>
 
-                    <View style={styles.lowerContainer}>{paginatedDateViews}</View>
+                    {isLoading ? (
+                        <ScrollView>
+                            {Array(3)
+                                .fill()
+                                .map((_, index) => (
+                                    <ShimmerTaskCard key={index} />
+                                ))}
+                        </ScrollView>
+                    ) : (
+                        <View style={styles.lowerContainer}>{paginatedDateViews}</View>
+                    )}
 
                     <View style={styles.paginationControls}>
                         <TouchableOpacity onPress={handlePreviousPage} disabled={currentPage === 0}>
@@ -442,6 +519,7 @@ const styles = StyleSheet.create({
         },
         shadowOpacity: 0.25,
         elevation: 5,
+        textAlign: 'center',
     },
     timeText: {
         fontSize: 34,
@@ -639,6 +717,18 @@ const styles = StyleSheet.create({
         color: '#333',
         textAlign: 'center',
         marginTop: 20,
+    },
+    shimmerTitle: {
+        marginBottom: 10,
+    },
+    shimmerSubtitle: {
+        marginBottom: 15,
+    },
+    shimmerStatus: {
+        position: 'absolute',
+        top: 20,
+        right: 20,
+        borderRadius: 20,
     },
 });
 
