@@ -74,3 +74,41 @@ export const getHistoryTasks = async (employeeId) => {
         throw new Error(error.response?.data?.message || 'Fetching closed assigner tasks failed');
     }
 };
+export const submitAdhocTask = async (adhocId, companyId, adhocImage, adhocReason = '') => {
+    try {
+        const token = await AsyncStorage.getItem('token');
+        const response = await apiService.put(
+            `/task-adhoc/submit/${adhocId}`,
+            {
+                company_id: companyId,
+                adhoc_image: adhocImage,
+                adhoc_reason: adhocReason, // Optional field, only sent if provided
+            },
+            {
+                headers: {
+                    Authorization: `Bearer ${token}`,
+                },
+            },
+        );
+        return response.data;
+    } catch (error) {
+        throw new Error(error.response?.data?.message || 'Submitting adhoc task failed');
+    }
+};
+export const cancelAdhocTask = async (adhocId) => {
+    try {
+        const token = await AsyncStorage.getItem('token');
+        const response = await apiService.put(
+            `/task-adhoc/cancel/${adhocId}`,
+            {},
+            {
+                headers: {
+                    Authorization: `Bearer ${token}`,
+                },
+            },
+        );
+        return response.data;
+    } catch (error) {
+        throw new Error(error.response?.data?.message || 'Canceling adhoc task failed');
+    }
+};

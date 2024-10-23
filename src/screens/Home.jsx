@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { View, Text, StyleSheet, Dimensions, TouchableOpacity, ScrollView, RefreshControl } from 'react-native';
+import { View, Text, StyleSheet, Dimensions, TouchableOpacity, ScrollView, RefreshControl, Alert } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -170,13 +170,13 @@ const StatisticCard = ({ value, description, color, icon }) => (
     </View>
 );
 
-const MenuButton = ({ icon, description }) => (
-    <View style={styles.menuButtonContainer}>
+const MenuButton = ({ icon, description, onPress }) => (
+    <TouchableOpacity style={styles.menuButtonContainer} onPress={onPress}>
         <View style={styles.statCard}>
             <Feather name={icon} size={24} color="#148FFF" />
         </View>
         <Text style={styles.menuButtonText}>{description}</Text>
-    </View>
+    </TouchableOpacity>
 );
 
 const getGreeting = () => {
@@ -209,7 +209,23 @@ const Home = () => {
     const [error, setError] = useState(null);
     const [alert, setAlert] = useState({ show: false, type: 'success', message: '' });
     const [projects, setProjects] = useState([]);
-
+    const handleMenuPress = (menuId) => {
+        switch (menuId) {
+            case 'adhoc':
+                navigation.navigate('AdhocDashboard');
+                break;
+            case 'leave':
+                Alert.alert('Fitur Belum Tersedia', 'Mohon maaf, fitur Cuti sedang dalam pengembangan.', [
+                    { text: 'OK', onPress: () => console.log('OK Pressed') },
+                ]);
+                break;
+            case 'claim':
+                Alert.alert('Fitur Belum Tersedia', 'Mohon maaf, fitur Klaim sedang dalam pengembangan.', [
+                    { text: 'OK', onPress: () => console.log('OK Pressed') },
+                ]);
+                break;
+        }
+    };
     const showAlert = (message, type) => {
         setAlert({ show: true, type, message });
         setTimeout(() => setAlert((prev) => ({ ...prev, show: false })), 3000);
@@ -349,35 +365,6 @@ const Home = () => {
 
     const groupedTasks = groupTasksByProject(tasks);
 
-    const ButtonList = [
-        { id: 1, icon: 'users', description: 'Tugas Ad Hoc' },
-        { id: 2, icon: 'credit-card', description: 'Cuti' },
-        { id: 3, icon: 'check-circle', description: 'Klaim' },
-    ];
-
-    const MenuButton = ({ icon, description, onPress }) => (
-        <TouchableOpacity style={styles.menuButtonContainer} onPress={onPress}>
-            <View style={styles.statCard}>
-                <Feather name={icon} size={24} color="#148FFF" />
-            </View>
-            <Text style={styles.menuButtonText}>{description}</Text>
-        </TouchableOpacity>
-    );
-    const handleButtonPress = (buttonId) => {
-        switch (buttonId) {
-            case 1:
-                navigation.navigate('AdhocDashboard');
-                break;
-            case 2:
-                // Navigasi untuk Cuti
-                break;
-            case 3:
-                // Navigasi untuk Klaim
-                break;
-            default:
-                break;
-        }
-    };
     const statistics = dashboardData
         ? [
               {
@@ -434,13 +421,19 @@ const Home = () => {
                 }
             >
                 <View style={styles.upperGridContainer}>
-                    {statistics.map((stat, index) => ( 
-                    isLoading ? (
-          <StatisticSkeleton key={index} color={stat.color} />
-        ) : (
-          <StatisticCard key={index} {...stat} />
-        )
-      ))}
+                    {statistics.map((stat, index) =>
+                        isLoading ? (
+                            <StatisticSkeleton key={index} color={stat.color} />
+                        ) : (
+                            <StatisticCard key={index} {...stat} />
+                        ),
+                    )}
+                </View>
+                {/* Menu buttons between containers */}
+                <View style={styles.menuContainer}>
+                    <MenuButton icon="users" description="Tugas Ad Hoc" onPress={() => handleMenuPress('adhoc')} />
+                    <MenuButton icon="credit-card" description="Cuti" onPress={() => handleMenuPress('leave')} />
+                    <MenuButton icon="check-circle" description="Klaim" onPress={() => handleMenuPress('claim')} />
                 </View>
                 <View style={styles.lowerContainer}>
                     <View style={styles.sectionHeader}>
@@ -590,24 +583,45 @@ const styles = StyleSheet.create({
         justifyContent: 'space-between',
         marginTop: 10,
     },
-    menuButtonContainer: {
-        width: '30%',
-        alignItems: 'center',
-        marginBottom: 20,
+    menuContainer: {
+        flexDirection: 'row',
+        justifyContent: 'space-around',
+        paddingHorizontal: 16,
+        paddingVertical: 16,
+        marginBottom: 10,
     },
+
+    menuButtonContainer: {
+        alignItems: 'center',
+        justifyContent: 'center',
+        width: '30%',
+    },
+
     statCard: {
         backgroundColor: 'white',
         borderRadius: 10,
-        padding: 15,
+        padding: 12,
         alignItems: 'center',
         justifyContent: 'center',
-        width: 60,
-        height: 60,
+        width: 48,
+        height: 48,
+        marginBottom: 4,
+        shadowColor: '#000',
+        shadowOffset: {
+            width: 0,
+            height: 2,
+        },
+        shadowOpacity: 0.1,
+        shadowRadius: 3,
+        elevation: 2,
     },
+
     menuButtonText: {
-        textAlign: 'center',
-        marginTop: 5,
+        fontSize: 12,
+        color: '#1C1C1E',
         fontFamily: 'Poppins-Medium',
+        textAlign: 'center',
+        marginTop: 4,
     },
     lowerContainer: {
         marginTop: 20,
