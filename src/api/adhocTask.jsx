@@ -112,3 +112,47 @@ export const cancelAdhocTask = async (adhocId) => {
         throw new Error(error.response?.data?.message || 'Canceling adhoc task failed');
     }
 };
+
+export const approveAdhocTask = async (adhocApprovalId, companyId, approvalComment) => {
+    try {
+        const token = await AsyncStorage.getItem('token'); // Fetch token from storage
+        const response = await apiService.put(
+            `/task-adhoc/approve/${adhocApprovalId}`, // API endpoint
+            {
+                company_id: companyId, // Include company_id
+                approval_comment: approvalComment, // Include approval_comment
+            },
+            {
+                headers: {
+                    Authorization: `Bearer ${token}`, // Add authorization header
+                },
+            },
+        );
+        return response.data; // Return response data
+    } catch (error) {
+        console.log('API response error:', error.response?.data); // Log API error response for debugging
+        throw new Error(error.response?.data?.message || 'Approving adhoc task failed'); // Throw error
+    }
+};
+
+export const rejectAdhocTask = async (adhocApprovalId, companyId, approvalComment) => {
+    try {
+        const token = await AsyncStorage.getItem('token'); // Fetch token from storage
+        const response = await apiService.put(
+            `/task-adhoc/reject/${adhocApprovalId}`, // API endpoint with approval ID
+            {
+                company_id: companyId, // Include company_id in the request body
+                approval_comment: approvalComment, // Include approval_comment
+            },
+            {
+                headers: {
+                    Authorization: `Bearer ${token}`, // Add authorization header
+                },
+            },
+        );
+        return response.data; // Return response data
+    } catch (error) {
+        console.log('API response error:', error.response?.data); // Log API error response for debugging
+        throw new Error(error.response?.data?.message || 'Rejecting adhoc task failed'); // Throw error
+    }
+};

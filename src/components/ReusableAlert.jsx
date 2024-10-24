@@ -44,6 +44,14 @@ const ReusableAlert = React.memo(({ show, alertType, message, onConfirm }) => {
     const isSuccess = alertType === ALERT_TYPES.SUCCESS;
     const slideAnim = useSlideAnimation(show);
 
+    React.useEffect(() => {
+        if (show && isSuccess) {
+            // Automatically close the alert after 2 seconds for success messages
+            const timer = setTimeout(onConfirm, 2000);
+            return () => clearTimeout(timer); // Clean up the timer when the alert is dismissed
+        }
+    }, [show, isSuccess, onConfirm]);
+
     if (!show) return null;
 
     return (

@@ -10,9 +10,12 @@ import {
     Dimensions,
     ActivityIndicator,
     Image,
+    TextInput,
+    Modal,
+    RefreshControl,
     Alert,
 } from 'react-native';
-import { Feather, MaterialIcons } from '@expo/vector-icons';
+import { Feather } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useFonts } from '../utils/UseFonts';
 import ReusableModalBottom from '../components/ReusableModalBottom';
@@ -25,11 +28,13 @@ import {
     getPendingApprovalTasks,
     getHistoryTasks,
     cancelAdhocTask,
+    approveAdhocTask,
+    rejectAdhocTask,
 } from '../api/adhocTask';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
-// Fungsi untuk menghitung ukuran font responsif
+// Function to calculate responsive font size
 const calculateFontSize = (size) => {
     const scale = SCREEN_WIDTH / 375;
     const newSize = size * scale;
@@ -116,6 +121,7 @@ const AdhocDashboard = ({ navigation }) => {
     const [showSuccessAlert, setShowSuccessAlert] = useState(false);
     const [showErrorAlert, setShowErrorAlert] = useState(false);
     const [errorMessage, setErrorMessage] = useState('');
+    const [refreshing, setRefreshing] = useState(false); // State for pull to refresh
     const tabs = ['Tugas Dibuat', 'Tugas Saya', 'Persetujuan', 'Riwayat'];
     const fontsLoaded = useFonts();
     const [adhocTasks, setAdhocTasks] = useState([]);
@@ -127,6 +133,10 @@ const AdhocDashboard = ({ navigation }) => {
     const [pendingApprovalTasks, setPendingApprovalTasks] = useState([]);
     const [historyTasks, setHistoryTasks] = useState([]);
     const [expandedSection, setExpandedSection] = useState(null);
+    const [isApproveModalVisible, setIsApproveModalVisible] = useState(false);
+    const [isRejectModalVisible, setIsRejectModalVisible] = useState(false);
+    const [approvalComment, setApprovalComment] = useState('');
+    const [taskId, setTaskId] = useState(null);
 
     useEffect(() => {
         getEmployeeId();
@@ -215,6 +225,62 @@ const AdhocDashboard = ({ navigation }) => {
             setError('Failed to fetch history tasks');
         } finally {
             setLoading(false);
+        }
+    };
+
+    const onRefresh = async () => {
+        setRefreshing(true); // Start refreshing
+        if (employeeId) {
+            if (activeTab === 'Tugas Dibuat') await fetchAdhocTasks();
+            else if (activeTab === 'Tugas Saya') await fetchMyTasks();
+            else if (activeTab === 'Persetujuan') await fetchPendingApprovalTasks();
+        }
+        setRefreshing(false); // Stop refreshing after data is fetched
+    };
+
+    const handleApproveTask = async () => {
+        setLoading(true); // Set loading state
+        try {
+            const companyId = await AsyncStorage.getItem('companyId'); // Fetch company ID from storage
+            console.log('Approving task with ID:', taskId, 'and company ID:', companyId); // Debugging logs
+
+            // Call the approve API
+            await approveAdhocTask(taskId, companyId, approvalComment);
+
+            setShowSuccessAlert(true); // Show success alert using ReusableAlert
+        } catch (error) {
+            setErrorMessage(`Failed to approve task: ${error.message}`);
+            setShowErrorAlert(true); // Show error alert using ReusableAlert
+        } finally {
+            setLoading(false); // Reset loading state
+            setIsApproveModalVisible(false); // Close modal if necessary
+            setApprovalComment(''); // Reset comment
+        }
+    };
+
+    const handleRejectTask = async () => {
+        if (!approvalComment || approvalComment.trim() === '') {
+            setErrorMessage('Approval comment is required to reject the task.');
+            setShowErrorAlert(true); // Show error alert using ReusableAlert
+            return;
+        }
+
+        setLoading(true); // Set loading state
+        try {
+            const companyId = await AsyncStorage.getItem('companyId'); // Fetch company ID from storage
+            console.log('Rejecting task with ID:', taskId, 'and company ID:', companyId); // Debugging logs
+
+            // Call the reject API
+            await rejectAdhocTask(taskId, companyId, approvalComment);
+
+            setShowSuccessAlert(true); // Show success alert using ReusableAlert
+        } catch (error) {
+            setErrorMessage(`Failed to reject task: ${error.message}`);
+            setShowErrorAlert(true); // Show error alert using ReusableAlert
+        } finally {
+            setLoading(false); // Reset loading state
+            setIsRejectModalVisible(false); // Close modal if necessary
+            setApprovalComment(''); // Reset comment
         }
     };
 
@@ -355,14 +421,14 @@ const AdhocDashboard = ({ navigation }) => {
         const isAssigner = employeeId === String(selectedTaskDetail.adhoc_assign_by);
         const isAssignee = employee_tasks.some((task) => String(task.employee_id) === employeeId);
 
-        // Menentukan apakah pengguna adalah approver di level persetujuan saat ini
+        // Determine if the user is the approver for the current approval level
         const currentApprover = task_approvals.find((approval) => approval.approval_level === adhoc_current_level);
         const isApprover = currentApprover && String(currentApprover.employee_id) === employeeId;
 
-        // Tombol submit hanya muncul untuk assignee jika tugas sedang dikerjakan
+        // Show submit button if the task is being worked on by the assignee
         const showSubmitButton = adhoc_status === 'working_on_it' && !isAssigner && isAssignee;
 
-        // Tombol approval hanya muncul jika pengguna adalah approver di level saat ini
+        // Show approval buttons if the user is the approver for the current level
         const showApprovalButtons = adhoc_status === 'waiting_for_approval' && isApprover;
 
         return (
@@ -449,10 +515,33 @@ const AdhocDashboard = ({ navigation }) => {
 
                 {showApprovalButtons ? (
                     <View style={styles.approvalButtonsContainer}>
-                        <TouchableOpacity style={styles.rejectButton}>
+                        {/* Reject button */}
+                        <TouchableOpacity
+                            style={styles.rejectButton}
+                            onPress={() => {
+                                const adhocApprovalId = selectedTaskDetail.task_approvals?.[0]?.id; // Cek apakah task_approvals adalah array
+                                // Get the approval ID
+                                if (adhocApprovalId) {
+                                    setTaskId(adhocApprovalId); // Set the correct approval ID
+                                    setIsRejectModalVisible(true); // Show the reject modal
+                                }
+                            }}
+                        >
                             <Text style={styles.rejectButtonText}>Reject</Text>
                         </TouchableOpacity>
-                        <TouchableOpacity style={styles.approveButton}>
+
+                        {/* Approve button */}
+                        <TouchableOpacity
+                            style={styles.approveButton}
+                            onPress={() => {
+                                const adhocApprovalId = selectedTaskDetail.task_approvals?.[0]?.id; // Cek apakah task_approvals adalah array
+
+                                if (adhocApprovalId) {
+                                    setTaskId(adhocApprovalId); // Set the correct approval ID
+                                    setIsApproveModalVisible(true); // Show the approve modal
+                                }
+                            }}
+                        >
                             <Text style={styles.approveButtonText}>Approve</Text>
                         </TouchableOpacity>
                     </View>
@@ -722,11 +811,20 @@ const AdhocDashboard = ({ navigation }) => {
                 {renderTabs()}
             </LinearGradient>
             <View style={styles.content}>
-                <ScrollView style={styles.taskList} contentContainerStyle={styles.taskListContent}>
+                <ScrollView
+                    style={styles.taskList}
+                    contentContainerStyle={styles.taskListContent}
+                    refreshControl={
+                        <RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={['#4A90E2']} />
+                    }
+                >
                     {renderTasks()}
                 </ScrollView>
                 {activeTab === 'Tugas Dibuat' && !error && (
-                    <TouchableOpacity style={styles.addButton}>
+                    <TouchableOpacity
+                        style={styles.addButton}
+                        onPress={() => navigation.navigate('AddAdhocTask')} // Navigasi ke layar AddAdhoc
+                    >
                         <Feather name="plus" size={24} color="#4A90E2" />
                     </TouchableOpacity>
                 )}
@@ -745,7 +843,47 @@ const AdhocDashboard = ({ navigation }) => {
                 message="Tugas berhasil dibatalkan."
                 onConfirm={() => setShowSuccessAlert(false)}
             />
+            {/* Modal for Approve */}
+            <Modal transparent={true} visible={isApproveModalVisible} animationType="slide">
+                <View style={styles.modalContainer}>
+                    <View style={styles.modalContent}>
+                        <Text style={styles.modalTitle}>Approval Comment</Text>
+                        <TextInput
+                            style={styles.modalInput}
+                            placeholder="Enter approval comment"
+                            value={approvalComment}
+                            onChangeText={setApprovalComment}
+                        />
+                        <TouchableOpacity style={styles.sendButton} onPress={handleApproveTask} disabled={loading}>
+                            <Text style={styles.sendButtonText}>{loading ? 'Approving...' : 'Send'}</Text>
+                        </TouchableOpacity>
+                        <TouchableOpacity style={styles.cancelButton} onPress={() => setIsApproveModalVisible(false)}>
+                            <Text style={styles.cancelButtonText}>Cancel</Text>
+                        </TouchableOpacity>
+                    </View>
+                </View>
+            </Modal>
 
+            {/* Modal for Reject */}
+            <Modal transparent={true} visible={isRejectModalVisible} animationType="slide">
+                <View style={styles.modalContainer}>
+                    <View style={styles.modalContent}>
+                        <Text style={styles.modalTitle}>Rejection Reason</Text>
+                        <TextInput
+                            style={styles.modalInput}
+                            placeholder="Enter rejection reason"
+                            value={approvalComment}
+                            onChangeText={setApprovalComment}
+                        />
+                        <TouchableOpacity style={styles.sendButton} onPress={handleRejectTask} disabled={loading}>
+                            <Text style={styles.sendButtonText}>{loading ? 'Rejecting...' : 'Send'}</Text>
+                        </TouchableOpacity>
+                        <TouchableOpacity style={styles.cancelButton} onPress={() => setIsRejectModalVisible(false)}>
+                            <Text style={styles.cancelButtonText}>Cancel</Text>
+                        </TouchableOpacity>
+                    </View>
+                </View>
+            </Modal>
             <ReusableAlert
                 show={showErrorAlert}
                 alertType="error"
@@ -1479,6 +1617,105 @@ const styles = StyleSheet.create({
         fontSize: calculateFontSize(14),
         color: '#2196F3',
         fontFamily: 'Poppins-SemiBold',
+    },
+    modalContainer: {
+        flex: 1,
+        justifyContent: 'center',
+        alignItems: 'center',
+        backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    },
+    modalContent: {
+        backgroundColor: '#fff',
+        padding: 20,
+        borderRadius: 10,
+        width: '80%',
+    },
+    modalTitle: {
+        fontSize: 18,
+        fontWeight: 'bold',
+        marginBottom: 10,
+    },
+    modalInput: {
+        borderWidth: 1,
+        borderColor: '#ddd',
+        borderRadius: 5,
+        padding: 10,
+        marginBottom: 15,
+    },
+    sendButton: {
+        backgroundColor: '#4A90E2',
+        padding: 10,
+        borderRadius: 5,
+        alignItems: 'center',
+        marginBottom: 10,
+    },
+    sendButtonText: {
+        color: '#fff',
+        fontWeight: 'bold',
+    },
+    cancelButton: {
+        backgroundColor: '#ccc',
+        padding: 10,
+        borderRadius: 5,
+        alignItems: 'center',
+    },
+    cancelButtonText: {
+        color: '#000',
+    },
+    closeModalButton: {
+        backgroundColor: '#F44336',
+        padding: 10,
+        borderRadius: 5,
+        alignItems: 'center',
+    },
+    closeModalText: {
+        color: '#fff',
+        fontWeight: 'bold',
+    },
+    headerContent: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        marginBottom: 15,
+    },
+    backButton: {
+        padding: 5,
+    },
+    headerTitle: {
+        color: '#FFF',
+        fontSize: 20,
+        fontWeight: 'bold',
+    },
+    approvalButtonsContainer: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        marginTop: 20,
+    },
+    rejectButton: {
+        backgroundColor: '#D32F2F', // Darker red for reject
+        padding: 12,
+        borderRadius: 8,
+        flex: 1,
+        marginRight: 8,
+        alignItems: 'center',
+    },
+    approveButton: {
+        backgroundColor: '#00C853', // Bright green for approve
+        padding: 12,
+        borderRadius: 8,
+        flex: 1,
+        marginLeft: 8,
+        alignItems: 'center',
+    },
+    rejectButtonText: {
+        color: '#FFFFFF',
+        fontWeight: 'bold',
+        fontSize: 16, // Slightly larger text for better readability
+    },
+    approveButtonText: {
+        color: '#FFFFFF',
+        fontWeight: 'bold',
+        fontSize: 16, // Slightly larger text for better readability
     },
 });
 
