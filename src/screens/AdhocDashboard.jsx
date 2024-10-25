@@ -416,6 +416,7 @@ const AdhocDashboard = ({ navigation }) => {
             employee_tasks,
             task_approvals,
             adhoc_image,
+            adhoc_assigner_images,
         } = selectedTaskDetail;
 
         const isAssigner = employeeId === String(selectedTaskDetail.adhoc_assign_by);

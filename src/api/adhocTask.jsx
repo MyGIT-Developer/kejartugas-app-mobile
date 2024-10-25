@@ -156,3 +156,17 @@ export const rejectAdhocTask = async (adhocApprovalId, companyId, approvalCommen
         throw new Error(error.response?.data?.message || 'Rejecting adhoc task failed'); // Throw error
     }
 };
+export const createAdhocTask = async (taskData) => {
+    try {
+        const token = await AsyncStorage.getItem('token');
+        const response = await apiService.post('/task-adhoc', taskData, {
+            headers: {
+                Authorization: `Bearer ${token}`,
+            },
+        });
+        return response.data;
+    } catch (error) {
+        console.error('API response error:', error.response?.data);
+        throw new Error(error.response?.data?.message || 'Creating adhoc task failed');
+    }
+};
