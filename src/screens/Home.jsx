@@ -160,14 +160,16 @@ const StatisticSkeleton = () => (
     </View>
 );
 
-const StatisticCard = ({ value, description, color, icon }) => (
-    <View style={[styles.statisticCard, { borderColor: color }]}>
-        <View style={styles.textContainer}>
-            <Text style={styles.valueText}>{value}</Text>
-            <Text style={styles.descriptionText}>{description}</Text>
+const StatisticCard = ({ value, description, color, icon, onPress }) => (
+    <TouchableOpacity onPress={onPress}>
+        <View style={[styles.statisticCard, { borderColor: color }]}>
+            <View style={styles.textContainer}>
+                <Text style={styles.valueText}>{value}</Text>
+                <Text style={styles.descriptionText}>{description}</Text>
+            </View>
+            <Feather name={icon} size={30} color={color} style={styles.icon} />
         </View>
-        <Feather name={icon} size={30} color={color} style={styles.icon} />
-    </View>
+    </TouchableOpacity>
 );
 
 const MenuButton = ({ icon, description, onPress }) => (
@@ -209,23 +211,100 @@ const Home = () => {
     const [error, setError] = useState(null);
     const [alert, setAlert] = useState({ show: false, type: 'success', message: '' });
     const [projects, setProjects] = useState([]);
+    const [accessPermissions, setAccessPermissions] = useState([]);
+
+    const checkAccessPermission = async () => {
+        try {
+            const accessPermissions = await AsyncStorage.getItem('access_permissions');
+            const permissions = JSON.parse(accessPermissions) || [];
+            setAccessPermissions(permissions);
+        } catch (error) {
+            console.error('Error checking access permission:', error);
+            setAccessPermissions([]); // Ensure permissions is an empty array on error
+        } finally {
+            setIsLoading(false); // Set loading to false regardless of success or error
+        }
+    };
+
+    useEffect(() => {
+        checkAccessPermission();
+    }, []);
+
     const handleMenuPress = (menuId) => {
         switch (menuId) {
             case 'adhoc':
                 navigation.navigate('AdhocDashboard');
                 break;
             case 'leave':
-                Alert.alert('Fitur Belum Tersedia', 'Mohon maaf, fitur Cuti sedang dalam pengembangan.', [
-                    { text: 'OK', onPress: () => console.log('OK Pressed') },
-                ]);
+                // Alert.alert('Fitur Belum Tersedia', 'Mohon maaf, fitur Cuti sedang dalam pengembangan.', [
+                //     { text: 'OK', onPress: () => console.log('OK Pressed') },
+                // ]);
+                showAlert('Fitur Belum Tersedia. Mohon maaf, fitur Cuti sedang dalam pengembangan.', 'error');
                 break;
             case 'claim':
-                Alert.alert('Fitur Belum Tersedia', 'Mohon maaf, fitur Klaim sedang dalam pengembangan.', [
-                    { text: 'OK', onPress: () => console.log('OK Pressed') },
-                ]);
+                // Alert.alert('Fitur Belum Tersedia', 'Mohon maaf, fitur Klaim sedang dalam pengembangan.', [
+                //     { text: 'OK', onPress: () => console.log('OK Pressed') },
+                // ]);
+                showAlert('Fitur Belum Tersedia. Mohon maaf, fitur Klaim sedang dalam pengembangan.', 'error');
                 break;
         }
     };
+
+    const handlePress = (stat) => {
+        // Determine the required permission for the intended screen based on the stat description
+        let requiredPermission;
+    
+        switch (stat.description) {
+            case 'Projek Dalam Pengerjaan':
+                requiredPermission = accessPermissions.access_project; // Define the required permission for this screen
+                break;
+            case 'Total Projek Selesai':
+                requiredPermission = accessPermissions.access_project; // Define the required permission for this screen
+                break;
+            case 'Total Dalam Pengerjaan':
+                requiredPermission = accessPermissions.access_tasks; // Define the required permission for this screen
+                break;
+            case 'Tugas Selesai':
+                requiredPermission = accessPermissions.access_tasks; // Define the required permission for this screen
+                break;
+            default:
+                // Alert.alert('Fitur Belum Tersedia', 'Tidak ada Fitur', [
+                //     { text: 'OK', onPress: () => console.log('OK Pressed') },
+                // ]);;
+                showAlert('Fitur Belum Tersedia.', 'error');
+                return;
+        }
+
+    
+        if (!requiredPermission) {
+            // Show an alert or message indicating no access
+            // Alert.alert('You do not have permission to access this feature.', 'Anda tidak memiliki akses ke dalam fitur ini', [
+            //     { text: 'OK', onPress: () => console.log('OK Pressed') },
+            // ]);
+            showAlert('You do not have permission to access this feature.', 'error');
+            return;
+        }
+    
+        // Navigate based on the description
+        switch (stat.description) {
+            case 'Projek Dalam Pengerjaan':
+                navigation.navigate('ProjectOnWorking');
+                break;
+            case 'Total Projek Selesai':
+                navigation.navigate('ProjectList');
+                break;
+            case 'Total Dalam Pengerjaan':
+                navigation.navigate('ProjectOnWorking');
+                break;
+            case 'Tugas Selesai':
+                navigation.navigate('CompletedTasksScreen');
+                break;
+            default:
+                break; // Default case is covered above
+        }
+    };
+    
+
     const showAlert = (message, type) => {
         setAlert({ show: true, type, message });
         setTimeout(() => setAlert((prev) => ({ ...prev, show: false })), 3000);
@@ -425,7 +504,11 @@ const Home = () => {
                         isLoading ? (
                             <StatisticSkeleton key={index} color={stat.color} />
                         ) : (
-                            <StatisticCard key={index} {...stat} />
+                              <StatisticCard 
+                        key={index}
+                        {...stat}
+                        onPress={() => handlePress(stat)} // Tambahkan onPress untuk navigasi
+                    />
                         ),
                     )}
                 </View>

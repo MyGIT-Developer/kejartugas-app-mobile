@@ -22,6 +22,7 @@ import AdhocDashboard from '../screens/AdhocDashboard';
 import AddAdhocTask from '../screens/AddAdhocTask';
 import SubmitForm from '../components/SubmitForm';
 import EditAdhoc from '../screens/EditAdhoc';
+import PersonalInformation from '../screens/PersonalInformation';
 
 const Stack = createStackNavigator();
 
@@ -54,6 +55,7 @@ const screens = [
     { name: 'SubmitForm', component: SubmitForm },
     { name: 'AddAdhocTask', component: AddAdhocTask },
     { name: 'EditAdhoc', component: EditAdhoc },
+    { name: 'PersonalInformation', component: PersonalInformation },
 ];
 
 const RootNavigator = () => (

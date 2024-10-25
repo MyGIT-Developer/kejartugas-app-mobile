@@ -29,6 +29,8 @@ const showNotImplementedAlert = (featureName) => {
     );
 };
 
+
+
 const Profile = () => {
     const [isLoading, setIsLoading] = useState(false);
     const navigation = useNavigation();
@@ -86,6 +88,10 @@ const Profile = () => {
             <Text style={styles.profileButtonText}>{title}</Text>
         </TouchableOpacity>
     );
+
+    const navigateToScreen = (screenName, data) => {
+        navigation.navigate(screenName, { employeeData: data });
+    };
 
     const handleLogout = async () => {
         setIsLoading(true); // Start loading
@@ -145,9 +151,6 @@ const Profile = () => {
                     <TouchableOpacity style={styles.backIcon} onPress={() => navigation.goBack()}>
                         <Icon name="arrow-back" size={24} color="#fff" />
                     </TouchableOpacity>
-                    <TouchableOpacity style={styles.editIcon}>
-                        <Icon name="edit" size={24} color="#fff" />
-                    </TouchableOpacity>
                 </View>
 
                 <View style={styles.profile}>
@@ -170,6 +173,11 @@ const Profile = () => {
                 </View>
 
                 <View style={styles.buttonContainer}>
+                    <ProfileButton
+                        icon="person"
+                        title="Personal Information"
+                        onPress={() => navigateToScreen('PersonalInformation', userData)}
+                    />
                     <ProfileButton
                         icon="edit"
                         title="Edit Profile"

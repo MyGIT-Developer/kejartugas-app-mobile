@@ -12,14 +12,15 @@ import SlidingButton from '../components/SlidingButton';
 import SlidingFragment from '../components/SlidingFragment';
 import { getProject } from '../api/projectTask';
 
+import Shimmer from '../components/Shimmer';
 const { height, width: SCREEN_WIDTH } = Dimensions.get('window');
 
 // Skeleton component for project item
 const SkeletonItem = () => (
-    <View style={[styles.projectItem, { backgroundColor: '#f0f0f0' }]}>
-      <View style={[styles.skeletonText, { width: '80%', height: 20, marginBottom: 10 }]} />
-      <View style={[styles.skeletonText, { width: '100%', height: 10, marginBottom: 10 }]} />
-      <View style={[styles.skeletonText, { width: '40%', height: 20 }]} />
+    <View style={[styles.projectItem, { backgroundColor: '#f0f0f0', gap:10 }]}>
+         <Shimmer width={SCREEN_WIDTH * 0.6} height={20} style={styles.shimmerText} />
+         <Shimmer width={275} height={20} style={styles.shimmerText} />
+         <Shimmer width={100} height={20} style={styles.shimmerText} />
     </View>
   );
 
@@ -102,34 +103,49 @@ const ProjectList = () => {
         </View>
     );
 
-    const ProjectListView = ({ filterType }) => (
-        <ScrollView
-            refreshControl={
-                <RefreshControl
-                    refreshing={refreshing}
-                    onRefresh={onRefresh}
-                    colors={['#0E509E']}
-                    tintColor="#0E509E"
-                />
-            }
-            contentContainerStyle={styles.projectList}
-        >
-            {loading ? (
-                // Render skeleton items while loading
-                [...Array(5)].map((_, index) => <SkeletonItem key={index} />)
-            ) : project && Array.isArray(project) ? (
-                project
-                    .sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
-                    .filter((item) => item.project_type === filterType || !filterType)
-                    .map(renderProjectItem)
-            ) : (
-                <View>
-                    <Text style={{ fontFamily: 'Poppins-Regular', letterSpacing: -0.3 }}>Tidak ada Projek</Text>
-                </View>
-            )}
-        </ScrollView>
-    );
-
+    const ProjectListView = ({ filterType }) => {
+        const filteredProjects = project
+            ?.filter((item) => item.project_type === filterType || !filterType) || [];
+    
+        const getEmptyMessage = () => {
+            if (!filterType) return 'Tidak ada Projek'; // Jika tidak ada filter, pesan umum
+            if (filterType === 'general') return 'Tidak ada projek General';
+            if (filterType === 'maintenance') return 'Tidak ada projek Maintenance';
+            // Anda bisa menambahkan tipe proyek lainnya di sini jika diperlukan
+            return 'Tidak ada Projek';
+        };
+    
+        return (
+            <ScrollView
+                refreshControl={
+                    <RefreshControl
+                        refreshing={refreshing}
+                        onRefresh={onRefresh}
+                        colors={['#0E509E']}
+                        tintColor="#0E509E"
+                    />
+                }
+                contentContainerStyle={styles.projectList}
+            >
+                {loading ? (
+                    // Render skeleton items while loading
+                    [...Array(5)].map((_, index) => <SkeletonItem key={index} />)
+                ) : filteredProjects.length > 0 ? (
+                    filteredProjects
+                        .sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
+                        .map(renderProjectItem)
+                ) : (
+                    <View style={styles.projectItem}>
+                        <Text style={{ fontFamily: 'Poppins-Regular', letterSpacing: -0.3, color:"black", textAlign:"center" }}>
+                            {getEmptyMessage()}
+                        </Text>
+                    </View>
+                )}
+            </ScrollView>
+        );
+    };
+    
+    
     const fragments = [
         {
             title: 'Semua Proyek',
@@ -262,6 +278,25 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         alignItems: 'center',
         alignSelf: 'flex-start',
+    },
+    shimmerContainer: {
+        flex: 1,
+        paddingHorizontal: 15,
+        paddingTop: 10,
+    },
+    shimmerMessageContainer: {
+        flexDirection: 'row',
+        marginBottom: 20,
+    },
+    shimmerAvatar: {
+        borderRadius: 20,
+        marginRight: 10,
+    },
+    shimmerTextContainer: {
+        flex: 1,
+    },
+    shimmerText: {
+        borderRadius: 5,
     },
 });
 

@@ -208,6 +208,7 @@ const Tugas = () => {
     useEffect(() => {
         checkAccessPermission();
     }, []);
+
     const checkAccessPermission = async () => {
         try {
             const accessPermissions = await AsyncStorage.getItem('access_permissions');
@@ -218,11 +219,7 @@ const Tugas = () => {
             setHasAccess(false);
         }
     };
-    useEffect(() => {
-        if (hasAccess) {
-            fetchTasks();
-        }
-    }, [hasAccess]);
+
     const fetchTasks = async () => {
         setRefreshing(true);
         setIsLoading(true);

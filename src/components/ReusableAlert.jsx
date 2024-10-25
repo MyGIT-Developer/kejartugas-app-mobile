@@ -5,17 +5,20 @@ import LottieView from 'lottie-react-native';
 // Adjust these paths based on your project structure
 import successAnimation from '../../assets/animations/success.json';
 import errorAnimation from '../../assets/animations/error.json';
+import trashAnimation from '../../assets/animations/trash-success.json';
 
 const { width, height } = Dimensions.get('window');
 
 const ALERT_TYPES = {
     SUCCESS: 'success',
     ERROR: 'error',
+    DELETE: 'delete',
 };
 
 const DEFAULT_MESSAGES = {
     [ALERT_TYPES.SUCCESS]: 'Action completed successfully.',
     [ALERT_TYPES.ERROR]: 'An error occurred.',
+    [ALERT_TYPES.DELETE]: 'Are you sure you want to delete this item?',
 };
 
 const useSlideAnimation = (show) => {
@@ -41,8 +44,9 @@ const useSlideAnimation = (show) => {
 };
 
 const ReusableAlert = React.memo(({ show, alertType, message, onConfirm }) => {
-    const isSuccess = alertType === ALERT_TYPES.SUCCESS;
     const slideAnim = useSlideAnimation(show);
+    const isSuccess = alertType === ALERT_TYPES.SUCCESS;
+    const isDelete = alertType === ALERT_TYPES.DELETE;
 
     React.useEffect(() => {
         if (show && isSuccess) {
@@ -60,18 +64,29 @@ const ReusableAlert = React.memo(({ show, alertType, message, onConfirm }) => {
                 <View style={styles.alertContent}>
                     <View style={styles.iconContainer}>
                         <LottieView
-                            source={isSuccess ? successAnimation : errorAnimation}
+                            source={isSuccess ? successAnimation : isDelete ? trashAnimation : errorAnimation}
                             autoPlay
                             loop={false}
                             style={styles.icon}
                         />
                     </View>
-                    <Text style={styles.title}>{isSuccess ? 'Success' : 'Error'}</Text>
+                    <Text style={styles.title}>{isSuccess ? 'Success' : isDelete ? 'Delete Confirmation' : 'Error'}</Text>
                     <Text style={styles.message}>{message || DEFAULT_MESSAGES[alertType]}</Text>
-                    {!isSuccess && (
-                        <TouchableOpacity style={styles.button} onPress={onConfirm}>
-                            <Text style={styles.buttonText}>Okay</Text>
-                        </TouchableOpacity>
+                    {isDelete ? (
+                        <View style={styles.buttonContainer}>
+                            <TouchableOpacity style={[styles.button, styles.confirmButton]} onPress={onConfirm}>
+                                <Text style={styles.buttonText}>Yes, Delete</Text>
+                            </TouchableOpacity>
+                            <TouchableOpacity style={styles.button} onPress={onCancel}>
+                                <Text style={styles.buttonText}>Cancel</Text>
+                            </TouchableOpacity>
+                        </View>
+                    ) : (
+                        !isSuccess && (
+                            <TouchableOpacity style={styles.button} onPress={onConfirm}>
+                                <Text style={styles.buttonText}>Okay</Text>
+                            </TouchableOpacity>
+                        )
                     )}
                 </View>
             </Animated.View>

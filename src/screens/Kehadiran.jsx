@@ -89,10 +89,17 @@ const Kehadiran = () => {
                 Location.getCurrentPositionAsync({}),
             ]);
 
-            const latestAttendance = attendanceResponse.attendance[attendanceResponse.attendance.length - 1]; // Get the latest attendance entry
+            // Get today's date in the format used by the attendance data, e.g., YYYY-MM-DD
+            const today = new Date().toISOString().split('T')[0];
 
-            // Check if the checkout field is not empty
-            const checkedOutStatus = latestAttendance && latestAttendance.checkout ? true : false;
+            // Find the attendance record for today by checking the date part of the checkin field
+            const todayAttendance = attendanceResponse.attendance.find((record) => {
+                const recordDate = new Date(record.checkin).toISOString().split('T')[0];
+                return recordDate === today;
+            });
+
+            // Check if the user has checked out today
+            const checkedOutStatus = todayAttendance && todayAttendance.checkout ? true : false;
 
             setAttendanceData(attendanceResponse.attendance);
             setIsCheckedIn(attendanceResponse.isCheckedInToday);
@@ -389,21 +396,29 @@ const Kehadiran = () => {
                                     colors={['#d9d9d9', '#b8b8b8', '#a1a1a1']}
                                     disabled={true}
                                 />
-                            ) : isCheckedOut ? ( // If user is checked out, disable clock in button
-                                <CircularButton title="Clock In" colors={['#d9d9d9', '#b8b8b8', '#a1a1a1']} />
-                            ) : isCheckedIn ? ( // If user is checked in, show clock out button
+                            ) : isCheckedIn == 0 ? ( // If user is checked out, disable clock in button
+                                <CircularButton
+                                    title="Clock In"
+                                    colors={['#0E509E', '#5FA0DC', '#9FD2FF']}
+                                    onPress={handleClockIn}
+                                />
+                            ) : isCheckedIn == 1 && isCheckedOut == false ? ( // If user is checked in, show clock out button
                                 <CircularButton
                                     title="Clock Out"
                                     onPress={handleClockOut}
                                     colors={['#E11414', '#EA4545', '#EA8F8F']}
                                 />
-                            ) : (
-                                // If none checked in or checked out, show disabled clock out button
+                            ) : isCheckedIn == 1 && isCheckedOut == true ? (
                                 <CircularButton
                                     title="Clock In"
-                                    onPress={handleClockIn}
                                     colors={['#d9d9d9', '#b8b8b8', '#a1a1a1']}
-                                    disabled={false}
+                                    disabled={true}
+                                />
+                            ) : (
+                                <CircularButton
+                                    title="Clock In"
+                                    colors={['#0E509E', '#5FA0DC', '#9FD2FF']}
+                                    disabled={true}
                                 />
                             )}
                         </View>
