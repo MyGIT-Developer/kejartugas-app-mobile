@@ -378,7 +378,10 @@ const AdhocDashboard = ({ navigation }) => {
 
                 {isSelected && (
                     <View style={styles.dropdownMenu}>
-                        <TouchableOpacity style={styles.dropdownItem}>
+                        <TouchableOpacity
+                            style={styles.dropdownItem}
+                            onPress={() => navigation.navigate('EditAdhoc', { adhocId: task.id })} // Navigasi ke EditAdhoc dengan adhocId
+                        >
                             <Feather name="edit-2" size={20} color="#4A90E2" />
                             <Text style={[styles.dropdownText, fontsLoaded ? { fontFamily: 'Poppins-Regular' } : null]}>
                                 Ubah Tugas

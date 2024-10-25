@@ -170,3 +170,22 @@ export const createAdhocTask = async (taskData) => {
         throw new Error(error.response?.data?.message || 'Creating adhoc task failed');
     }
 };
+
+export const editAdhocTask = async (adhocId, taskData) => {
+    try {
+        const token = await AsyncStorage.getItem('token');
+        const response = await apiService.put(
+            `/task-adhoc/edit/${adhocId}`, // Endpoint untuk mengedit tugas adhoc
+            taskData, // Data yang dikirim dalam request body
+            {
+                headers: {
+                    Authorization: `Bearer ${token}`, // Menggunakan token untuk autentikasi
+                },
+            },
+        );
+        return response.data; // Mengembalikan data respon
+    } catch (error) {
+        console.error('API response error:', error.response?.data); // Menampilkan error untuk debugging
+        throw new Error(error.response?.data?.message || 'Editing adhoc task failed'); // Pesan error default
+    }
+};

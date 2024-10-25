@@ -134,6 +134,7 @@ const AddAdhocTask = ({ navigation }) => {
         const workingDays = calculateWorkingDays(startDate, endDate);
         setDuration(`${workingDays} Hari Kerja`);
     }, [startDate, endDate]);
+
     const pickImage = async () => {
         const result = await ImagePicker.launchImageLibraryAsync({
             mediaTypes: ImagePicker.MediaTypeOptions.Images,
