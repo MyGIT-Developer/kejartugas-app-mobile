@@ -82,11 +82,7 @@ const getCollectionStatusBadgeColor = (status) => {
     }
 };
 
-const TaskCard = React.memo(function TaskCard({
-    task = task, // Use default parameter instead of defaultProps
-    onProjectDetailPress = () => {},
-    onTaskDetailPress = () => {},
-}) {
+const TaskCard = React.memo(({ task = {}, onProjectDetailPress = () => {}, onTaskDetailPress = () => {} }) => {
     const {
         color: badgeColor,
         textColor: badgeTextColor,
@@ -142,12 +138,12 @@ const ShimmerTaskCard = () => (
 );
 
 const TaskSection = ({
-    title = '',
+    title,
     tasks = [],
     isLoading = false,
-    onProjectDetailPress = () => {},
-    onTaskDetailPress = () => {},
-    onSeeAllPress = () => {},
+    onProjectDetailPress,
+    onTaskDetailPress,
+    onSeeAllPress,
 }) => (
     <View style={styles.section}>
         <View style={styles.sectionHeader}>
@@ -186,7 +182,7 @@ const TaskSection = ({
 );
 
 const Tugas = () => {
-    const [isLoading, setIsLoading] = useState(false);
+    const [isLoading, setIsLoading] = useState(true);
     const [refreshing, setRefreshing] = useState(false);
     const [tasks, setTasks] = useState({
         inProgress: [],
@@ -213,6 +209,7 @@ const Tugas = () => {
         checkAccessPermission();
         fetchTasks(); // Call fetchTasks here to load tasks at startup
     }, []);
+    
     const checkAccessPermission = async () => {
         try {
             const accessPermissions = await AsyncStorage.getItem('access_permissions');
@@ -225,10 +222,12 @@ const Tugas = () => {
     };
 
     const fetchTasks = async () => {
+        if (isLoading && !refreshing) return;
+
         setRefreshing(true);
         setIsLoading(true); // Keep shimmer visible while fetching data
         setError(null);
-
+        
         try {
             const employeeId = await AsyncStorage.getItem('employeeId');
             if (!employeeId) throw new Error('ID Karyawan tidak ditemukan');

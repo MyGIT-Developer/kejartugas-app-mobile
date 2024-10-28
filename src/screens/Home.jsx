@@ -293,7 +293,7 @@ const Home = () => {
             case 'Total Projek Selesai':
                 navigation.navigate('ProjectList');
                 break;
-            case 'Total Dalam Pengerjaan':
+            case 'Tugas Dalam Pengerjaan':
                 navigation.navigate('Tugas');
                 break;
             case 'Tugas Selesai':
