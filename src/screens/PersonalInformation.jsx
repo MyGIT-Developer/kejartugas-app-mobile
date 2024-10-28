@@ -1,6 +1,6 @@
 // PersonalInformation.js
 import React from 'react';
-import { View, Text, ScrollView, StyleSheet, SafeAreaView, Dimensions } from 'react-native';
+import { View, Text, ScrollView, StyleSheet, SafeAreaView, Dimensions, Image } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 const { height, width: SCREEN_WIDTH } = Dimensions.get('window');
 import { Feather } from '@expo/vector-icons';
@@ -18,45 +18,40 @@ const PersonalInformation = ({ route }) => {
 
     const navigation = useNavigation();
 
-    
     const getInitials = (name) => {
-        return name
-            ?.split(' ')
-            .map(word => word[0])
-            .join('')
-            .slice(0, 2)
-            .toUpperCase() || 'AD';
+        return (
+            name
+                ?.split(' ')
+                .map((word) => word[0])
+                .join('')
+                .slice(0, 2)
+                .toUpperCase() || 'AD'
+        );
     };
 
     return (
         <SafeAreaView style={styles.container}>
-       
-                <View style={styles.backgroundBox}>
-                    <LinearGradient
-                        colors={['#0E509E', '#5FA0DC', '#9FD2FF']}
-                        style={styles.linearGradient}
-                        start={{ x: 0, y: 0 }}
-                        end={{ x: 1, y: 1 }}
-                    />
-                </View>
+            <View style={styles.backgroundBox}>
+                <LinearGradient
+                    colors={['#0E509E', '#5FA0DC', '#9FD2FF']}
+                    style={styles.linearGradient}
+                    start={{ x: 0, y: 0 }}
+                    end={{ x: 1, y: 1 }}
+                />
+            </View>
 
-                <View style={styles.headerSection}>
-                    <Feather name="chevron-left" style={styles.backIcon} onPress={() => navigation.goBack()} />
-                    <Text style={styles.headerText}>Personal Information</Text>
-                </View>
+            <View style={styles.headerSection}>
+                <Feather name="chevron-left" style={styles.backIcon} onPress={() => navigation.goBack()} />
+                <Text style={styles.headerText}>Personal Information</Text>
+            </View>
             <ScrollView>
                 {/* Header Section */}
                 <View style={styles.header}>
                     <View style={styles.profileImage}>
                         {employeeData.profile_picture ? (
-                            <Image 
-                                source={{ uri: employeeData.profile_picture }}
-                                style={styles.profilePhoto}
-                            />
+                            <Image source={{ uri: employeeData.profile_picture }} style={styles.profilePhoto} />
                         ) : (
-                            <Text style={styles.profileInitials}>
-                                {getInitials(employeeData.employee_name)}
-                            </Text>
+                            <Text style={styles.profileInitials}>{getInitials(employeeData.employee_name)}</Text>
                         )}
                     </View>
                     <Text style={styles.name}>{employeeData.employee_name}</Text>
@@ -69,15 +64,9 @@ const PersonalInformation = ({ route }) => {
 
                 {/* Statistics Section */}
                 <View style={styles.statsContainer}>
-                    <StatisticCard 
-                        value={employeeData.total_projects}
-                        label="Total Projek"
-                    />
+                    <StatisticCard value={employeeData.total_projects} label="Total Projek" />
                     <View style={styles.statsDevider} />
-                    <StatisticCard 
-                        value={employeeData.total_tasks}
-                        label="Total Tugas"
-                    />
+                    <StatisticCard value={employeeData.total_tasks} label="Total Tugas" />
                 </View>
 
                 {/* Information Sections */}
@@ -170,7 +159,6 @@ const styles = StyleSheet.create({
         shadowOpacity: 0.25,
         shadowRadius: 3.84,
         elevation: 5,
-        
     },
     profileImage: {
         width: 100,
@@ -231,7 +219,6 @@ const styles = StyleSheet.create({
         shadowOpacity: 0.25,
         shadowRadius: 3.84,
         elevation: 5,
-
     },
     statsDevider: {
         width: 1,
@@ -267,7 +254,6 @@ const styles = StyleSheet.create({
         shadowOpacity: 0.25,
         shadowRadius: 3.84,
         elevation: 5,
-        
     },
     sectionTitle: {
         fontSize: 18,

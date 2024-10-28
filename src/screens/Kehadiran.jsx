@@ -1,5 +1,15 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { View, Text, StyleSheet, Alert, TouchableOpacity, RefreshControl, Dimensions, ScrollView } from 'react-native';
+import {
+    View,
+    Text,
+    StyleSheet,
+    Alert,
+    TouchableOpacity,
+    RefreshControl,
+    Dimensions,
+    ScrollView,
+    Image,
+} from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import * as Location from 'expo-location';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -23,33 +33,45 @@ const AccessDenied = () => {
         </View>
     );
 };
-
 const ShimmerTaskCard = () => (
     <View style={[styles.containerPerDate, { marginBottom: 20 }]}>
-        <View style={styles.upperAbsent}>
-            <Shimmer width={100} height={15} style={styles.shimmerSubtitle} />
-            <Shimmer width={50} height={15} style={styles.shimmerSubtitle} />
-        </View>
+        <View style={styles.cardContent}>
+            {/* Left Content */}
+            <View style={styles.leftContent}>
+                {/* Date Section */}
+                <View style={styles.dateSection}>
+                    <Shimmer width={200} height={20} style={{ marginBottom: 8 }} />
+                    <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                        <Shimmer width={100} height={30} style={{ borderRadius: 15 }} />
+                    </View>
+                </View>
 
-        <View style={styles.midAbsent}>
-            <View style={styles.column}>
-                <Shimmer width={70} height={15} style={styles.shimmerSubtitle} />
-                <Shimmer width={70} height={15} style={styles.shimmerSubtitle} />
-            </View>
-            <View style={styles.column}>
-                <Shimmer width={70} height={15} style={styles.shimmerSubtitle} />
-                <Shimmer width={70} height={15} style={styles.shimmerSubtitle} />
-            </View>
-            <View style={styles.column}>
-                <Shimmer width={70} height={15} style={styles.shimmerSubtitle} />
-                <Shimmer width={70} height={15} style={styles.shimmerSubtitle} />
-            </View>
-        </View>
+                {/* Time Details */}
+                <View style={[styles.timeDetails, { paddingVertical: 12 }]}>
+                    <View style={styles.timeColumn}>
+                        <Shimmer width={60} height={15} style={{ marginBottom: 4 }} />
+                        <Shimmer width={50} height={18} />
+                    </View>
+                    <View style={styles.timeColumn}>
+                        <Shimmer width={60} height={15} style={{ marginBottom: 4 }} />
+                        <Shimmer width={50} height={18} />
+                    </View>
+                    <View style={styles.timeColumn}>
+                        <Shimmer width={60} height={15} style={{ marginBottom: 4 }} />
+                        <Shimmer width={50} height={18} />
+                    </View>
+                </View>
 
-        <View style={styles.lowerAbsent}>
-            <Shimmer width={70} height={15} style={styles.shimmerSubtitle} />
-            <View>
-                <Shimmer width={70} height={15} style={styles.shimmerSubtitle} />
+                {/* Notes Section */}
+                <View style={styles.notesSection}>
+                    <Shimmer width={80} height={15} style={{ marginBottom: 4 }} />
+                    <Shimmer width={200} height={40} />
+                </View>
+            </View>
+
+            {/* Right Content - Image Placeholder */}
+            <View style={styles.imageContainer}>
+                <Shimmer width={100} height={133} style={{ borderRadius: 10, marginTop: 20 }} />
             </View>
         </View>
     </View>
@@ -313,37 +335,56 @@ const Kehadiran = () => {
             ? calculateDuration(new Date(attendanceForDate.checkin), new Date(attendanceForDate.checkout))
             : '-';
         const notes = attendanceForDate ? attendanceForDate.note : 'No notes';
+        const attendanceImage = attendanceForDate?.attendance_image
+            ? `http://202.10.36.103:8000/${attendanceForDate.attendance_image}`
+            : null;
 
         return (
             <View key={index} style={styles.containerPerDate}>
-                <View style={styles.upperAbsent}>
-                    <Text>{formattedDateForUpper}</Text>
-                    <View style={[styles.statusView, { backgroundColor: getBackgroundColor(status) }]}>
-                        <View style={{ padding: 4, borderRadius: 50, backgroundColor: getIndicatorDotColor(status) }} />
-                        <Text style={{ color: '#000' }}>{status}</Text>
-                    </View>
-                </View>
+                <View style={styles.cardContent}>
+                    {/* Left side - Date and Status */}
+                    <View style={styles.leftContent}>
+                        <View style={styles.dateSection}>
+                            <Text style={styles.dateText}>{formattedDateForUpper}</Text>
+                            <View style={[styles.statusView, { backgroundColor: getBackgroundColor(status) }]}>
+                                <View style={[styles.statusDot, { backgroundColor: getIndicatorDotColor(status) }]} />
+                                <Text style={styles.statusText}>{status}</Text>
+                            </View>
+                        </View>
 
-                <View style={styles.midAbsent}>
-                    <View style={styles.column}>
-                        <Text style={styles.tableHeader}>Clock In</Text>
-                        <Text style={styles.tableCell}>{checkIn}</Text>
-                    </View>
-                    <View style={styles.column}>
-                        <Text style={styles.tableHeader}>Clock Out</Text>
-                        <Text style={styles.tableCell}>{checkOut}</Text>
-                    </View>
-                    <View style={styles.column}>
-                        <Text style={styles.tableHeader}>Durasi</Text>
-                        <Text style={styles.tableCell}>{duration}</Text>
-                    </View>
-                </View>
+                        {/* Time Details */}
+                        <View style={styles.timeDetails}>
+                            <View style={styles.timeColumn}>
+                                <Text style={styles.timeLabel}>Clock In</Text>
+                                <Text style={styles.timeValue}>{checkIn}</Text>
+                            </View>
+                            <View style={styles.timeColumn}>
+                                <Text style={styles.timeLabel}>Clock Out</Text>
+                                <Text style={styles.timeValue}>{checkOut}</Text>
+                            </View>
+                            <View style={styles.timeColumn}>
+                                <Text style={styles.timeLabel}>Duration</Text>
+                                <Text style={styles.timeValue}>{duration}</Text>
+                            </View>
+                        </View>
 
-                <View style={styles.lowerAbsent}>
-                    <Text>Notes</Text>
-                    <View>
-                        <Text>{notes}</Text>
+                        {/* Notes Section */}
+                        <View style={styles.notesSection}>
+                            <Text style={styles.notesLabel}>Notes:</Text>
+                            <Text style={styles.notesText}>{notes}</Text>
+                        </View>
                     </View>
+
+                    {/* Right side - Attendance Image */}
+                    {attendanceImage && (
+                        <View style={styles.imageContainer}>
+                            <Image
+                                source={{ uri: attendanceImage }}
+                                style={styles.attendanceImage}
+                                resizeMode="cover"
+                            />
+                        </View>
+                    )}
                 </View>
             </View>
         );
@@ -476,27 +517,22 @@ const Kehadiran = () => {
 };
 const styles = StyleSheet.create({
     container: {
-        minHeight: height, // Ensure the content is at least as tall as the screen
+        minHeight: height,
         flexGrow: 1,
     },
     scrollViewContent: {
         flexGrow: 1,
-        paddingBottom: 20, // Add some bottom padding for better scrolling
-    },
-    locationContainer: {
-        flexDirection: 'row', // Align items horizontally
-        alignItems: 'center', // Center items vertically
-        padding: 10,
+        paddingBottom: 20,
     },
     backgroundBox: {
-        height: 125, // Set your desired height
-        width: '100%', // Set your desired width
-        position: 'absolute', // Position it behind other elements
+        height: 125,
+        width: '100%',
+        position: 'absolute',
         top: 0,
         left: 0,
     },
     linearGradient: {
-        flex: 1, // Ensure the gradient covers the entire view
+        flex: 1,
         borderBottomLeftRadius: 50,
         borderBottomRightRadius: 30,
     },
@@ -520,13 +556,11 @@ const styles = StyleSheet.create({
         backgroundColor: 'white',
         flex: 1,
         borderRadius: 20,
-        // height: 200,
         display: 'flex',
         justifyContent: 'center',
         flexDirection: 'column',
         gap: 10,
         padding: 20,
-
         shadowColor: '#000',
         shadowOffset: {
             width: 0,
@@ -547,53 +581,10 @@ const styles = StyleSheet.create({
         color: 'gray',
         marginBottom: 10,
     },
-    icon: {
-        marginRight: 10, // Space between the icon and text
-    },
     buttonContainer: {
         flex: 1,
         justifyContent: 'center',
         alignItems: 'center',
-    },
-    midContainer: {
-        backgroundColor: 'white',
-        borderRadius: 15,
-        maxHeight: 75,
-        display: 'flex',
-        flexDirection: 'row',
-        justifyContent: 'center',
-        alignItems: 'center',
-        gap: 10,
-
-        shadowColor: '#000',
-        shadowOffset: {
-            width: 0,
-            height: 2,
-        },
-        shadowOpacity: 0.25,
-        elevation: 5,
-    },
-    label: {
-        fontSize: 16,
-    },
-    dateText: {
-        fontSize: 16,
-    },
-    datePicker: {
-        width: '100%',
-        marginVertical: 10,
-    },
-    datepickerBox: {
-        backgroundBox: '#d7d7d7',
-    },
-    searchButton: {
-        backgroundColor: '#000',
-        padding: 10,
-        display: 'flex',
-        flexDirection: 'row',
-        alignItems: 'center',
-        gap: 10,
-        borderRadius: 10,
     },
     lowerContainer: {
         flex: 1,
@@ -604,74 +595,102 @@ const styles = StyleSheet.create({
         alignItems: 'center',
     },
     containerPerDate: {
-        padding: 10,
         backgroundColor: 'white',
-        borderRadius: 8,
+        borderRadius: 15,
         width: '100%',
+        marginBottom: 15,
         shadowColor: '#000',
         shadowOffset: {
             width: 0,
             height: 2,
         },
-        shadowOpacity: 0.25,
-        elevation: 5,
+        shadowOpacity: 0.1,
+        shadowRadius: 4,
+        elevation: 3,
+        padding: 15,
     },
-    upperAbsent: {
+    cardContent: {
         flexDirection: 'row',
         justifyContent: 'space-between',
-        alignItems: 'center',
-        borderBottomWidth: 1,
-        borderBottomColor: 'gray',
-        paddingBottom: 10,
     },
-    midAbsent: {
-        display: 'flex',
-        flexDirection: 'row',
-        marginTop: 10,
-    },
-    tableContainer: {
-        flexDirection: 'row',
-        borderBottomWidth: 1,
-        borderBottomColor: '#ccc',
-        paddingVertical: 10,
-        paddingHorizontal: 10,
-    },
-    tableHeader: {
-        fontWeight: 'bold',
-        marginBottom: 5,
-    },
-    tableRow: {
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        marginVertical: 5,
-    },
-    tableCell: {
+    leftContent: {
         flex: 1,
-        padding: 5,
+        marginRight: 15,
     },
-    column: {
-        flexDirection: 'column',
-        flex: 1,
-        justifyContent: 'center',
-        alignContent: 'center',
+    dateSection: {
+        marginBottom: 12,
     },
-    lowerAbsent: {
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        marginTop: 10,
-        borderTopWidth: 1,
-        borderTopColor: 'gray',
-        paddingTop: 10,
+    dateText: {
+        fontSize: 16,
+        fontWeight: '600',
+        color: '#2D3748',
+        marginBottom: 8,
     },
     statusView: {
-        backgroundColor: '#ddd',
-        paddingVertical: 5,
-        paddingHorizontal: 10,
-        borderRadius: 50,
-        display: 'flex',
         flexDirection: 'row',
         alignItems: 'center',
-        gap: 5,
+        alignSelf: 'flex-start',
+        paddingHorizontal: 12,
+        paddingVertical: 6,
+        borderRadius: 20,
+    },
+    statusDot: {
+        width: 8,
+        height: 8,
+        borderRadius: 4,
+        marginRight: 6,
+    },
+    statusText: {
+        fontSize: 14,
+        fontWeight: '500',
+        color: '#2D3748',
+    },
+    timeDetails: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        marginBottom: 12,
+        paddingVertical: 12,
+        borderTopWidth: 1,
+        borderBottomWidth: 1,
+        borderColor: '#E2E8F0',
+    },
+    timeColumn: {
+        flex: 1,
+    },
+    timeLabel: {
+        fontSize: 12,
+        color: '#718096',
+        marginBottom: 4,
+    },
+    timeValue: {
+        fontSize: 14,
+        fontWeight: '500',
+        color: '#2D3748',
+    },
+    notesSection: {
+        marginTop: 8,
+    },
+    notesLabel: {
+        fontSize: 14,
+        fontWeight: '500',
+        color: '#718096',
+        marginBottom: 4,
+    },
+    notesText: {
+        fontSize: 14,
+        color: '#4A5568',
+        lineHeight: 20,
+    },
+    imageContainer: {
+        width: 100,
+        aspectRatio: 3 / 4,
+        borderRadius: 10,
+        overflow: 'hidden',
+        backgroundColor: '#F7FAFC',
+    },
+    attendanceImage: {
+        width: '100%',
+        height: '100%',
     },
     paginationControls: {
         flexDirection: 'row',
@@ -698,7 +717,6 @@ const styles = StyleSheet.create({
     disabledButton: {
         color: '#ccc',
     },
-    //accessDenied
     accessDeniedContainer: {
         flex: 1,
         justifyContent: 'center',
@@ -715,17 +733,6 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         marginBottom: 20,
     },
-    icon: {
-        fontSize: 40,
-        color: 'white',
-        fontWeight: 'bold',
-    },
-    message: {
-        fontSize: 16,
-        textAlign: 'center',
-        fontFamily: 'Poppins-Regular',
-        color: '#666',
-    },
     message: {
         fontSize: 18,
         fontWeight: 'bold',
@@ -738,12 +745,6 @@ const styles = StyleSheet.create({
     },
     shimmerSubtitle: {
         marginBottom: 15,
-    },
-    shimmerStatus: {
-        position: 'absolute',
-        top: 20,
-        right: 20,
-        borderRadius: 20,
     },
 });
 
