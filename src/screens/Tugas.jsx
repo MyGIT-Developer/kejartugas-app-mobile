@@ -82,10 +82,10 @@ const getCollectionStatusBadgeColor = (status) => {
     }
 };
 
-const TaskCard = React.memo(function TaskCard({ 
-    task = task,  // Use default parameter instead of defaultProps
-    onProjectDetailPress = () => {}, 
-    onTaskDetailPress = () => {} 
+const TaskCard = React.memo(function TaskCard({
+    task = task, // Use default parameter instead of defaultProps
+    onProjectDetailPress = () => {},
+    onTaskDetailPress = () => {},
 }) {
     const {
         color: badgeColor,
@@ -132,8 +132,8 @@ const ShimmerTaskCard = () => (
             <Shimmer width={200} height={20} style={styles.shimmerTitle} />
             <Shimmer width={175} height={20} style={styles.shimmerTitle} />
         </View>
-        <Shimmer width={150} height={20} style={[styles.shimmerTitle, {marginBottom:45}]} />
-      
+        <Shimmer width={150} height={20} style={[styles.shimmerTitle, { marginBottom: 45 }]} />
+
         <View style={styles.buttonContainer}>
             <Shimmer width={120} height={25} style={styles.shimmerButton} />
             <Shimmer width={100} height={30} style={styles.shimmerButton} />
@@ -211,8 +211,8 @@ const Tugas = () => {
 
     useEffect(() => {
         checkAccessPermission();
+        fetchTasks(); // Call fetchTasks here to load tasks at startup
     }, []);
-
     const checkAccessPermission = async () => {
         try {
             const accessPermissions = await AsyncStorage.getItem('access_permissions');
@@ -226,19 +226,19 @@ const Tugas = () => {
 
     const fetchTasks = async () => {
         setRefreshing(true);
-        setIsLoading(true);
+        setIsLoading(true); // Keep shimmer visible while fetching data
         setError(null);
+
         try {
             const employeeId = await AsyncStorage.getItem('employeeId');
-            if (!employeeId) {
-                throw new Error('ID Karyawan tidak ditemukan');
-            }
+            if (!employeeId) throw new Error('ID Karyawan tidak ditemukan');
 
             const data = await fetchTotalTasksForEmployee(employeeId);
 
-            const sortedTasks = data.employeeTasks.sort((a, b) => {
-                return new Date(b.start_date) - new Date(a.start_date);
-            });
+            // Simulate delay for shimmer testing
+            await new Promise((resolve) => setTimeout(resolve, 2000)); // 2-second delay
+
+            const sortedTasks = data.employeeTasks.sort((a, b) => new Date(b.start_date) - new Date(a.start_date));
 
             const tasksByStatus = {
                 inProgress: sortedTasks.filter((task) => task.task_status === 'workingOnIt'),
@@ -249,6 +249,7 @@ const Tugas = () => {
             };
             setTasks(tasksByStatus);
 
+            // Populate projects data
             const projectsMap = new Map();
             sortedTasks.forEach((task) => {
                 if (!projectsMap.has(task.project_id)) {
@@ -261,19 +262,11 @@ const Tugas = () => {
                 projectsMap.get(task.project_id).tasks.push(task);
             });
             setProjects(Array.from(projectsMap.values()));
-
-            for (const status in tasksByStatus) {
-                tasksByStatus[status].forEach(async (task) => {
-                    if (task.id) {
-                        await AsyncStorage.setItem(`task_${task.id}`, JSON.stringify(task.id));
-                    }
-                });
-            }
         } catch (error) {
             setError('Gagal mengambil tugas. Silakan coba lagi nanti.');
             setShowAlert(true);
         } finally {
-            setIsLoading(false);
+            setIsLoading(false); // Hide shimmer once data is fully loaded
             setRefreshing(false);
         }
     };
@@ -392,6 +385,7 @@ const Tugas = () => {
                 </LinearGradient>
 
                 <View style={styles.content}>
+                    {/* Render shimmer if loading, otherwise render TaskSection */}
                     <TaskSection
                         title="Dalam Pengerjaan"
                         tasks={tasks.inProgress}
@@ -620,9 +614,7 @@ const styles = StyleSheet.create({
         right: 20,
         borderRadius: 20,
     },
-    shimmerButton: {
-        
-    },
+    shimmerButton: {},
     bottomSpacer: {
         height: 100,
     },
