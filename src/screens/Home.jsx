@@ -261,7 +261,7 @@ const Home = () => {
             case 'Total Projek Selesai':
                 requiredPermission = accessPermissions.access_project; // Define the required permission for this screen
                 break;
-            case 'Total Dalam Pengerjaan':
+            case 'Tugas Dalam Pengerjaan':
                 requiredPermission = accessPermissions.access_tasks; // Define the required permission for this screen
                 break;
             case 'Tugas Selesai':
@@ -294,10 +294,10 @@ const Home = () => {
                 navigation.navigate('ProjectList');
                 break;
             case 'Total Dalam Pengerjaan':
-                navigation.navigate('ProjectOnWorking');
+                navigation.navigate('Tugas');
                 break;
             case 'Tugas Selesai':
-                navigation.navigate('CompletedTasksScreen');
+                navigation.navigate('Tugas');
                 break;
             default:
                 break; // Default case is covered above
@@ -459,7 +459,7 @@ const Home = () => {
                   icon: 'check-circle',
               },
               {
-                  description: 'Total Dalam Pengerjaan',
+                  description: 'Tugas Dalam Pengerjaan',
                   value: dashboardData.total_tasks_working_on_it,
                   color: '#DD9968',
                   icon: 'rotate-cw',
