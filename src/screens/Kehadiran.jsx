@@ -34,17 +34,79 @@ const AccessDenied = () => {
     );
 };
 const ShimmerTaskCard = () => (
+    //     <View key={index} style={styles.containerPerDate}>
+    //     <View style={styles.upperContainerPerDate}>
+    //         <View style={styles.dateSection}>
+    //             <Text style={styles.dateText}>{formattedDateForUpper}</Text>
+    //             <View style={[styles.statusView, { backgroundColor: getBackgroundColor(status) }]}>
+    //                 <View style={[styles.statusDot, { backgroundColor: getIndicatorDotColor(status) }]} />
+    //                 <Text style={styles.statusText}>{status}</Text>
+    //             </View>
+    //         </View>
+
+    //         <View style={[styles.wfh, { backgroundColor: '#d7d7d7' }]}>
+    //                 <Text style={styles.statusText}>{wfh}</Text>
+    //             </View>
+    //     </View>
+    //     <View style={styles.cardContent}>
+    //         {/* Left side - Date and Status */}
+    //         <View style={styles.leftContent}>
+    //             {/* Time Details */}
+    //             <View style={styles.timeDetails}>
+    //                 <View style={styles.timeColumn}>
+    //                     <Text style={styles.timeLabel}>Clock In</Text>
+    //                     <Text style={styles.timeValue}>{checkIn}</Text>
+    //                 </View>
+    //                 <View style={styles.timeColumn}>
+    //                     <Text style={styles.timeLabel}>Clock Out</Text>
+    //                     <Text style={styles.timeValue}>{checkOut}</Text>
+    //                 </View>
+    //                 <View style={styles.timeColumn}>
+    //                     <Text style={styles.timeLabel}>Duration</Text>
+    //                     <Text style={styles.timeValue}>{duration}</Text>
+    //                 </View>
+    //             </View>
+
+    //             {/* Notes Section */}
+    //             <View style={styles.notesSection}>
+    //                 <Text style={styles.notesLabel}>Notes:</Text>
+    //                 <Text style={styles.notesText}>{notes}</Text>
+    //             </View>
+    //         </View>
+
+    //         {/* Right side - Attendance Image */}
+
+    //         <View style={styles.imageContainer}>
+    //             {attendanceImage ? (
+    //                 <Image
+    //                     source={{ uri: attendanceImage }}
+    //                     style={styles.attendanceImage}
+    //                     resizeMode="cover"
+    //                 />
+    //             ) : (
+    //                 <View style={styles.noAttendanceImage}>
+    //                     <Text>No Image</Text>
+    //                 </View>
+    //             )}
+    //         </View>
+    //     </View>
+    // </View>
+
     <View style={[styles.containerPerDate, { marginBottom: 20 }]}>
+        <View style={styles.upperContainerPerDate}>
+            <View style={styles.dateSection}>
+                <Shimmer width={180} height={20} style={{ marginBottom: 8 }} />
+                <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                    <Shimmer width={100} height={30} style={{ borderRadius: 15 }} />
+                </View>
+            </View>
+
+            <Shimmer width={50} height={18} />
+        </View>
         <View style={styles.cardContent}>
             {/* Left Content */}
             <View style={styles.leftContent}>
                 {/* Date Section */}
-                <View style={styles.dateSection}>
-                    <Shimmer width={200} height={20} style={{ marginBottom: 8 }} />
-                    <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                        <Shimmer width={100} height={30} style={{ borderRadius: 15 }} />
-                    </View>
-                </View>
 
                 {/* Time Details */}
                 <View style={[styles.timeDetails, { paddingVertical: 12 }]}>
@@ -65,7 +127,7 @@ const ShimmerTaskCard = () => (
                 {/* Notes Section */}
                 <View style={styles.notesSection}>
                     <Shimmer width={80} height={15} style={{ marginBottom: 4 }} />
-                    <Shimmer width={200} height={40} />
+                    <Shimmer width={175} height={40} />
                 </View>
             </View>
 
@@ -339,19 +401,26 @@ const Kehadiran = () => {
             ? `http://202.10.36.103:8000/${attendanceForDate.attendance_image}`
             : null;
 
+        const wfh = attendanceForDate ? (attendanceForDate.isWFH ? 'Out of Office' : 'In Office') : 'No notes';
+
         return (
             <View key={index} style={styles.containerPerDate}>
+                <View style={styles.upperContainerPerDate}>
+                    <View style={styles.dateSection}>
+                        <Text style={styles.dateText}>{formattedDateForUpper}</Text>
+                        <View style={[styles.statusView, { backgroundColor: getBackgroundColor(status) }]}>
+                            <View style={[styles.statusDot, { backgroundColor: getIndicatorDotColor(status) }]} />
+                            <Text style={styles.statusText}>{status}</Text>
+                        </View>
+                    </View>
+
+                    <View style={[styles.wfh, { backgroundColor: '#d7d7d7' }]}>
+                        <Text style={styles.statusText}>{wfh}</Text>
+                    </View>
+                </View>
                 <View style={styles.cardContent}>
                     {/* Left side - Date and Status */}
                     <View style={styles.leftContent}>
-                        <View style={styles.dateSection}>
-                            <Text style={styles.dateText}>{formattedDateForUpper}</Text>
-                            <View style={[styles.statusView, { backgroundColor: getBackgroundColor(status) }]}>
-                                <View style={[styles.statusDot, { backgroundColor: getIndicatorDotColor(status) }]} />
-                                <Text style={styles.statusText}>{status}</Text>
-                            </View>
-                        </View>
-
                         {/* Time Details */}
                         <View style={styles.timeDetails}>
                             <View style={styles.timeColumn}>
@@ -376,15 +445,20 @@ const Kehadiran = () => {
                     </View>
 
                     {/* Right side - Attendance Image */}
-                    {attendanceImage && (
-                        <View style={styles.imageContainer}>
+
+                    <View style={styles.imageContainer}>
+                        {attendanceImage ? (
                             <Image
                                 source={{ uri: attendanceImage }}
                                 style={styles.attendanceImage}
                                 resizeMode="cover"
                             />
-                        </View>
-                    )}
+                        ) : (
+                            <View style={styles.noAttendanceImage}>
+                                <Text>No Image</Text>
+                            </View>
+                        )}
+                    </View>
                 </View>
             </View>
         );
@@ -609,6 +683,11 @@ const styles = StyleSheet.create({
         elevation: 3,
         padding: 15,
     },
+    upperContainerPerDate: {
+        backgroundColor: 'white',
+        width: '100%',
+        marginBottom: 15,
+    },
     cardContent: {
         flexDirection: 'row',
         justifyContent: 'space-between',
@@ -618,13 +697,14 @@ const styles = StyleSheet.create({
         marginRight: 15,
     },
     dateSection: {
-        marginBottom: 12,
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
     },
     dateText: {
         fontSize: 16,
         fontWeight: '600',
         color: '#2D3748',
-        marginBottom: 8,
     },
     statusView: {
         flexDirection: 'row',
@@ -681,16 +761,37 @@ const styles = StyleSheet.create({
         color: '#4A5568',
         lineHeight: 20,
     },
+    wfh: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        alignSelf: 'flex-start',
+        paddingHorizontal: 12,
+        paddingVertical: 6,
+        borderRadius: 5,
+    },
     imageContainer: {
         width: 100,
         aspectRatio: 3 / 4,
         borderRadius: 10,
         overflow: 'hidden',
-        backgroundColor: '#F7FAFC',
+        backgroundColor: '#ebebeb',
+        shadowColor: '#000',
+        shadowOffset: {
+            width: 0,
+            height: 2,
+        },
+        shadowOpacity: 0.1,
+        shadowRadius: 4,
+        elevation: 3,
     },
     attendanceImage: {
         width: '100%',
         height: '100%',
+    },
+    noAttendanceImage: {
+        flex: 1,
+        justifyContent: 'center',
+        alignItems: 'center',
     },
     paginationControls: {
         flexDirection: 'row',
