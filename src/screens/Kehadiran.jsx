@@ -34,64 +34,6 @@ const AccessDenied = () => {
     );
 };
 const ShimmerTaskCard = () => (
-    //     <View key={index} style={styles.containerPerDate}>
-    //     <View style={styles.upperContainerPerDate}>
-    //         <View style={styles.dateSection}>
-    //             <Text style={styles.dateText}>{formattedDateForUpper}</Text>
-    //             <View style={[styles.statusView, { backgroundColor: getBackgroundColor(status) }]}>
-    //                 <View style={[styles.statusDot, { backgroundColor: getIndicatorDotColor(status) }]} />
-    //                 <Text style={styles.statusText}>{status}</Text>
-    //             </View>
-    //         </View>
-
-    //         <View style={[styles.wfh, { backgroundColor: '#d7d7d7' }]}>
-    //                 <Text style={styles.statusText}>{wfh}</Text>
-    //             </View>
-    //     </View>
-    //     <View style={styles.cardContent}>
-    //         {/* Left side - Date and Status */}
-    //         <View style={styles.leftContent}>
-    //             {/* Time Details */}
-    //             <View style={styles.timeDetails}>
-    //                 <View style={styles.timeColumn}>
-    //                     <Text style={styles.timeLabel}>Clock In</Text>
-    //                     <Text style={styles.timeValue}>{checkIn}</Text>
-    //                 </View>
-    //                 <View style={styles.timeColumn}>
-    //                     <Text style={styles.timeLabel}>Clock Out</Text>
-    //                     <Text style={styles.timeValue}>{checkOut}</Text>
-    //                 </View>
-    //                 <View style={styles.timeColumn}>
-    //                     <Text style={styles.timeLabel}>Duration</Text>
-    //                     <Text style={styles.timeValue}>{duration}</Text>
-    //                 </View>
-    //             </View>
-
-    //             {/* Notes Section */}
-    //             <View style={styles.notesSection}>
-    //                 <Text style={styles.notesLabel}>Notes:</Text>
-    //                 <Text style={styles.notesText}>{notes}</Text>
-    //             </View>
-    //         </View>
-
-    //         {/* Right side - Attendance Image */}
-
-    //         <View style={styles.imageContainer}>
-    //             {attendanceImage ? (
-    //                 <Image
-    //                     source={{ uri: attendanceImage }}
-    //                     style={styles.attendanceImage}
-    //                     resizeMode="cover"
-    //                 />
-    //             ) : (
-    //                 <View style={styles.noAttendanceImage}>
-    //                     <Text>No Image</Text>
-    //                 </View>
-    //             )}
-    //         </View>
-    //     </View>
-    // </View>
-
     <View style={[styles.containerPerDate, { marginBottom: 20 }]}>
         <View style={styles.upperContainerPerDate}>
             <View style={styles.dateSection}>
@@ -357,6 +299,19 @@ const Kehadiran = () => {
 
         return `${hours}h ${minutes}m`;
     };
+    const renderImage = (imageUri) => {
+        return imageUri ? (
+            <Image
+                source={{ uri: imageUri }}
+                style={styles.attendanceImage}
+                onError={(e) => console.error('Image load error:', e.nativeEvent.error)}
+            />
+        ) : (
+            <View style={styles.noAttendanceImage}>
+                <Text>No Image Available</Text>
+            </View>
+        );
+    };
 
     const renderDateView = (date, index) => {
         const currentDate = new Date(startDate);
@@ -398,9 +353,9 @@ const Kehadiran = () => {
             : '-';
         const notes = attendanceForDate ? attendanceForDate.note : 'No notes';
         const attendanceImage = attendanceForDate?.attendance_image
-            ? `http://202.10.36.103:8000/${attendanceForDate.attendance_image}`
+            ? `http://app.kejartugas.com:8000/${attendanceForDate.attendance_image}`
             : null;
-
+        console.log(attendanceImage);
         const wfh = attendanceForDate ? (attendanceForDate.isWFH ? 'Out of Office' : 'In Office') : 'No notes';
 
         return (
@@ -446,19 +401,7 @@ const Kehadiran = () => {
 
                     {/* Right side - Attendance Image */}
 
-                    <View style={styles.imageContainer}>
-                        {attendanceImage ? (
-                            <Image
-                                source={{ uri: attendanceImage }}
-                                style={styles.attendanceImage}
-                                resizeMode="cover"
-                            />
-                        ) : (
-                            <View style={styles.noAttendanceImage}>
-                                <Text>No Image</Text>
-                            </View>
-                        )}
-                    </View>
+                    <View style={styles.imageContainer}>{renderImage(attendanceImage)}</View>
                 </View>
             </View>
         );
