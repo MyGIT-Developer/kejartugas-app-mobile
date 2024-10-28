@@ -18,23 +18,26 @@ import { useNavigation } from '@react-navigation/native';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { getEmployeeById } from '../api/general';
+import { useFonts } from '../utils/UseFonts';
+
 const { height, width: SCREEN_WIDTH } = Dimensions.get('window');
 
-const InfoItem = ({ label, value }) => (
+const InfoItem = ({ label, value, fontsLoaded }) => (
     <View style={styles.infoItem}>
-        <Text style={styles.label}>{label}</Text>
-        <Text style={styles.value}>{value}</Text>
+        <Text style={[styles.label, fontsLoaded ? { fontFamily: 'Poppins-Regular' } : null]}>{label}</Text>
+        <Text style={[styles.value, fontsLoaded ? { fontFamily: 'Poppins-Medium' } : null]}>{value}</Text>
     </View>
 );
 
-const StatisticCard = ({ value, label }) => (
+const StatisticCard = ({ value, label, fontsLoaded }) => (
     <View style={styles.statCard}>
-        <Text style={styles.statValue}>{value}</Text>
-        <Text style={styles.statLabel}>{label}</Text>
+        <Text style={[styles.statValue, fontsLoaded ? { fontFamily: 'Poppins-Bold' } : null]}>{value}</Text>
+        <Text style={[styles.statLabel, fontsLoaded ? { fontFamily: 'Poppins-Regular' } : null]}>{label}</Text>
     </View>
 );
 
 const Profile = () => {
+    const fontsLoaded = useFonts();
     const [isLoading, setIsLoading] = useState(false);
     const navigation = useNavigation();
     const [userData, setUserData] = useState([]);
@@ -124,6 +127,10 @@ const Profile = () => {
         setModalVisible(false);
     };
 
+    if (!fontsLoaded) {
+        return <ActivityIndicator size="large" color="#0E509E" style={{ flex: 1 }} />;
+    }
+
     return (
         <SafeAreaView style={styles.container}>
             <View style={styles.backgroundBox}>
@@ -149,7 +156,9 @@ const Profile = () => {
                     <TouchableOpacity style={styles.backIcon} onPress={() => navigation.goBack()}>
                         <Icon name="arrow-back" size={24} color="#fff" />
                     </TouchableOpacity>
-                    <Text style={styles.headerText}>Profile</Text>
+                    <Text style={[styles.headerText, fontsLoaded ? { fontFamily: 'Poppins-Bold' } : null]}>
+                        Profile
+                    </Text>
                 </View>
                 <View style={styles.profileSection}>
                     <View style={styles.profileHeader}>
@@ -161,44 +170,60 @@ const Profile = () => {
                         <Image source={{ uri: `${baseUrl}${userData.profile_picture}` }} style={styles.avatar} />
                     ) : (
                         <View style={styles.initialsContainer}>
-                            <Text style={styles.initialsText}>{getInitials(userData.employee_name)}</Text>
+                            <Text style={[styles.initialsText, fontsLoaded ? { fontFamily: 'Poppins-Bold' } : null]}>
+                                {getInitials(userData.employee_name)}
+                            </Text>
                         </View>
                     )}
-                    <Text style={styles.name}>{userData.employee_name}</Text>
-                    <Text style={styles.jobTitle}>{userData.job_name}</Text>
+                    <Text style={[styles.name, fontsLoaded ? { fontFamily: 'Poppins-Bold' } : null]}>
+                        {userData.employee_name}
+                    </Text>
+                    <Text style={[styles.jobTitle, fontsLoaded ? { fontFamily: 'Poppins-Regular' } : null]}>
+                        {userData.job_name}
+                    </Text>
                     <View style={styles.companyInfo}>
-                        <Text style={styles.companyText}>{userData.company_name}</Text>
-                        <Text style={styles.teamText}>Tim: {userData.team_name}</Text>
+                        <Text style={[styles.companyText, fontsLoaded ? { fontFamily: 'Poppins-Regular' } : null]}>
+                            {userData.company_name}
+                        </Text>
+                        <Text style={[styles.teamText, fontsLoaded ? { fontFamily: 'Poppins-Regular' } : null]}>
+                            Tim: {userData.team_name}
+                        </Text>
                     </View>
                 </View>
 
                 <View style={styles.statsContainer}>
-                    <StatisticCard value={userData.total_projects} label="Total Projek" />
+                    <StatisticCard value={userData.total_projects} label="Total Projek" fontsLoaded={fontsLoaded} />
                     <View style={styles.statsDevider} />
-                    <StatisticCard value={userData.total_tasks} label="Total Tugas" />
+                    <StatisticCard value={userData.total_tasks} label="Total Tugas" fontsLoaded={fontsLoaded} />
                 </View>
 
                 <View style={styles.section}>
-                    <Text style={styles.sectionTitle}>Informasi Kontak</Text>
-                    <InfoItem label="Email" value={userData.email} />
-                    <InfoItem label="No. Handphone" value={userData.mobile_number || '-'} />
-                    <InfoItem label="Alamat" value={userData.address || '-'} />
+                    <Text style={[styles.sectionTitle, fontsLoaded ? { fontFamily: 'Poppins-SemiBold' } : null]}>
+                        Informasi Kontak
+                    </Text>
+                    <InfoItem label="Email" value={userData.email} fontsLoaded={fontsLoaded} />
+                    <InfoItem label="No. Handphone" value={userData.mobile_number || '-'} fontsLoaded={fontsLoaded} />
+                    <InfoItem label="Alamat" value={userData.address || '-'} fontsLoaded={fontsLoaded} />
                 </View>
 
                 <View style={styles.section}>
-                    <Text style={styles.sectionTitle}>Data Pribadi</Text>
-                    <InfoItem label="NIK" value={userData.identity_number || '-'} />
-                    <InfoItem label="NPWP" value={userData.npwp_number || '-'} />
-                    <InfoItem label="Tanggal Lahir" value={userData.date_of_birth || '-'} />
-                    <InfoItem label="Jenis Kelamin" value={userData.gender || '-'} />
-                    <InfoItem label="Agama" value={userData.religion || '-'} />
+                    <Text style={[styles.sectionTitle, fontsLoaded ? { fontFamily: 'Poppins-SemiBold' } : null]}>
+                        Data Pribadi
+                    </Text>
+                    <InfoItem label="NIK" value={userData.identity_number || '-'} fontsLoaded={fontsLoaded} />
+                    <InfoItem label="NPWP" value={userData.npwp_number || '-'} fontsLoaded={fontsLoaded} />
+                    <InfoItem label="Tanggal Lahir" value={userData.date_of_birth || '-'} fontsLoaded={fontsLoaded} />
+                    <InfoItem label="Jenis Kelamin" value={userData.gender || '-'} fontsLoaded={fontsLoaded} />
+                    <InfoItem label="Agama" value={userData.religion || '-'} fontsLoaded={fontsLoaded} />
                 </View>
 
-                <View style={styles.section}>
-                    <Text style={styles.sectionTitle}>Informasi Pekerjaan</Text>
-                    <InfoItem label="Jabatan" value={userData.job_name} />
-                    <InfoItem label="Departemen" value={userData.team_name} />
-                    <InfoItem label="Role" value={userData.role_name} />
+                <View style={[styles.section, { marginBottom: 30 }]}>
+                    <Text style={[styles.sectionTitle, fontsLoaded ? { fontFamily: 'Poppins-SemiBold' } : null]}>
+                        Informasi Pekerjaan
+                    </Text>
+                    <InfoItem label="Jabatan" value={userData.job_name} fontsLoaded={fontsLoaded} />
+                    <InfoItem label="Departemen" value={userData.team_name} fontsLoaded={fontsLoaded} />
+                    <InfoItem label="Role" value={userData.role_name} fontsLoaded={fontsLoaded} />
                 </View>
 
                 <Modal visible={modalVisible} transparent={true} animationType="none">
@@ -270,13 +295,11 @@ const styles = StyleSheet.create({
         marginHorizontal: 15,
         borderRadius: 8,
         shadowColor: '#000',
-        shadowOffset: {
-            width: 0,
-            height: 2,
-        },
+        shadowOffset: { width: 0, height: 2 },
         shadowOpacity: 0.25,
         shadowRadius: 3.84,
         elevation: 5,
+        marginBottom: 15,
     },
     profileHeader: {
         width: '100%',
@@ -343,10 +366,7 @@ const styles = StyleSheet.create({
         marginHorizontal: 15,
         borderRadius: 8,
         shadowColor: '#000',
-        shadowOffset: {
-            width: 0,
-            height: 2,
-        },
+        shadowOffset: { width: 0, height: 2 },
         shadowOpacity: 0.25,
         shadowRadius: 3.84,
         elevation: 5,
@@ -378,10 +398,7 @@ const styles = StyleSheet.create({
         marginHorizontal: 15,
         borderRadius: 8,
         shadowColor: '#000',
-        shadowOffset: {
-            width: 0,
-            height: 2,
-        },
+        shadowOffset: { width: 0, height: 2 },
         shadowOpacity: 0.25,
         shadowRadius: 3.84,
         elevation: 5,
@@ -428,6 +445,7 @@ const styles = StyleSheet.create({
         fontSize: 18,
         fontWeight: 'bold',
         marginBottom: 20,
+        textAlign: 'center',
     },
     modalButtonContainer: {
         flexDirection: 'row',
