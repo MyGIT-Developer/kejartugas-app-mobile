@@ -1,9 +1,19 @@
 import React, { useEffect, useState, useCallback } from 'react';
-import { View, Text, SafeAreaView, Dimensions, StyleSheet, RefreshControl, Platform, StatusBar } from 'react-native';
+import {
+    View,
+    Text,
+    SafeAreaView,
+    Dimensions,
+    StyleSheet,
+    RefreshControl,
+    Platform,
+    StatusBar,
+    ScrollView,
+} from 'react-native';
 import FloatingButton from '../components/FloatingButtonProject';
 import { getProject } from '../api/projectTask';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { ScrollView, TextInput } from 'react-native-gesture-handler';
+import { TextInput } from 'react-native-gesture-handler';
 import { useFocusEffect } from '@react-navigation/native';
 const { height, width: SCREEN_WIDTH } = Dimensions.get('window');
 import { LinearGradient } from 'expo-linear-gradient';
