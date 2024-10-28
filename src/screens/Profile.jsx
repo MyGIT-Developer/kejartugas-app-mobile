@@ -8,11 +8,10 @@ import {
     Dimensions,
     SafeAreaView,
     ScrollView,
-    Alert,
-    RefreshControl,
     ActivityIndicator,
     Modal,
     Animated,
+    RefreshControl,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useNavigation } from '@react-navigation/native';
@@ -21,23 +20,28 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { getEmployeeById } from '../api/general';
 const { height, width: SCREEN_WIDTH } = Dimensions.get('window');
 
-const showNotImplementedAlert = (featureName) => {
-    Alert.alert(
-        'Feature Not Available',
-        `The ${featureName} feature is not implemented yet. Please check back later.`,
-        [{ text: 'OK', onPress: () => console.log('OK Pressed') }],
-    );
-};
+const InfoItem = ({ label, value }) => (
+    <View style={styles.infoItem}>
+        <Text style={styles.label}>{label}</Text>
+        <Text style={styles.value}>{value}</Text>
+    </View>
+);
 
-
+const StatisticCard = ({ value, label }) => (
+    <View style={styles.statCard}>
+        <Text style={styles.statValue}>{value}</Text>
+        <Text style={styles.statLabel}>{label}</Text>
+    </View>
+);
 
 const Profile = () => {
     const [isLoading, setIsLoading] = useState(false);
     const navigation = useNavigation();
     const [userData, setUserData] = useState([]);
-    const [modalVisible, setModalVisible] = useState(false); // Modal visibility state
+    const [modalVisible, setModalVisible] = useState(false);
     const [refreshing, setRefreshing] = useState(false);
     const baseUrl = 'http://202.10.36.103:8000/';
+
     const fetchUserData = useCallback(async () => {
         try {
             const employeeId = await AsyncStorage.getItem('employeeId');
@@ -48,18 +52,18 @@ const Profile = () => {
         }
     }, []);
 
-    const [slideAnim] = useState(new Animated.Value(300)); // Start below screen
+    const [slideAnim] = useState(new Animated.Value(300));
 
-    React.useEffect(() => {
+    useEffect(() => {
         if (modalVisible) {
             Animated.timing(slideAnim, {
-                toValue: 0, // Slide up to its normal position
+                toValue: 0,
                 duration: 300,
                 useNativeDriver: true,
             }).start();
         } else {
             Animated.timing(slideAnim, {
-                toValue: 300, // Slide back down
+                toValue: 300,
                 duration: 300,
                 useNativeDriver: true,
             }).start();
@@ -77,54 +81,47 @@ const Profile = () => {
         };
         getUserData();
     }, []);
+
     const onRefresh = useCallback(() => {
         setRefreshing(true);
         fetchUserData().then(() => setRefreshing(false));
-    }, []);
+    }, [fetchUserData]);
 
-    const ProfileButton = ({ icon, title, onPress }) => (
-        <TouchableOpacity style={styles.profileButton} onPress={onPress}>
-            <Icon name={icon} size={24} color="#4A4A4A" />
-            <Text style={styles.profileButtonText}>{title}</Text>
-        </TouchableOpacity>
-    );
-
-    const navigateToScreen = (screenName, data) => {
-        navigation.navigate(screenName, { employeeData: data });
+    const getInitials = (name) => {
+        return (
+            name
+                ?.split(' ')
+                .map((word) => word[0])
+                .join('')
+                .slice(0, 2)
+                .toUpperCase() || 'AD'
+        );
     };
 
     const handleLogout = async () => {
-        setIsLoading(true); // Start loading
-    
-        // Delay function using Promise and setTimeout
+        setIsLoading(true);
         const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
-    
         try {
-            // Optional delay (e.g., 2 seconds before logging out)
-            await delay(2000); // Adjust the time in milliseconds (2000ms = 2 seconds)
-    
+            await delay(2000);
             await AsyncStorage.clear();
             navigation.reset({
                 index: 0,
                 routes: [{ name: 'Login' }],
             });
-    
-            // Close the modal after successful logout
-            setModalVisible(false); 
+            setModalVisible(false);
         } catch (error) {
             console.log(error);
         } finally {
-            setIsLoading(false); // Stop loading
+            setIsLoading(false);
         }
     };
-    
 
     const confirmLogout = () => {
-        setModalVisible(true); // Show the confirmation modal
+        setModalVisible(true);
     };
 
     const cancelLogout = () => {
-        setModalVisible(false); // Hide modal
+        setModalVisible(false);
     };
 
     return (
@@ -138,12 +135,13 @@ const Profile = () => {
                 />
             </View>
             <ScrollView
+                contentContainerStyle={{ paddingBottom: 100 }} // Tambahkan paddingBottom untuk bagian bawah
                 refreshControl={
                     <RefreshControl
                         refreshing={refreshing}
                         onRefresh={onRefresh}
-                        colors={['#0E509E']} // Android
-                        tintColor="#0E509E" // iOS
+                        colors={['#0E509E']}
+                        tintColor="#0E509E"
                     />
                 }
             >
@@ -151,79 +149,79 @@ const Profile = () => {
                     <TouchableOpacity style={styles.backIcon} onPress={() => navigation.goBack()}>
                         <Icon name="arrow-back" size={24} color="#fff" />
                     </TouchableOpacity>
+                    <Text style={styles.headerText}>Profile</Text>
                 </View>
-
-                <View style={styles.profile}>
-                    <Image source={{ uri: `${baseUrl}${userData.profile_picture}` }} style={styles.avatar} />
-                    <View>
-                        <Text style={styles.name}>{userData.employee_name}</Text>
-                        <Text style={styles.role}>{userData.job_name}</Text>
+                <View style={styles.profileSection}>
+                    <View style={styles.profileHeader}>
+                        <TouchableOpacity style={styles.logoutIcon} onPress={confirmLogout}>
+                            <Icon name="exit-to-app" size={24} color="#e74c3c" />
+                        </TouchableOpacity>
                     </View>
-                </View>
-
-                <View style={styles.infoContainer}>
-                    <View style={styles.infoItem}>
-                        <Icon name="phone" size={20} color="#fff" />
-                        <Text style={styles.infoText}>{userData.mobile_number || '-'}</Text>
-                    </View>
-                    <View style={styles.infoItem}>
-                        <Icon name="email" size={20} color="#fff" />
-                        <Text style={styles.infoText}>{userData.email || '-'}</Text>
-                    </View>
-                </View>
-
-                <View style={styles.buttonContainer}>
-                    <ProfileButton
-                        icon="person"
-                        title="Personal Information"
-                        onPress={() => navigateToScreen('PersonalInformation', userData)}
-                    />
-                    <ProfileButton
-                        icon="edit"
-                        title="Edit Profile"
-                        onPress={() => showNotImplementedAlert('Edit Profile')}
-                    />
-                    <ProfileButton
-                        icon="help"
-                        title="Help & Support"
-                        onPress={() => showNotImplementedAlert('Help & Support')}
-                    />
-                    <ProfileButton
-                        icon="book"
-                        title="Terms and Privacy Policy"
-                        onPress={() => showNotImplementedAlert('Terms and Privacy Policy')}
-                    />
-                </View>
-
-                <View>
-                    <TouchableOpacity style={styles.logoutButton} onPress={confirmLogout}>
-                        {/* <Icon name="logout" size={24} color="#fff" style={{ transform: [{ scaleX: -1 }] }}/> */}
-                        <Text style={styles.logoutButtonText}>Logout</Text>
-                    </TouchableOpacity>
-
-                    {/* Logout Confirmation Modal */}
-                    <Modal visible={modalVisible} transparent={true} animationType="none">
-                        <View style={styles.overlay}>
-                            <Animated.View style={[styles.modalContent, { transform: [{ translateY: slideAnim }] }]}>
-                                {isLoading ? (
-                                    <ActivityIndicator size="large" color="#0000ff" />
-                                ) : (
-                                    <>
-                                        <Text style={styles.modalTitle}>Are you sure you want to logout?</Text>
-                                        <View style={styles.modalButtonContainer}>
-                                            <TouchableOpacity style={styles.confirmButton} onPress={handleLogout}>
-                                                <Text style={styles.buttonText}>Logout</Text>
-                                            </TouchableOpacity>
-                                            <TouchableOpacity style={styles.cancelButton} onPress={cancelLogout}>
-                                                <Text style={styles.buttonText}>Cancel</Text>
-                                            </TouchableOpacity>
-                                        </View>
-                                    </>
-                                )}
-                            </Animated.View>
+                    {userData.profile_picture ? (
+                        <Image source={{ uri: `${baseUrl}${userData.profile_picture}` }} style={styles.avatar} />
+                    ) : (
+                        <View style={styles.initialsContainer}>
+                            <Text style={styles.initialsText}>{getInitials(userData.employee_name)}</Text>
                         </View>
-                    </Modal>
+                    )}
+                    <Text style={styles.name}>{userData.employee_name}</Text>
+                    <Text style={styles.jobTitle}>{userData.job_name}</Text>
+                    <View style={styles.companyInfo}>
+                        <Text style={styles.companyText}>{userData.company_name}</Text>
+                        <Text style={styles.teamText}>Tim: {userData.team_name}</Text>
+                    </View>
                 </View>
+
+                <View style={styles.statsContainer}>
+                    <StatisticCard value={userData.total_projects} label="Total Projek" />
+                    <View style={styles.statsDevider} />
+                    <StatisticCard value={userData.total_tasks} label="Total Tugas" />
+                </View>
+
+                <View style={styles.section}>
+                    <Text style={styles.sectionTitle}>Informasi Kontak</Text>
+                    <InfoItem label="Email" value={userData.email} />
+                    <InfoItem label="No. Handphone" value={userData.mobile_number || '-'} />
+                    <InfoItem label="Alamat" value={userData.address || '-'} />
+                </View>
+
+                <View style={styles.section}>
+                    <Text style={styles.sectionTitle}>Data Pribadi</Text>
+                    <InfoItem label="NIK" value={userData.identity_number || '-'} />
+                    <InfoItem label="NPWP" value={userData.npwp_number || '-'} />
+                    <InfoItem label="Tanggal Lahir" value={userData.date_of_birth || '-'} />
+                    <InfoItem label="Jenis Kelamin" value={userData.gender || '-'} />
+                    <InfoItem label="Agama" value={userData.religion || '-'} />
+                </View>
+
+                <View style={styles.section}>
+                    <Text style={styles.sectionTitle}>Informasi Pekerjaan</Text>
+                    <InfoItem label="Jabatan" value={userData.job_name} />
+                    <InfoItem label="Departemen" value={userData.team_name} />
+                    <InfoItem label="Role" value={userData.role_name} />
+                </View>
+
+                <Modal visible={modalVisible} transparent={true} animationType="none">
+                    <View style={styles.overlay}>
+                        <Animated.View style={[styles.modalContent, { transform: [{ translateY: slideAnim }] }]}>
+                            {isLoading ? (
+                                <ActivityIndicator size="large" color="#0000ff" />
+                            ) : (
+                                <>
+                                    <Text style={styles.modalTitle}>Are you sure you want to logout?</Text>
+                                    <View style={styles.modalButtonContainer}>
+                                        <TouchableOpacity style={styles.confirmButton} onPress={handleLogout}>
+                                            <Text style={styles.buttonText}>Logout</Text>
+                                        </TouchableOpacity>
+                                        <TouchableOpacity style={styles.cancelButton} onPress={cancelLogout}>
+                                            <Text style={styles.buttonText}>Cancel</Text>
+                                        </TouchableOpacity>
+                                    </View>
+                                </>
+                            )}
+                        </Animated.View>
+                    </View>
+                </Modal>
             </ScrollView>
         </SafeAreaView>
     );
@@ -247,32 +245,46 @@ const styles = StyleSheet.create({
         borderBottomRightRadius: 25,
     },
     header: {
-        justifyContent: 'center',
+        flexDirection: 'row',
         alignItems: 'center',
+        justifyContent: 'center',
         width: SCREEN_WIDTH,
-        marginTop: 20,
-        gap: 20,
+        paddingTop: 60,
+        paddingBottom: 20,
+    },
+    headerText: {
+        fontSize: 22,
+        fontWeight: 'bold',
+        color: 'white',
+        textAlign: 'center',
     },
     backIcon: {
         position: 'absolute',
-        top: 35,
         left: 20,
         color: 'white',
-        fontSize: 24,
     },
-    editIcon: {
-        position: 'absolute',
-        top: 35,
-        right: 20,
-        color: 'white',
-        fontSize: 24,
-    },
-    profile: {
-        paddingHorizontal: 16,
+    profileSection: {
         alignItems: 'center',
-        gap: 10,
-        flexDirection: 'row',
-        marginTop: 80,
+        padding: 20,
+        backgroundColor: 'white',
+        marginHorizontal: 15,
+        borderRadius: 8,
+        shadowColor: '#000',
+        shadowOffset: {
+            width: 0,
+            height: 2,
+        },
+        shadowOpacity: 0.25,
+        shadowRadius: 3.84,
+        elevation: 5,
+    },
+    profileHeader: {
+        width: '100%',
+        alignItems: 'flex-end',
+        marginBottom: -10,
+    },
+    logoutIcon: {
+        padding: 5,
     },
     avatar: {
         width: 100,
@@ -282,99 +294,124 @@ const styles = StyleSheet.create({
         borderWidth: 2,
         borderColor: '#fff',
     },
-    name: {
-        fontSize: 24,
-        fontFamily: 'Poppins-Bold',
-        color: '#333',
-    },
-    role: {
-        fontSize: 16,
-        fontFamily: 'Poppins-Medium',
-        color: '#fff',
-    },
-    infoContainer: {
-        marginTop: 20,
-        paddingHorizontal: 16,
-    },
-    infoItem: {
-        flexDirection: 'row',
+    initialsContainer: {
+        width: 100,
+        height: 100,
+        borderRadius: 50,
+        backgroundColor: '#2196F3',
+        justifyContent: 'center',
         alignItems: 'center',
         marginBottom: 10,
+        borderWidth: 2,
+        borderColor: '#fff',
     },
-    infoText: {
-        marginLeft: 10,
+    initialsText: {
+        color: 'white',
+        fontSize: 36,
+        fontWeight: 'bold',
+    },
+    name: {
+        fontSize: 24,
+        fontWeight: 'bold',
+        marginBottom: 5,
+        textAlign: 'center',
+    },
+    jobTitle: {
         fontSize: 16,
-        color: '#fff',
-        fontFamily: 'Poppins-Medium',
+        color: '#666',
+        marginBottom: 5,
+    },
+    companyInfo: {
+        alignItems: 'center',
+    },
+    companyText: {
+        fontSize: 14,
+        color: '#666',
+        marginBottom: 2,
+    },
+    teamText: {
+        fontSize: 14,
+        color: '#666',
     },
     statsContainer: {
         flexDirection: 'row',
-        justifyContent: 'space-around',
-        marginTop: 20,
-        paddingVertical: 20,
-        backgroundColor: '#FFF',
-        borderRadius: 12,
-        marginHorizontal: 16,
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.1,
-        shadowRadius: 4,
-        elevation: 3,
-    },
-    statItem: {
+        backgroundColor: 'white',
+        marginTop: 15,
+        padding: 20,
+        justifyContent: 'center',
         alignItems: 'center',
+        marginHorizontal: 15,
+        borderRadius: 8,
+        shadowColor: '#000',
+        shadowOffset: {
+            width: 0,
+            height: 2,
+        },
+        shadowOpacity: 0.25,
+        shadowRadius: 3.84,
+        elevation: 5,
+    },
+    statsDevider: {
+        width: 1,
+        height: '100%',
+        backgroundColor: '#e0e0e0',
+        marginHorizontal: 30,
+    },
+    statCard: {
+        alignItems: 'center',
+        flex: 1,
     },
     statValue: {
         fontSize: 24,
         fontWeight: 'bold',
-        color: '#4A90E2',
+        color: '#2196F3',
+        marginBottom: 5,
     },
     statLabel: {
         fontSize: 14,
         color: '#666',
-        marginTop: 4,
     },
-    buttonContainer: {
-        marginTop: 20,
-        paddingHorizontal: 16,
-    },
-    profileButton: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        paddingVertical: 12,
-        borderBottomWidth: 1,
-        borderBottomColor: '#E0E0E0',
-    },
-    profileButtonText: {
-        marginLeft: 16,
-        fontSize: 16,
-        color: '#4A4A4A',
-        fontFamily: 'Poppins-Medium',
-        letterSpacing: -0.5,
-    },
-    logoutButton: {
-        backgroundColor: '#e74c3c',
+    section: {
+        backgroundColor: 'white',
+        marginTop: 15,
         padding: 15,
-        borderRadius: 5,
-        alignItems: 'center',
-        marginHorizontal: 20,
-        marginTop: 30,
-        flexDirection: 'row',
-        gap: 10,
-        justifyContent: 'center',
+        marginHorizontal: 15,
+        borderRadius: 8,
+        shadowColor: '#000',
+        shadowOffset: {
+            width: 0,
+            height: 2,
+        },
+        shadowOpacity: 0.25,
+        shadowRadius: 3.84,
+        elevation: 5,
     },
-    logoutButtonText: {
-        color: '#FFF',
+    sectionTitle: {
+        fontSize: 18,
+        fontWeight: '600',
+        marginBottom: 15,
+        color: '#333',
+    },
+    infoItem: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        paddingVertical: 10,
+        borderBottomWidth: 1,
+        borderBottomColor: '#f0f0f0',
+    },
+    label: {
         fontSize: 16,
-        fontFamily: 'Poppins-Bold',
+        color: '#666',
+        flex: 1,
+    },
+    value: {
+        fontSize: 16,
+        color: '#333',
+        fontWeight: '500',
+        flex: 1,
+        textAlign: 'right',
     },
     overlay: {
-        flex: 1,
-        justifyContent: 'center',
-        alignItems: 'center',
-        backgroundColor: 'rgba(0, 0, 0, 0.5)', // Semi-transparent overlay
-    },
-    modalContainer: {
         flex: 1,
         justifyContent: 'center',
         alignItems: 'center',
@@ -386,11 +423,10 @@ const styles = StyleSheet.create({
         borderRadius: 10,
         padding: 20,
         alignItems: 'center',
-        position: 'absolute',
     },
     modalTitle: {
         fontSize: 18,
-        fontFamily: 'Poppins-Bold',
+        fontWeight: 'bold',
         marginBottom: 20,
     },
     modalButtonContainer: {
@@ -416,7 +452,7 @@ const styles = StyleSheet.create({
     buttonText: {
         color: '#FFF',
         fontSize: 16,
-        fontFamily: 'Poppins-Bold',
+        fontWeight: 'bold',
     },
 });
 
