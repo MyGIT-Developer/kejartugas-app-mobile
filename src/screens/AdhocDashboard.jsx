@@ -213,6 +213,20 @@ const AdhocDashboard = ({ navigation }) => {
             setLoading(false);
         }
     };
+    // Function to fetch and display task details
+    const fetchAndShowTaskDetail = async (taskId) => {
+        try {
+            const response = await getAdhocTaskDetail(taskId);
+            if (response.status === 'success') {
+                setSelectedTaskDetail(response.data); // Set task details
+                setIsDetailModalVisible(true); // Open detail modal
+            } else {
+                console.error('Error fetching task detail:', response.message);
+            }
+        } catch (error) {
+            console.error('Error fetching task detail:', error);
+        }
+    };
 
     const fetchHistoryTasks = async () => {
         setLoading(true);
@@ -652,7 +666,12 @@ const AdhocDashboard = ({ navigation }) => {
                 <View style={styles.historyPreviewContainer}>
                     {isExpanded
                         ? section.items.map((item, index) => (
-                              <TouchableOpacity key={index} style={styles.historyPreviewItem} activeOpacity={0.7}>
+                              <TouchableOpacity
+                                  key={index}
+                                  style={styles.historyPreviewItem}
+                                  activeOpacity={0.7}
+                                  onPress={() => fetchAndShowTaskDetail(item.id)} // Show task detail when clicked
+                              >
                                   <View style={styles.historyPreviewContent}>
                                       <View style={styles.historyIconContainer}>
                                           <Feather name="file-text" size={24} color="#4A90E2" />
@@ -690,7 +709,12 @@ const AdhocDashboard = ({ navigation }) => {
                               </TouchableOpacity>
                           ))
                         : section.items.slice(0, 1).map((item, index) => (
-                              <TouchableOpacity key={index} style={styles.historyPreviewItem} activeOpacity={0.7}>
+                              <TouchableOpacity
+                                  key={index}
+                                  style={styles.historyPreviewItem}
+                                  activeOpacity={0.7}
+                                  onPress={() => fetchAndShowTaskDetail(item.id)} // Show task detail when clicked
+                              >
                                   <View style={styles.historyPreviewContent}>
                                       <View style={styles.historyIconContainer}>
                                           <Feather name="file-text" size={24} color="#4A90E2" />

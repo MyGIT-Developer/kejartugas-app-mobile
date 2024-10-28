@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
     View,
     Text,
@@ -14,14 +14,14 @@ import FloatingButton from '../components/FloatingButtonProject';
 import { getProject } from '../api/projectTask';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { TextInput } from 'react-native-gesture-handler';
-import { useFocusEffect } from '@react-navigation/native';
-const { height, width: SCREEN_WIDTH } = Dimensions.get('window');
 import { LinearGradient } from 'expo-linear-gradient';
 import * as Progress from 'react-native-progress';
 import { TouchableOpacity } from 'react-native';
-import { Feather } from '@expo/vector-icons';
+import { Feather, MaterialIcons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import ProjectScrollView from '../components/ProjectScrollView';
+
+const { height, width: SCREEN_WIDTH } = Dimensions.get('window');
 
 // Skeleton component for project card
 const SkeletonCard = () => (
@@ -32,6 +32,15 @@ const SkeletonCard = () => (
             <View style={[styles.skeletonText, { width: '100%', height: 10, marginBottom: 10 }]} />
             <View style={[styles.skeletonText, { width: '40%', height: 20 }]} />
         </View>
+    </View>
+);
+
+const AccessDenied = () => (
+    <View style={styles.accessDeniedContainer}>
+        <View style={styles.iconContainer}>
+            <MaterialIcons name="block" size={50} color="white" />
+        </View>
+        <Text style={styles.message}>Anda tidak mempunyai akses.</Text>
     </View>
 );
 
@@ -85,7 +94,6 @@ const ProjectSection = ({ title, projects, status, handleGoTo, handleGoToDetail 
             ) : (
                 <Text style={styles.sectionTitle}>{title}</Text>
             )}
-
             <TouchableOpacity onPress={() => handleGoTo(status)}>
                 <Text style={styles.seeAllText}>Lihat semua</Text>
             </TouchableOpacity>
@@ -115,11 +123,14 @@ const ProjectSection = ({ title, projects, status, handleGoTo, handleGoToDetail 
 const ProjectDashboard = () => {
     const navigation = useNavigation();
     const [project, setProject] = useState(null);
+    const [filteredProjects, setFilteredProjects] = useState(null); // Filtered projects for search
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
     const [refreshing, setRefreshing] = useState(false);
     const [companyId, setCompanyId] = useState(null);
     const [taskCount, setTaskCount] = useState([]);
+    const [hasAccess, setHasAccess] = useState(null);
+    const [searchQuery, setSearchQuery] = useState(''); // Search query state
 
     useEffect(() => {
         const getData = async () => {
@@ -130,8 +141,21 @@ const ProjectDashboard = () => {
                 console.error('Error fetching AsyncStorage data:', error);
             }
         };
+        getData();
+    }, []);
 
-        getData(); // Call the async function
+    useEffect(() => {
+        const checkAccessPermission = async () => {
+            try {
+                const accessPermissions = await AsyncStorage.getItem('access_permissions');
+                const permissions = JSON.parse(accessPermissions);
+                setHasAccess(permissions?.access_project === true);
+            } catch (error) {
+                console.error('Error checking access permission:', error);
+                setHasAccess(false);
+            }
+        };
+        checkAccessPermission();
     }, []);
 
     const fetchProject = async () => {
@@ -140,6 +164,7 @@ const ProjectDashboard = () => {
         try {
             const response = await getProject(companyId);
             setProject(response.data); // Assuming response contains the project data
+            setFilteredProjects(response.data); // Initialize filtered projects
             setTaskCount(response.data.task_status_counts);
         } catch (err) {
             setError(err.message);
@@ -155,7 +180,21 @@ const ProjectDashboard = () => {
         }
     }, [companyId]);
 
+    const handleSearch = (query) => {
+        setSearchQuery(query);
+        if (query === '') {
+            setFilteredProjects(project); // Reset to full project list if search is cleared
+        } else {
+            const filtered = project?.filter((item) => item.project_name.toLowerCase().includes(query.toLowerCase()));
+            setFilteredProjects(filtered);
+        }
+    };
+
     const renderContent = () => {
+        if (!hasAccess) {
+            return <AccessDenied />;
+        }
+
         if (loading) {
             return (
                 <>
@@ -178,20 +217,20 @@ const ProjectDashboard = () => {
             <>
                 <ProjectSection
                     title="Semua Proyek"
-                    projects={project}
+                    projects={filteredProjects}
                     status="all"
                     handleGoTo={handleGoTo}
                     handleGoToDetail={handleGoToDetail}
                 />
                 <ProjectSection
                     title="Dalam Pengerjaan"
-                    projects={project}
+                    projects={filteredProjects}
                     status="workingOnIt"
                     handleGoTo={() => handleGoTo('onProgress')}
                 />
                 <ProjectSection
                     title="Dalam Peninjauan"
-                    projects={project}
+                    projects={filteredProjects}
                     status="onReview"
                     handleGoTo={() => handleGoTo('onReview')}
                 />
@@ -222,35 +261,42 @@ const ProjectDashboard = () => {
     return (
         <SafeAreaView style={styles.safeArea}>
             <StatusBar barStyle="light-content" backgroundColor="#0E509E" hidden={true} />
-            <ScrollView
-                contentContainerStyle={styles.contentContainer}
-                refreshControl={<RefreshControl refreshing={refreshing} onRefresh={fetchProject} />}
-            >
-                <View style={styles.backgroundBox}>
-                    <LinearGradient
-                        colors={['#0E509E', '#5FA0DC', '#9FD2FF']}
-                        style={styles.linearGradient}
-                        start={{ x: 0, y: 0 }}
-                        end={{ x: 1, y: 1 }}
-                    />
-                </View>
-                <View style={styles.headerSection}>
-                    <Text style={styles.headerTitle}>Projek</Text>
-                    <View style={styles.searchSection}>
-                        <Feather name="search" size={20} color="#A7AFB1" style={styles.searchIcon} />
-                        <TextInput
-                            style={styles.input}
-                            placeholder="Pencarian"
-                            placeholderTextColor="#A7AFB1"
-                            underlineColorAndroid="transparent"
-                        />
-                    </View>
-                </View>
+            {hasAccess && (
+                <>
+                    <ScrollView
+                        contentContainerStyle={styles.contentContainer}
+                        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={fetchProject} />}
+                    >
+                        <View style={styles.backgroundBox}>
+                            <LinearGradient
+                                colors={['#0E509E', '#5FA0DC', '#9FD2FF']}
+                                style={styles.linearGradient}
+                                start={{ x: 0, y: 0 }}
+                                end={{ x: 1, y: 1 }}
+                            />
+                        </View>
+                        <View style={styles.headerSection}>
+                            <Text style={styles.headerTitle}>Projek</Text>
+                            <View style={styles.searchSection}>
+                                <Feather name="search" size={20} color="#A7AFB1" style={styles.searchIcon} />
+                                <TextInput
+                                    style={styles.input}
+                                    placeholder="Pencarian"
+                                    placeholderTextColor="#A7AFB1"
+                                    underlineColorAndroid="transparent"
+                                    value={searchQuery}
+                                    onChangeText={handleSearch}
+                                />
+                            </View>
+                        </View>
 
-                {/* Render Content */}
-                {renderContent()}
-            </ScrollView>
-            <FloatingButton />
+                        {/* Render Content */}
+                        {renderContent()}
+                    </ScrollView>
+                    <FloatingButton />
+                </>
+            )}
+            {!hasAccess && <AccessDenied />}
         </SafeAreaView>
     );
 };
@@ -258,7 +304,7 @@ const ProjectDashboard = () => {
 const styles = StyleSheet.create({
     safeArea: {
         flex: 1,
-        backgroundColor: 'transparent', // Match the starting color of the gradient
+        backgroundColor: 'transparent',
     },
     contentContainer: {
         flexGrow: 1,
@@ -270,11 +316,6 @@ const styles = StyleSheet.create({
         position: 'absolute',
         top: 0,
         left: 0,
-    },
-    errorContainer: {
-        flex: 1,
-        justifyContent: 'center',
-        alignItems: 'center',
     },
     linearGradient: {
         flex: 1,
@@ -322,16 +363,15 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         padding: 10,
         width: SCREEN_WIDTH,
-        paddingTop: Platform.OS === 'ios' ? 50 : 30, // Adjusted to move content up
+        paddingTop: Platform.OS === 'ios' ? 50 : 30,
     },
     headerTitle: {
         fontSize: 24,
         color: 'white',
         fontFamily: 'Poppins-Bold',
         letterSpacing: -0.3,
-        marginBottom: 15, // Add some space between title and search bar
+        marginBottom: 15,
     },
-
     searchSection: {
         flexDirection: 'row',
         backgroundColor: 'white',
@@ -359,7 +399,7 @@ const styles = StyleSheet.create({
         paddingVertical: Platform.OS === 'ios' ? 12 : 8,
         paddingHorizontal: 5,
         color: '#333',
-        fontFamily: Platform.OS === 'ios' ? 'Poppins-Regular' : 'Poppins-Regular',
+        fontFamily: 'Poppins-Regular',
         fontSize: 14,
     },
     sectionContainer: {
@@ -407,6 +447,29 @@ const styles = StyleSheet.create({
         fontSize: 10,
         fontFamily: 'Poppins-Medium',
         letterSpacing: -0.3,
+    },
+    accessDeniedContainer: {
+        flex: 1,
+        justifyContent: 'center',
+        alignItems: 'center',
+        padding: 20,
+        backgroundColor: '#F0F0F0',
+    },
+    iconContainer: {
+        width: 100,
+        height: 100,
+        borderRadius: 50,
+        backgroundColor: '#FF6B6B',
+        justifyContent: 'center',
+        alignItems: 'center',
+        marginBottom: 20,
+    },
+    message: {
+        fontSize: 18,
+        fontWeight: 'bold',
+        color: '#333',
+        textAlign: 'center',
+        marginTop: 20,
     },
 });
 
