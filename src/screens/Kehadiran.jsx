@@ -108,25 +108,29 @@ const Kehadiran = () => {
     const fetchData = useCallback(async () => {
         if (!employeeId || !companyId) return;
         setIsLoading(true);
+
         try {
+            const { status } = await Location.requestForegroundPermissionsAsync();
+            if (status !== 'granted') {
+                setErrorMsg('Location permission denied. Please enable location access in settings.');
+                showAlert('Location permission denied. Please enable location access in settings.', 'error');
+                setIsLoading(false);
+                return;
+            }
+
             const [attendanceResponse, parameterResponse, locationResponse] = await Promise.all([
                 getAttendance(employeeId),
                 getParameter(companyId),
                 Location.getCurrentPositionAsync({}),
             ]);
 
-            // Get today's date in the format used by the attendance data, e.g., YYYY-MM-DD
             const today = new Date().toISOString().split('T')[0];
-
-            // Find the attendance record for today by checking the date part of the checkin field
             const todayAttendance = attendanceResponse.attendance.find((record) => {
                 const recordDate = new Date(record.checkin).toISOString().split('T')[0];
                 return recordDate === today;
             });
 
-            // Check if the user has checked out today
             const checkedOutStatus = todayAttendance && todayAttendance.checkout ? true : false;
-
             setAttendanceData(attendanceResponse.attendance);
             setIsCheckedIn(attendanceResponse.isCheckedInToday);
             setIsCheckedOut(checkedOutStatus);
@@ -134,21 +138,17 @@ const Kehadiran = () => {
             setRadius(parameterResponse.data.radius);
 
             const { latitude, longitude } = locationResponse.coords;
-            const formattedCoordinates = `${latitude.toFixed(6)}, ${longitude.toFixed(6)}`;
-            setLocation(formattedCoordinates);
+            setLocation(`${latitude.toFixed(6)}, ${longitude.toFixed(6)}`);
 
             const [reverseGeocodeResult] = await Location.reverseGeocodeAsync({ latitude, longitude });
-            if (reverseGeocodeResult) {
-                setLocationName(
-                    `${reverseGeocodeResult.street}, ${reverseGeocodeResult.city}, ${reverseGeocodeResult.region}, ${reverseGeocodeResult.country}`,
-                );
-            } else {
-                setLocationName('Unable to retrieve location name');
-            }
-            setIsLoading(false);
+            setLocationName(
+                reverseGeocodeResult
+                    ? `${reverseGeocodeResult.street}, ${reverseGeocodeResult.city}, ${reverseGeocodeResult.region}, ${reverseGeocodeResult.country}`
+                    : 'Unable to retrieve location name',
+            );
         } catch (error) {
             console.error('Error fetching data:', error);
-            Alert.alert('Error', 'Failed to fetch data. Please try again.');
+            showAlert('Failed to fetch data. Please try again.', 'error');
         } finally {
             setIsLoading(false);
         }
@@ -355,7 +355,7 @@ const Kehadiran = () => {
         const attendanceImage = attendanceForDate?.attendance_image
             ? `https://app.kejartugas.com/${attendanceForDate.attendance_image}`
             : null;
-        console.log(attendanceImage);
+        // console.log(attendanceImage);
         const wfh = attendanceForDate ? (attendanceForDate.isWFH ? 'Out of Office' : 'In Office') : 'No notes';
 
         return (

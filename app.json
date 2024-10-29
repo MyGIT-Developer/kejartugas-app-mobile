@@ -1,66 +1,70 @@
 {
-    "expo": {
-        "name": "Kejar Tugas",
-        "slug": "kejar-tugas",
-        "version": "1.1.1",
-        "orientation": "portrait",
-        "icon": "./assets/images/kt-512.png",
-        "userInterfaceStyle": "light",
-        "splash": {
-            "image": "./assets/images/kt_splash_screen.png"
-        },
-        "updates": {
-            "fallbackToCacheTimeout": 0
-        },
-        "assetBundlePatterns": ["**/*"],
-        "ios": {
-            "supportsTablet": true,
-            "bundleIdentifier": "com.innovation.kejartugas",
-            "jsEngine": "hermes",
-            "infoPlist": {
-                "NSCameraUsageDescription": "Aplikasi ini memerlukan akses kamera untuk mengambil foto.",
-                "NSLocationWhenInUseUsageDescription": "This app needs access to location when open.",
-                "NSLocationAlwaysUsageDescription": "This app needs access to location when in the background.",
-                "NSLocationAlwaysAndWhenInUseUsageDescription": "This app needs access to location when open and in the background."
-            }
-        },
-        "android": {
-            "adaptiveIcon": {
-                "foregroundImage": "./assets/images/kt-512.png"
-            },
-            "package": "com.innovation.kejartugas",
-            "permissions": [
-                "CAMERA",
-                "READ_EXTERNAL_STORAGE",
-                "WRITE_EXTERNAL_STORAGE",
-                "ACCESS_FINE_LOCATION",
-                "ACCESS_COARSE_LOCATION",
-                "RECORD_AUDIO",
-                "READ_CONTACTS",
-                "WRITE_CONTACTS",
-                "CALL_PHONE",
-                "SEND_SMS",
-                "READ_PHONE_STATE",
-                "ACCESS_NETWORK_STATE",
-                "INTERNET"
-            ]
-        },
-        "web": {
-            "favicon": "./assets/images/favicon.png"
-        },
-        "plugins": [
-            "expo-font",
-            [
-                "expo-location",
-                {
-                    "locationAlwaysAndWhenInUsePermission": "Allow $(PRODUCT_NAME) to use your location."
-                }
-            ]
-        ],
-        "extra": {
-            "eas": {
-                "projectId": "e1ce8215-b7b5-4f6e-93e9-395c28377593"
-            }
+  "expo": {
+    "name": "Kejar Tugas",
+    "slug": "kejar-tugas",
+    "version": "1.1.1",
+    "orientation": "portrait",
+    "icon": "./assets/images/kt-512.png",
+    "userInterfaceStyle": "light",
+    "splash": {
+      "image": "./assets/images/kt_splash_screen.png"
+    },
+    "updates": {
+      "fallbackToCacheTimeout": 0
+    },
+    "assetBundlePatterns": [
+      "**/*"
+    ],
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.innovation.kejartugas",
+      "jsEngine": "hermes",
+      "infoPlist": {
+        "NSCameraUsageDescription": "Aplikasi ini memerlukan akses kamera untuk mengambil foto.",
+        "NSLocationWhenInUseUsageDescription": "This app needs access to location when open.",
+        "NSLocationAlwaysUsageDescription": "This app needs access to location when in the background.",
+        "NSLocationAlwaysAndWhenInUseUsageDescription": "This app needs access to location when open and in the background."
+      }
+    },
+    "android": {
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/images/kt-512.png"
+      },
+      "package": "com.innovation.kejartugas",
+      "permissions": [
+        "CAMERA",
+        "READ_EXTERNAL_STORAGE",
+        "WRITE_EXTERNAL_STORAGE",
+        "ACCESS_FINE_LOCATION",
+        "ACCESS_COARSE_LOCATION",
+        "RECORD_AUDIO",
+        "READ_CONTACTS",
+        "WRITE_CONTACTS",
+        "CALL_PHONE",
+        "SEND_SMS",
+        "READ_PHONE_STATE",
+        "ACCESS_NETWORK_STATE",
+        "INTERNET",
+        "android.permission.ACCESS_COARSE_LOCATION",
+        "android.permission.ACCESS_FINE_LOCATION"
+      ]
+    },
+    "web": {
+      "favicon": "./assets/images/favicon.png"
+    },
+    "plugins": [
+      "expo-font",
+      [
+        "expo-location",
+        {
+          "locationAlwaysAndWhenInUsePermission": "Allow $(PRODUCT_NAME) to use your location."
         }
+      ]
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "06f3558f-88d4-41ad-912e-a6ad9abeea7e"
+      }
     }
+  }
 }
