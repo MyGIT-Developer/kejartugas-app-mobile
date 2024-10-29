@@ -112,7 +112,7 @@ const getStatusText = (status) => {
     }
 };
 
-const BASE_URL = 'http://202.10.36.103:8000/';
+const BASE_URL = 'https://app.kejartugas.com/';
 
 const AdhocDashboard = ({ navigation }) => {
     const [activeTab, setActiveTab] = useState('Tugas Dibuat');

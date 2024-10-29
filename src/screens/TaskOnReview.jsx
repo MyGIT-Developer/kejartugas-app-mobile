@@ -39,52 +39,52 @@ const getDurationBadge = (remainingDays) => {
 };
 
 const getCollectionStatusBadgeColor = (status) => {
-  switch (status) {
-      case 'finish':
-          return { color: '#A7C8E5', textColor: '#092D58', label: 'Selesai' };
-      case 'earlyFinish':
-          return { color: '#9ADFAD', textColor: '#0A642E', label: 'Selesai Lebih Awal' };
-      case 'finish in delay':
-          return { color: '#F0E089', textColor: '#80490A', label: 'Selesai Terlambat' };
-      case 'overdue':
-          return { color: '#F69292', textColor: '#811616', label: 'Terlambat' };
-      default:
-          return { color: '#E0E0E0', textColor: '#000000', label: status || 'Belum Dikumpulkan' };
-  }
+    switch (status) {
+        case 'finish':
+            return { color: '#A7C8E5', textColor: '#092D58', label: 'Selesai' };
+        case 'earlyFinish':
+            return { color: '#9ADFAD', textColor: '#0A642E', label: 'Selesai Lebih Awal' };
+        case 'finish in delay':
+            return { color: '#F0E089', textColor: '#80490A', label: 'Selesai Terlambat' };
+        case 'overdue':
+            return { color: '#F69292', textColor: '#811616', label: 'Terlambat' };
+        default:
+            return { color: '#E0E0E0', textColor: '#000000', label: status || 'Belum Dikumpulkan' };
+    }
 };
 
 const getStatusBadgeColor = (status, endDate) => {
-  if (status === 'Completed') {
-      return { color: '#C9F8C1', textColor: '#333333', label: 'Selesai' };
-  }
+    if (status === 'Completed') {
+        return { color: '#C9F8C1', textColor: '#333333', label: 'Selesai' };
+    }
 
-  const remainingDays = calculateRemainingDays(endDate, status);
+    const remainingDays = calculateRemainingDays(endDate, status);
 
-  if (remainingDays === 0) {
-      return { color: '#F69292', textColor: '#811616', label: 'Deadline Tugas Hari Ini' };
-  } else if (remainingDays < 0) {
-      return { color: '#F69292', textColor: '#811616', label: `Terlambat selama ${Math.abs(remainingDays)} hari` };
-  } else if (remainingDays > 0) {
-      return { color: '#FFE9CB', textColor: '#E07706', label: `Tersisa ${remainingDays} hari` };
-  }
+    if (remainingDays === 0) {
+        return { color: '#F69292', textColor: '#811616', label: 'Deadline Tugas Hari Ini' };
+    } else if (remainingDays < 0) {
+        return { color: '#F69292', textColor: '#811616', label: `Terlambat selama ${Math.abs(remainingDays)} hari` };
+    } else if (remainingDays > 0) {
+        return { color: '#FFE9CB', textColor: '#E07706', label: `Tersisa ${remainingDays} hari` };
+    }
 
-  // Existing status handling logic
-  switch (status) {
-      case 'workingOnIt':
-          return { color: '#CCC8C8', textColor: '#333333', label: 'Dalam Pengerjaan' };
-      case 'onReview':
-          return { color: '#9AE1EA', textColor: '#333333', label: 'Dalam Peninjauan' };
-      case 'rejected':
-          return { color: '#050404FF', textColor: '#811616', label: 'Ditolak' };
-      case 'onHold':
-          return { color: '#F69292', textColor: '#811616', label: 'Ditunda' };
-      case 'Completed':
-          return { color: '#C9F8C1', textColor: '#333333', label: 'Selesai' }; // Updated label
-      case 'onPending':
-          return { color: '#F0E08A', textColor: '#333333', label: 'Tersedia' };
-      default:
-          return { color: '#E0E0E0', textColor: '#333333', label: status };
-  }
+    // Existing status handling logic
+    switch (status) {
+        case 'workingOnIt':
+            return { color: '#CCC8C8', textColor: '#333333', label: 'Dalam Pengerjaan' };
+        case 'onReview':
+            return { color: '#9AE1EA', textColor: '#333333', label: 'Dalam Peninjauan' };
+        case 'rejected':
+            return { color: '#050404FF', textColor: '#811616', label: 'Ditolak' };
+        case 'onHold':
+            return { color: '#F69292', textColor: '#811616', label: 'Ditunda' };
+        case 'Completed':
+            return { color: '#C9F8C1', textColor: '#333333', label: 'Selesai' }; // Updated label
+        case 'onPending':
+            return { color: '#F0E08A', textColor: '#333333', label: 'Tersedia' };
+        default:
+            return { color: '#E0E0E0', textColor: '#333333', label: status };
+    }
 };
 
 const TaskItem = ({ task, onPress }) => {
@@ -205,9 +205,7 @@ const TaskOnReview = () => {
     }, [fetchTasks]);
 
     const filteredAndGroupedTasks = useMemo(() => {
-        const filteredTasks = taskData.filter(
-            (task) => task.task_status === 'onReview',
-        );
+        const filteredTasks = taskData.filter((task) => task.task_status === 'onReview');
 
         return filteredTasks.reduce((grouped, task) => {
             const key = task.project_name || task.project_id || 'Ungrouped';
@@ -246,7 +244,7 @@ const TaskOnReview = () => {
     }
 
     const handleTaskDetailPress = async (task) => {
-        const baseUrl = 'http://202.10.36.103:8000/';
+        const baseUrl = 'https://app.kejartugas.com/';
         try {
             const response = await fetchTaskById(task.id); // Fetch task details by ID
             const taskDetails = response.data; // Access the data field from the response
@@ -306,48 +304,48 @@ const TaskOnReview = () => {
     return (
         <SafeAreaView style={styles.container}>
             <ScrollView contentContainerStyle={styles.mainContainer}>
-            <View style={styles.backgroundBox}>
-                <LinearGradient
-                    colors={['#0E509E', '#5FA0DC', '#9FD2FF']}
-                    style={styles.linearGradient}
-                    start={{ x: 0, y: 0 }}
-                    end={{ x: 1, y: 1 }}
-                />
-            </View>
-            <View style={styles.headerSection}>
-                <Feather name="chevron-left" style={styles.backIcon} onPress={() => navigation.goBack()} />
-                <Text style={styles.header}>Dalam Peninjauan</Text>
-            </View>
+                <View style={styles.backgroundBox}>
+                    <LinearGradient
+                        colors={['#0E509E', '#5FA0DC', '#9FD2FF']}
+                        style={styles.linearGradient}
+                        start={{ x: 0, y: 0 }}
+                        end={{ x: 1, y: 1 }}
+                    />
+                </View>
+                <View style={styles.headerSection}>
+                    <Feather name="chevron-left" style={styles.backIcon} onPress={() => navigation.goBack()} />
+                    <Text style={styles.header}>Dalam Peninjauan</Text>
+                </View>
 
-            <FlatList
-                data={projectsWithTasks}
-                contentContainerStyle={styles.contentContainer}
-                keyExtractor={([projectName]) => projectName}
-                renderItem={({ item: [projectName, tasks] }) => (
-                    <ProjectTasksGroup
-                        projectName={projectName}
-                        tasks={tasks}
-                        onTaskPress={handleTaskDetailPress}
+                <FlatList
+                    data={projectsWithTasks}
+                    contentContainerStyle={styles.contentContainer}
+                    keyExtractor={([projectName]) => projectName}
+                    renderItem={({ item: [projectName, tasks] }) => (
+                        <ProjectTasksGroup
+                            projectName={projectName}
+                            tasks={tasks}
+                            onTaskPress={handleTaskDetailPress}
+                        />
+                    )}
+                />
+
+                {modalType === 'default' ? (
+                    <DraggableModalTask
+                        visible={draggableModalVisible}
+                        onClose={() => {
+                            setDraggableModalVisible(false);
+                            setSelectedTask(null); // Optional: Reset selectedTask on close
+                        }}
+                        taskDetails={selectedTask || {}}
+                    />
+                ) : (
+                    <ReusableModalSuccess
+                        visible={draggableModalVisible}
+                        onClose={() => setDraggableModalVisible(false)}
+                        taskDetails={selectedTask || {}}
                     />
                 )}
-            />
-
-            {modalType === 'default' ? (
-                <DraggableModalTask
-                    visible={draggableModalVisible}
-                    onClose={() => {
-                        setDraggableModalVisible(false);
-                        setSelectedTask(null); // Optional: Reset selectedTask on close
-                    }}
-                    taskDetails={selectedTask || {}}
-                />
-            ) : (
-                <ReusableModalSuccess
-                    visible={draggableModalVisible}
-                    onClose={() => setDraggableModalVisible(false)}
-                    taskDetails={selectedTask || {}}
-                />
-            )}
             </ScrollView>
         </SafeAreaView>
     );

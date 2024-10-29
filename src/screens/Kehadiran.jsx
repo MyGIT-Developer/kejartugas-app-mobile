@@ -353,7 +353,7 @@ const Kehadiran = () => {
             : '-';
         const notes = attendanceForDate ? attendanceForDate.note : 'No notes';
         const attendanceImage = attendanceForDate?.attendance_image
-            ? `http://app.kejartugas.com:8000/${attendanceForDate.attendance_image}`
+            ? `https://app.kejartugas.com/${attendanceForDate.attendance_image}`
             : null;
         console.log(attendanceImage);
         const wfh = attendanceForDate ? (attendanceForDate.isWFH ? 'Out of Office' : 'In Office') : 'No notes';

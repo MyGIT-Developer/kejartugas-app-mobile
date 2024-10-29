@@ -257,7 +257,7 @@ const DetailProjekDua = ({ data, onFetch }) => {
     const [draggableModalVisible, setDraggableModalVisible] = useState(false);
 
     const handleTaskDetailPress = async (task) => {
-        const baseUrl = 'http://202.10.36.103:8000/';
+        const baseUrl = 'https://app.kejartugas.com/';
         try {
             const response = await fetchTaskById(task.id); // Fetch task details by ID
             const taskDetails = response.data; // Access the data field from the response
@@ -316,51 +316,50 @@ const DetailProjekDua = ({ data, onFetch }) => {
 
     return (
         <SafeAreaView style={styles.safeArea}>
-        <ScrollView contentContainerStyle={styles.container}>
-            <View style={styles.table}>
-                <View style={styles.tableHeader}>
-                    <Text style={[styles.headerCell, styles.indexHeaderCell]}>No</Text>
-                    <Text style={[styles.headerCell, styles.taskNameHeaderCell]}>Nama Tugas</Text>
-                    <Text style={[styles.headerCell, styles.statusHeaderCell]}>Status</Text>
+            <ScrollView contentContainerStyle={styles.container}>
+                <View style={styles.table}>
+                    <View style={styles.tableHeader}>
+                        <Text style={[styles.headerCell, styles.indexHeaderCell]}>No</Text>
+                        <Text style={[styles.headerCell, styles.taskNameHeaderCell]}>Nama Tugas</Text>
+                        <Text style={[styles.headerCell, styles.statusHeaderCell]}>Status</Text>
+                    </View>
+                    {taskData && taskData.length > 0 ? (
+                        taskData.map((item, index) => (
+                            <TableRow
+                                key={item.id || index}
+                                item={item}
+                                index={index}
+                                onTaskPress={handleTaskDetailPress}
+                                projectData={data}
+                                fetchProjectData={onFetch}
+                            />
+                        ))
+                    ) : (
+                        <TableRow item={{ task_name: 'No data available' }} index={0} />
+                    )}
                 </View>
-                {taskData && taskData.length > 0 ? (
-                    taskData.map((item, index) => (
-                        <TableRow
-                            key={item.id || index}
-                            item={item}
-                            index={index}
-                            onTaskPress={handleTaskDetailPress}
-                            projectData={data}
-                            fetchProjectData={onFetch}
-                        />
-                    ))
-                ) : (
-                    <TableRow item={{ task_name: 'No data available' }} index={0} />
-                )}
-            </View>
-            <FloatingButtonTask projectData={data} />
-        </ScrollView>
+                <FloatingButtonTask projectData={data} />
+            </ScrollView>
 
-        {modalType === 'default' ? (
-            <DraggableModalTask
-                visible={draggableModalVisible}
-                onClose={() => {
-                    setDraggableModalVisible(false);
-                    setSelectedTask(null); // Optional: Reset selectedTask on close
-                }}
-                taskDetails={selectedTask || {}}
-            />
-        ) : (
-            <ReusableModalSuccess
-                visible={draggableModalVisible}
-                onClose={() => setDraggableModalVisible(false)}
-                taskDetails={selectedTask || {}}
-            />
-        )}
+            {modalType === 'default' ? (
+                <DraggableModalTask
+                    visible={draggableModalVisible}
+                    onClose={() => {
+                        setDraggableModalVisible(false);
+                        setSelectedTask(null); // Optional: Reset selectedTask on close
+                    }}
+                    taskDetails={selectedTask || {}}
+                />
+            ) : (
+                <ReusableModalSuccess
+                    visible={draggableModalVisible}
+                    onClose={() => setDraggableModalVisible(false)}
+                    taskDetails={selectedTask || {}}
+                />
+            )}
 
-        {/* Floating Button positioned at the bottom right */}
-
-    </SafeAreaView>
+            {/* Floating Button positioned at the bottom right */}
+        </SafeAreaView>
     );
 };
 
@@ -368,8 +367,8 @@ const styles = StyleSheet.create({
     safeArea: {
         flex: 1, // Make sure SafeAreaView takes full height
     },
-   container: {
-    paddingHorizontal: 20,
+    container: {
+        paddingHorizontal: 20,
         paddingBottom: 100, // Space for floating button, adjust as needed
     },
     table: {

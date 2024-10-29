@@ -183,7 +183,7 @@ const DetailTaskSection = () => {
     const groupedTasks = groupTasksByProject(tasks);
 
     const handleTaskDetailPress = async (task) => {
-        const baseUrl = 'http://202.10.36.103:8000/';
+        const baseUrl = 'https://app.kejartugas.com/';
         try {
             const response = await fetchTaskById(task.id); // Fetch task details by ID
             const taskDetails = response.data; // Access the data field from the response
@@ -206,7 +206,7 @@ const DetailTaskSection = () => {
                 collectionStatusTextColor: collectionStatus.textColor,
                 collectionDescription: taskDetails.task_desc || 'N/A',
                 task_image: taskDetails.task_image ? `${baseUrl}${taskDetails.task_image}` : null,
-    
+
                 // Additional fields based on your previous structure
                 baselineWeight: taskDetails.baseline_weight || '0',
                 actualWeight: taskDetails.actual_weight || '0',
@@ -223,23 +223,22 @@ const DetailTaskSection = () => {
                         percentage: progress.percentage,
                     })) || [],
             };
-    
+
             setSelectedTask(transformedTaskDetails);
-    
+
             // Optionally check task status for modal type
             if (taskDetails.task_status === 'Completed') {
                 setModalType('success');
             } else {
                 setModalType('default');
             }
-    
+
             setDraggableModalVisible(true);
         } catch (error) {
             console.error('Error fetching task details:', error);
             // Optionally, show an alert or a message to the user
         }
     };
-    
 
     return (
         <SafeAreaView style={styles.safeArea}>

@@ -43,7 +43,7 @@ const Profile = () => {
     const [userData, setUserData] = useState([]);
     const [modalVisible, setModalVisible] = useState(false);
     const [refreshing, setRefreshing] = useState(false);
-    const baseUrl = 'http://202.10.36.103:8000/';
+    const baseUrl = 'https://app.kejartugas.com/';
 
     const fetchUserData = useCallback(async () => {
         try {
