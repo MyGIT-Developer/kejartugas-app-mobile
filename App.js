@@ -6,6 +6,12 @@ import RootNavigator from './src/components/RootNavigator';
 import { useFonts } from './src/utils/UseFonts';
 import { Text, TextInput, StyleSheet } from 'react-native';
 import * as SplashScreen from 'expo-splash-screen';
+import notificationService from './src/utils/notificationService';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import {  setupNotifications } from './src/api/notification';
+
+// Create navigation ref for notifications
+export const navigationRef = React.createRef();
 
 // Theme untuk styled-components
 const theme = {
@@ -55,6 +61,30 @@ export default function App() {
         return null;
     }
 
+    const setupApp = async () => {
+        try {
+            // Check if user is logged in
+            const token = await AsyncStorage.getItem('token');
+            
+            if (token) {
+                // Setup notifications if user is logged in
+                await setupNotifications();
+            }
+
+            // Hide splash screen
+            setTimeout(async () => {
+                await SplashScreen.hideAsync();
+            }, 3000);
+        } catch (error) {
+            console.error('Error setting up app:', error);
+            await SplashScreen.hideAsync();
+        }
+    };
+    
+    if (!fontsLoaded) {
+        return null;
+    }
+
     // Override the default text styles
     const oldTextRender = Text.render;
     Text.render = function (...args) {
@@ -76,7 +106,7 @@ export default function App() {
     return (
         <PaperProvider theme={paperTheme}>
             <ThemeProvider theme={theme}>
-                <NavigationContainer>
+            <NavigationContainer ref={navigationRef}>
                     <RootNavigator />
                 </NavigationContainer>
             </ThemeProvider>

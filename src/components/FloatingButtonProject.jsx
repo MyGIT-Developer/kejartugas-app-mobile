@@ -4,7 +4,7 @@ import Icon from 'react-native-vector-icons/Feather';
 import * as Animatable from 'react-native-animatable';
 import { useNavigation } from '@react-navigation/native';
 
-const FloatingButtonProject = () => {
+const FloatingButtonProject = ({ bottom }) => {
     const navigator = useNavigation();
 
     const handleGoToCreate = () => {
@@ -14,7 +14,7 @@ const FloatingButtonProject = () => {
     };
 
     return (
-        <View style={styles.container}>
+        <View style={[styles.container, { bottom: bottom }]}>
             <TouchableOpacity onPress={handleGoToCreate} style={styles.floatingButton}>
             <Icon name="plus" size={26} color="#148FFF" />
             </TouchableOpacity>
@@ -25,7 +25,6 @@ const FloatingButtonProject = () => {
 const styles = StyleSheet.create({
     container: {
         position: 'absolute',
-        bottom: 100,
         right: 20,
         alignItems: 'center',
     },

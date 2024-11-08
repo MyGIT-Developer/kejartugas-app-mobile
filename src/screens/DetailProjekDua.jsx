@@ -155,7 +155,7 @@ const TableRow = React.memo(({ item, index, onTaskPress, projectData, fetchProje
     }, []);
 
     return (
-        <ScrollView contentContainerStyle={styles.rowContainer}>
+        <View style={styles.rowContainer}>
             {item.task_name == 'No data available' ? (
                 <View style={styles.row}>
                     <Text style={styles.taskNameText}>No data available</Text>
@@ -246,7 +246,7 @@ const TableRow = React.memo(({ item, index, onTaskPress, projectData, fetchProje
                     />
                 </>
             )}
-        </ScrollView>
+        </View>
     );
 });
 
@@ -316,37 +316,53 @@ const DetailProjekDua = ({ data, onFetch }) => {
 
     return (
         <SafeAreaView style={styles.safeArea}>
-            <ScrollView contentContainerStyle={styles.container}>
-                <View style={styles.table}>
+        <View style={styles.mainContainer}>
+        <View style={styles.headerSection}>
                     <View style={styles.tableHeader}>
                         <Text style={[styles.headerCell, styles.indexHeaderCell]}>No</Text>
                         <Text style={[styles.headerCell, styles.taskNameHeaderCell]}>Nama Tugas</Text>
                         <Text style={[styles.headerCell, styles.statusHeaderCell]}>Status</Text>
                     </View>
-                    {taskData && taskData.length > 0 ? (
-                        taskData.map((item, index) => (
-                            <TableRow
-                                key={item.id || index}
-                                item={item}
-                                index={index}
-                                onTaskPress={handleTaskDetailPress}
-                                projectData={data}
-                                fetchProjectData={onFetch}
-                            />
-                        ))
-                    ) : (
-                        <TableRow item={{ task_name: 'No data available' }} index={0} />
-                    )}
                 </View>
-                <FloatingButtonTask projectData={data} />
-            </ScrollView>
 
+                {/* Table Section */}
+                <View style={styles.tableSection}>
+                    <ScrollView
+                        style={styles.scrollView}
+                        contentContainerStyle={styles.scrollViewContent}
+                        showsVerticalScrollIndicator={false}
+                    >
+                        {taskData && taskData.length > 0 ? (
+                            taskData.map((item, index) => (
+                                <TableRow
+                                    key={item.id || index}
+                                    item={item}
+                                    index={index}
+                                    onTaskPress={handleTaskDetailPress}
+                                    projectData={data}
+                                    fetchProjectData={onFetch}
+                                />
+                            ))
+                        ) : (
+                            <TableRow item={{ task_name: 'No data available' }} index={0} />
+                        )}
+                        <View style={styles.bottomPadding} />
+                    </ScrollView>
+                </View>
+
+                {/* Floating Button */}
+                <FloatingButtonTask 
+                    projectData={data} 
+                />
+            </View>
+
+            {/* Modals */}
             {modalType === 'default' ? (
                 <DraggableModalTask
                     visible={draggableModalVisible}
                     onClose={() => {
                         setDraggableModalVisible(false);
-                        setSelectedTask(null); // Optional: Reset selectedTask on close
+                        setSelectedTask(null);
                     }}
                     taskDetails={selectedTask || {}}
                 />
@@ -357,29 +373,41 @@ const DetailProjekDua = ({ data, onFetch }) => {
                     taskDetails={selectedTask || {}}
                 />
             )}
-
-            {/* Floating Button positioned at the bottom right */}
         </SafeAreaView>
     );
 };
 
 const styles = StyleSheet.create({
-    safeArea: {
-        flex: 1, // Make sure SafeAreaView takes full height
+      safeArea: {
+        flex: 1,
+        backgroundColor: '#f5f5f5',
     },
-    container: {
+    mainContainer: {
+        flex: 1,
         paddingHorizontal: 20,
-        paddingBottom: 100, // Space for floating button, adjust as needed
     },
-    table: {
-        borderRadius: 15,
-        width: '100%',
-        shadowColor: '#000',
-        backgroundColor: 'white',
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.1,
-        shadowRadius: 3.84,
-        elevation: 5,
+    contentWrapper: {
+        flex: 1,
+        paddingHorizontal: 20,
+    },
+    headerSection: {
+        paddingTop: 10,
+        marginBottom: 10,
+        zIndex: 2,
+    },
+    tableSection: {
+        flex: 1,
+        marginBottom: 80, // Space for floating button
+    },
+    scrollView: {
+        flex: 1,
+    },
+    scrollViewContent: {
+        flexGrow: 1,
+        paddingBottom: 100, // Extra padding to prevent content from being hidden behind the button
+    },
+    bottomPadding: {
+        height: 80, // Increased bottom padding
     },
     tableHeader: {
         flexDirection: 'row',
@@ -398,33 +426,34 @@ const styles = StyleSheet.create({
     indexHeaderCell: {
         flex: 1,
         textAlign: 'center',
-        fontFamily: 'Poppins-Medium',
-        letterSpacing: -0.3,
     },
     taskNameHeaderCell: {
         flex: 3,
         textAlign: 'left',
-        fontFamily: 'Poppins-Medium',
-        letterSpacing: -0.3,
     },
     statusHeaderCell: {
         flex: 2,
         textAlign: 'center',
-        fontFamily: 'Poppins-Medium',
-        letterSpacing: -0.3,
     },
     rowContainer: {
         marginBottom: 8,
         backgroundColor: 'white',
         borderRadius: 8,
-        // shadowColor: "#000",
-        // shadowOffset: {
-        //   width: 0,
-        //   height: 2,
-        // },
-        // shadowOpacity: 0.23,
-        // shadowRadius: 2.62,
-        // elevation: 4,
+        shadowColor: '#000',
+        shadowOffset: {
+            width: 0,
+            height: 1,
+        },
+        shadowOpacity: 0.18,
+        shadowRadius: 1.0,
+        elevation: 1,
+    },
+    expandedContent: {
+        padding: 12,
+        backgroundColor: '#F5F5F5',
+        borderBottomLeftRadius: 8,
+        borderBottomRightRadius: 8,
+        minHeight: 200, // Added minimum height for expanded content
     },
     row: {
         flexDirection: 'row',
@@ -465,12 +494,6 @@ const styles = StyleSheet.create({
         fontSize: 14,
         fontWeight: '600',
         textAlign: 'center',
-    },
-    expandedContent: {
-        padding: 12,
-        backgroundColor: '#F5F5F5',
-        borderBottomLeftRadius: 8,
-        borderBottomRightRadius: 8,
     },
     expandedLabel: {
         fontSize: 14,

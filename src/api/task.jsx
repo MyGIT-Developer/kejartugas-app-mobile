@@ -16,42 +16,36 @@ export const fetchTotalTasksForEmployee = async (employeeId) => {
 };
 
 export const addNewTask = async (formData) => {
-    console.log('Adding new task with formData:', formData);    
+    console.log('Adding new task with formData:', formData);
     try {
         const token = await AsyncStorage.getItem('token');
-        const response = await apiService.post(`/tasks`,
-            formData,
-            {
-              headers: {
+        const response = await apiService.post(`/tasks`, formData, {
+            headers: {
                 Authorization: `Bearer ${token}`,
-              },
-            }
-          );
+            },
+        });
         return response.data;
     } catch (error) {
         throw new Error(error || 'Adding new task failed');
     }
-}
+};
 
 export const updateTask = async (id, formData, jobsId) => {
     try {
         const token = await AsyncStorage.getItem('token');
-        const response = await apiService.put(`/tasks/${id}`,
-            formData,
-            {
-              headers: {
+        const response = await apiService.put(`/tasks/${id}`, formData, {
+            headers: {
                 Authorization: `Bearer ${token}`,
-              },
-              params: {
-                jobs_id: jobsId
-              },
-            }
-          );
+            },
+            params: {
+                jobs_id: jobsId,
+            },
+        });
         return response.data;
     } catch (error) {
         throw new Error(error || 'Adding new task failed');
     }
-}
+};
 
 export const submitTask = async (taskId, payload) => {
     try {
@@ -135,36 +129,44 @@ export const deleteTask = async (taskId) => {
     } catch (error) {
         throw new Error(error.response?.data?.message || 'Deleting task failed');
     }
-}
+};
 
 export const approveTask = async (taskId) => {
     try {
         const token = await AsyncStorage.getItem('token');
-        const response = await apiService.put(`/tasks/${taskId}/review`,  {
-            isAccepted: true,
-          }, {
-            headers: {
-                Authorization: `Bearer ${token}`,
+        const response = await apiService.put(
+            `/tasks/${taskId}/review`,
+            {
+                isAccepted: true,
             },
-        });
+            {
+                headers: {
+                    Authorization: `Bearer ${token}`,
+                },
+            },
+        );
         return response.data; // Return the data field directly
     } catch (error) {
         throw new Error(error.response?.data?.message || 'Approving task failed');
     }
-}
+};
 
 export const rejectTask = async (taskId) => {
     try {
         const token = await AsyncStorage.getItem('token');
-        const response = await apiService.put(`/tasks/${taskId}/review`,  {
-            isAccepted: false,
-          }, {
-            headers: {
-                Authorization: `Bearer ${token}`,
+        const response = await apiService.put(
+            `/tasks/${taskId}/review`,
+            {
+                isAccepted: false,
             },
-        });
+            {
+                headers: {
+                    Authorization: `Bearer ${token}`,
+                },
+            },
+        );
         return response.data; // Return the data field directly
     } catch (error) {
         throw new Error(error.response?.data?.message || 'Rejecting task failed');
     }
-}
+};

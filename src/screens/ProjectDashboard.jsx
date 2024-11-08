@@ -115,7 +115,7 @@ const ProjectSection = ({ title, projects, status, handleGoTo, handleGoToDetail 
                 )}
             </ScrollView>
         ) : (
-            <ProjectScrollView projects={projects} status={status} />
+            <ProjectScrollView projects={projects} status={status}/>
         )}
     </View>
 );
@@ -293,7 +293,7 @@ const ProjectDashboard = () => {
                         {/* Render Content */}
                         {renderContent()}
                     </ScrollView>
-                    <FloatingButton />
+                    <FloatingButton bottom={100}/>
                 </>
             )}
             {!hasAccess && <AccessDenied />}

@@ -12,6 +12,7 @@ import {
     FlatList,
     Alert,
     Image,
+    PermissionsAndroid,
 } from 'react-native';
 import CheckBox from '@react-native-community/checkbox'; // External CheckBox component
 import DateTimePicker from '@react-native-community/datetimepicker';
@@ -26,11 +27,11 @@ import { addNewTask, updateTask } from '../api/task';
 import ReusableBottomPopUp from '../components/ReusableBottomPopUp';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import { launchImageLibrary } from 'react-native-image-picker';
+import notificationService from '../utils/notificationService';
 
 const TaskForm = () => {
     const route = useRoute();
     const { mode = 'create', initialTaskData = null, projectData } = route.params;
-    console.log('Initial task data:', initialTaskData);
     const [companyId, setCompanyId] = useState('');
     const [employeeId, setEmployeeId] = useState('');
     const [jobId, setJobId] = useState('');
@@ -332,27 +333,127 @@ const TaskForm = () => {
     //     console.log(formData);
     // }, [formData, companyId]);
 
+    const [hasNotificationPermission, setHasNotificationPermission] = useState(false);
+
+    // Modify your existing useEffect for notification setup
+    useEffect(() => {
+        setupNotifications();
+    }, []);
+
+    const setupNotifications = async () => {
+        try {
+            const permissionGranted = await notificationService.requestPermissions();
+            setHasNotificationPermission(permissionGranted);
+        } catch (error) {
+            console.error('Error setting up notifications:', error);
+            setHasNotificationPermission(false);
+        }
+    };
+
+    // Function to send task assignment notification
+    const sendTaskAssignmentNotification = async (taskName, assignees) => {
+        if (!hasNotificationPermission) return;
+
+        const assigneeNames = assignees
+            .map(id => assignedEmployees.find(emp => emp.id === id)?.employee_name)
+            .filter(Boolean)
+            .join(', ');
+
+        // Notification for the task creator
+        await notificationService.sendLocalNotification(
+            'Task Created Successfully ✅',
+            `Task "${taskName}" has been assigned to ${assigneeNames}`
+        );
+
+        // Schedule deadline reminder if end date exists
+        if (formData.end_date) {
+            // Reminder 1 day before deadline
+            const reminderDate = new Date(formData.end_date);
+            reminderDate.setDate(reminderDate.getDate() - 1);
+            reminderDate.setHours(9, 0, 0); // Set to 9 AM
+
+            await notificationService.scheduleNotification(
+                'Task Deadline Reminder ⏰',
+                `Task "${taskName}" is due tomorrow!`,
+                reminderDate
+            );
+
+            // Reminder on the morning of the deadline
+            const deadlineDate = new Date(formData.end_date);
+            deadlineDate.setHours(9, 0, 0); // Set to 9 AM
+
+            await notificationService.scheduleNotification(
+                'Task Due Today ⚠️',
+                `Task "${taskName}" is due today!`,
+                deadlineDate
+            );
+        }
+    };
+
+    // Function to send task update notification
+    const sendTaskUpdateNotification = async (taskName, status, assignees) => {
+        if (!hasNotificationPermission) return;
+
+        const assigneeNames = assignees
+            .map(id => assignedEmployees.find(emp => emp.id === id)?.employee_name)
+            .filter(Boolean)
+            .join(', ');
+
+        await notificationService.sendLocalNotification(
+            'Task Updated 🔄',
+            `Task "${taskName}" has been updated. Assigned to: ${assigneeNames}`
+        );
+    };
+
     const handleSubmit = useCallback(async () => {
         try {
             validateForm();
 
-            const response =
-                mode === 'create' ? await addNewTask(formData) : await updateTask(initialTaskData.id, formData, jobId);
+            const response = mode === 'create' 
+                ? await addNewTask(formData) 
+                : await updateTask(initialTaskData.id, formData, jobId);
+
+            // Handle notifications based on mode
+            if (response.data) {
+                try {
+                    if (mode === 'create') {
+                        await sendTaskAssignmentNotification(
+                            formData.task_name,
+                            formData.assign_to
+                        );
+                    } else {
+                        await sendTaskUpdateNotification(
+                            formData.task_name,
+                            'updated',
+                            formData.assign_to
+                        );
+                    }
+                } catch (notifError) {
+                    console.error('Notification error:', notifError);
+                    // Don't block the task creation/update if notification fails
+                }
+            }
 
             setAlert({
                 show: true,
                 type: 'success',
-                message: response.message || `Tugas berhasil ${mode === 'create' ? 'dibuat' : 'diperbarui'}`,
+                message: response.message || `Task successfully ${mode === 'create' ? 'created' : 'updated'}`
             });
 
+            // Navigate back after a short delay
             setTimeout(() => {
                 navigation.goBack();
             }, 2000);
+
         } catch (error) {
-            console.log(`Error ${mode === 'create' ? 'creating' : 'updating'} task:`, error);
-            setAlert({ show: true, type: 'error', message: error.message });
+            console.error(`Error ${mode === 'create' ? 'creating' : 'updating'} task:`, error);
+            setAlert({ 
+                show: true, 
+                type: 'error', 
+                message: error.message 
+            });
         }
-    }, [formData, mode, initialTaskData]);
+    }, [formData, mode, initialTaskData, assignedEmployees, hasNotificationPermission]);
 
     const handleImagePick = () => {
         launchImageLibrary({ mediaType: 'photo' }, (response) => {

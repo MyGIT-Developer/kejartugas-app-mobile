@@ -1,5 +1,16 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { View, Text, StyleSheet, Dimensions, TouchableOpacity, ScrollView, RefreshControl, Alert } from 'react-native';
+import {
+    View,
+    Text,
+    StyleSheet,
+    Dimensions,
+    TouchableOpacity,
+    ScrollView,
+    RefreshControl,
+    Alert,
+    Platform,
+    SafeAreaView,
+} from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -10,11 +21,14 @@ const cardWidth = (width - 60) / 2;
 import { fetchTaskById, fetchTotalTasksForEmployee } from '../api/task'; // Import the fetchTaskById function
 import ReusableBottomPopUp from '../components/ReusableBottomPopUp';
 import Shimmer from '../components/Shimmer';
+import { getNotificationByEmployee } from '../api/notification';
+import NotificationService from '../utils/notificationService';
 
 const formatDate = (date) => {
     const options = { year: 'numeric', month: 'long', day: 'numeric' };
     return new Date(date).toLocaleDateString('id-ID', options);
 };
+
 // Group tasks by project name
 const groupTasksByProject = (tasks) => {
     const groupedTasks = {};
@@ -212,6 +226,8 @@ const Home = () => {
     const [alert, setAlert] = useState({ show: false, type: 'success', message: '' });
     const [projects, setProjects] = useState([]);
     const [accessPermissions, setAccessPermissions] = useState([]);
+    const [notifications, setNotifications] = useState([]); // To store notifications
+    const [unreadCount, setUnreadCount] = useState(0);
 
     const checkAccessPermission = async () => {
         try {
@@ -253,7 +269,7 @@ const Home = () => {
     const handlePress = (stat) => {
         // Determine the required permission for the intended screen based on the stat description
         let requiredPermission;
-    
+
         switch (stat.description) {
             case 'Projek Dalam Pengerjaan':
                 requiredPermission = accessPermissions.access_project; // Define the required permission for this screen
@@ -275,7 +291,6 @@ const Home = () => {
                 return;
         }
 
-    
         if (!requiredPermission) {
             // Show an alert or message indicating no access
             // Alert.alert('You do not have permission to access this feature.', 'Anda tidak memiliki akses ke dalam fitur ini', [
@@ -284,7 +299,7 @@ const Home = () => {
             showAlert('You do not have permission to access this feature.', 'error');
             return;
         }
-    
+
         // Navigate based on the description
         switch (stat.description) {
             case 'Projek Dalam Pengerjaan':
@@ -303,7 +318,6 @@ const Home = () => {
                 break; // Default case is covered above
         }
     };
-    
 
     const showAlert = (message, type) => {
         setAlert({ show: true, type, message });
@@ -336,6 +350,138 @@ const Home = () => {
             console.error('Error checking token expiration:', error);
         }
     };
+
+    const [notificationsSeen, setNotificationsSeen] = useState(new Set());
+const [lastFetchTime, setLastFetchTime] = useState(Date.now());
+
+const fetchNotifications = async () => {
+    setIsLoading(true);
+
+    try {
+        const currentTime = Date.now();
+        const response = await getNotificationByEmployee(employeeData.id);
+        const notifications = response.data;
+
+        // Find new unread notifications that came after last fetch
+        const newUnreadNotifications = notifications.filter(notification => 
+            !notification.is_read && 
+            !notificationsSeen.has(notification.id) &&
+            new Date(notification.created_at) > new Date(lastFetchTime)
+        );
+
+        // Show notifications only for new ones
+        if (newUnreadNotifications.length > 0) {
+            for (const notification of newUnreadNotifications) {
+                await handleLocalNotification(notification);
+                // Add to seen notifications
+                setNotificationsSeen(prev => new Set([...prev, notification.id]));
+            }
+        }
+
+        // Update state
+        setNotifications(notifications);
+        setLastFetchTime(currentTime);
+        const unread = notifications.filter((notif) => !notif.is_read).length;
+        setUnreadCount(unread);
+
+    } catch (error) {
+        console.error('Error fetching notifications:', error);
+    } finally {
+        setIsLoading(false);
+    }
+};
+
+const handleLocalNotification = async (notification) => {
+    try {
+        let title = 'New Notification';
+        let body = notification.message;
+
+        switch (notification.notif_type) {
+            case 'TASK_ASSIGNED':
+                title = '🔔 New Task Assignment';
+                break;
+            case 'TASK_UPDATE':
+                title = '📝 Task Update';
+                break;
+            case 'TASK_COMMENT':
+                title = '💬 New Comment';
+                break;
+            // Add more cases as needed
+            default:
+                title = '🔔 New Notification';
+        }
+
+        await NotificationService.sendLocalNotification(
+            title,
+            body,
+            {
+                data: {
+                    type: notification.notif_type,
+                    taskId: notification.task_id,
+                    notificationId: notification.id
+                }
+            }
+        );
+    } catch (error) {
+        console.error('Error sending local notification:', error);
+    }
+};
+
+
+// Update your notification fetch interval
+useEffect(() => {
+    let intervalId;
+
+    if (employeeData.id) {
+        // Initial fetch
+        fetchNotifications();
+
+        // Set up interval for subsequent fetches
+        intervalId = setInterval(() => {
+            fetchNotifications();
+        }, 60000); // Check every minute instead of 30 seconds
+    }
+
+    return () => {
+        if (intervalId) {
+            clearInterval(intervalId);
+        }
+    };
+}, [employeeData.id]);
+
+// Optional: Persist seen notifications
+useEffect(() => {
+    const saveSeenNotifications = async () => {
+        try {
+            await AsyncStorage.setItem(
+                'seenNotifications', 
+                JSON.stringify(Array.from(notificationsSeen))
+            );
+        } catch (error) {
+            console.error('Error saving seen notifications:', error);
+        }
+    };
+
+    if (notificationsSeen.size > 0) {
+        saveSeenNotifications();
+    }
+}, [notificationsSeen]);
+
+// Load saved seen notifications on mount
+useEffect(() => {
+    const loadSeenNotifications = async () => {
+        try {
+            const stored = await AsyncStorage.getItem('seenNotifications');
+            if (stored) {
+                setNotificationsSeen(new Set(JSON.parse(stored)));
+            }
+        } catch (error) {
+            console.error('Error loading seen notifications:', error);
+        }
+    };
+
+    loadSeenNotifications();
+}, []);
 
     const fetchTasks = async () => {
         setIsLoading(true);
@@ -398,14 +544,20 @@ const Home = () => {
         }
     }, [employeeData]);
 
-    const onRefresh = useCallback(async () => {
-        setRefreshing(true);
-        setIsLoading(true);
-        await checkTokenExpiration();
-        await Promise.all([fetchTasks(), fetchHomeData()]);
-        setRefreshing(false);
-        setIsLoading(false);
-    }, [fetchHomeData]);
+    // Modify your refresh control
+const onRefresh = useCallback(async () => {
+    setRefreshing(true);
+    setIsLoading(true);
+    await checkTokenExpiration();
+    await Promise.all([
+        fetchTasks(),
+        fetchHomeData(),
+        // Update last fetch time before fetching new notifications
+        fetchNotifications(),
+    ]);
+    setRefreshing(false);
+    setIsLoading(false);
+}, [fetchHomeData]);
 
     useEffect(() => {
         const fetchEmployeeData = async () => {
@@ -473,20 +625,56 @@ const Home = () => {
           ]
         : [];
 
+    const NotificationIcon = ({ unreadCount, onPress }) => (
+        <TouchableOpacity
+            style={styles.notificationButton}
+            onPress={() =>
+                navigation.navigate('NotificationScreen', {
+                    notifications: notifications,
+                    onNotificationsUpdate: (updatedNotifications) => {
+                        setNotifications(updatedNotifications);
+                        setUnreadCount(updatedNotifications.filter((n) => !n.read).length);
+                        AsyncStorage.setItem('notifications', JSON.stringify(updatedNotifications));
+                    },
+                })
+            }
+            activeOpacity={0.7}
+        >
+            <View style={styles.iconContainer}>
+                <Feather name="bell" size={24} color="white" />
+                {unreadCount > 0 && (
+                    <View style={styles.badgeContainer}>
+                        <Text style={styles.badgeText}>{unreadCount > 99 ? '99+' : unreadCount}</Text>
+                    </View>
+                )}
+            </View>
+        </TouchableOpacity>
+    );
+
     return (
         <View style={styles.container}>
-            <View style={styles.backgroundBox}>
+            <View style={styles.headerWrapper}>
                 <LinearGradient
                     colors={['#0E509E', '#5FA0DC', '#9FD2FF']}
-                    style={styles.linearGradient}
+                    style={styles.headerGradient}
                     start={{ x: 0, y: 0 }}
                     end={{ x: 1, y: 1 }}
-                />
+                >
+                    <SafeAreaView style={styles.safeArea}>
+                        <View style={styles.headerContainer}>
+                            <View style={styles.greetingContainer}>
+                                <Text style={styles.greetingText}>{greeting}</Text>
+                                <Text style={styles.nameText} numberOfLines={1} ellipsizeMode="tail">
+                                    {employeeData.name}
+                                </Text>
+                            </View>
+                            <View style={styles.headerRight}>
+                                <NotificationIcon unreadCount={unreadCount} />
+                            </View>
+                        </View>
+                    </SafeAreaView>
+                </LinearGradient>
             </View>
-
-            <Text style={styles.header}>
-                {greeting}, {employeeData.name}
-            </Text>
 
             <ScrollView
                 contentContainerStyle={styles.scrollViewContent}
@@ -504,11 +692,11 @@ const Home = () => {
                         isLoading ? (
                             <StatisticSkeleton key={index} color={stat.color} />
                         ) : (
-                              <StatisticCard 
-                        key={index}
-                        {...stat}
-                        onPress={() => handlePress(stat)} // Tambahkan onPress untuk navigasi
-                    />
+                            <StatisticCard
+                                key={index}
+                                {...stat}
+                                onPress={() => handlePress(stat)} // Tambahkan onPress untuk navigasi
+                            />
                         ),
                     )}
                 </View>
@@ -579,31 +767,84 @@ const styles = StyleSheet.create({
     container: {
         flex: 1,
     },
-    locationContainer: {
-        flexDirection: 'row', // Align items horizontally
-        alignItems: 'center', // Center items vertically
-        padding: 10,
-    },
-    backgroundBox: {
-        height: 125,
+    headerWrapper: {
         width: '100%',
-        position: 'absolute',
-        top: 0,
-        left: 0,
+        zIndex: 10,
     },
-    linearGradient: {
-        flex: 1,
-        borderBottomLeftRadius: 50,
+    headerGradient: {
+        paddingBottom: 20,
         borderBottomRightRadius: 30,
+        borderBottomLeftRadius: 30,
     },
-    header: {
-        fontSize: 24,
-        color: 'white',
-        paddingVertical: 20,
-        paddingHorizontal: 40,
-        marginTop: 50,
+    safeArea: {
+        width: '100%',
+    },
+    headerContainer: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        paddingHorizontal: 20,
+        paddingTop: Platform.OS === 'ios' ? 0 : 40,
+        paddingBottom: 15,
+    },
+    greetingContainer: {
+        flex: 1,
+        marginRight: 16,
+    },
+    greetingText: {
+        fontSize: 14,
+        color: 'rgba(255, 255, 255, 0.9)',
         fontFamily: 'Poppins-Regular',
-        letterSpacing: -1,
+        marginBottom: 4,
+    },
+    nameText: {
+        fontSize: 20,
+        color: 'white',
+        fontFamily: 'Poppins-SemiBold',
+        lineHeight: 28,
+    },
+    headerRight: {
+        flexDirection: 'row',
+        alignItems: 'center',
+    },
+    notificationButton: {
+        padding: 8,
+        marginLeft: 8,
+    },
+    iconContainer: {
+        position: 'relative',
+        width: 40,
+        height: 40,
+        justifyContent: 'center',
+        alignItems: 'center',
+        backgroundColor: 'rgba(255, 255, 255, 0.1)',
+        borderRadius: 20,
+    },
+    badgeContainer: {
+        position: 'absolute',
+        top: -2,
+        right: -2,
+        minWidth: 20,
+        height: 20,
+        paddingHorizontal: 2,
+        backgroundColor: '#fc5953',
+        borderRadius: 10,
+        justifyContent: 'center',
+        alignItems: 'center',
+        shadowColor: '#000',
+        shadowOffset: {
+            width: 0,
+            height: 2,
+        },
+        shadowOpacity: 0.25,
+        shadowRadius: 3.84,
+        elevation: 5,
+    },
+    badgeText: {
+        color: 'white',
+        fontSize: 10,
+        fontFamily: 'Poppins-Bold',
+        textAlign: 'center',
     },
     scrollViewContent: {
         flexGrow: 1,

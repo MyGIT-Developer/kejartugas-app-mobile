@@ -188,7 +188,7 @@ const ProjectList = () => {
                     />
                 </ScrollView>
             </View>
-            <FloatingButton />
+            <FloatingButton bottom={20}/>
         </>
     );
 };

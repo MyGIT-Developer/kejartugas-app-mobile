@@ -1,8 +1,9 @@
-import React, { useState } from 'react';
-import { View, TouchableOpacity, StyleSheet } from 'react-native';
+import React from 'react';
+import { View, TouchableOpacity, StyleSheet, Dimensions } from 'react-native';
 import Icon from 'react-native-vector-icons/Feather';
-import * as Animatable from 'react-native-animatable';
 import { useNavigation } from '@react-navigation/native';
+
+const { width, height } = Dimensions.get('window');
 
 const FloatingButtonTask = ({ projectData }) => {
     const navigator = useNavigation();
@@ -10,29 +11,26 @@ const FloatingButtonTask = ({ projectData }) => {
     const handleGoToCreate = () => {
         navigator.navigate('TaskForm', {
             projectData: projectData
-        });// Pass projectData as a parameter
+        });
     };
 
     return (
-        <View style={styles.container}>
-            <TouchableOpacity onPress={handleGoToCreate} style={styles.floatingButton}>
-                <Icon name="plus" size={26} color="#148FFF" />
-            </TouchableOpacity>
-        </View>
+        <TouchableOpacity 
+            onPress={handleGoToCreate} 
+            style={styles.floatingButton}
+            activeOpacity={0.7}
+        >
+            <Icon name="plus" size={26} color="#148FFF" />
+        </TouchableOpacity>
     );
 };
 
-
 const styles = StyleSheet.create({
-    container: {
-        position: 'absolute',
-        bottom: 20, // Change to 20 to ensure it stays above the bottom edge
-        right: 20,
-        alignItems: 'center',
-        // Optional: If you want to make it responsive on different screen sizes
-        zIndex: 1000, // Ensures the button appears above other components
-    },
     floatingButton: {
+        position: 'absolute',
+        bottom: 280,
+        // top: 300,
+        right: 20,
         backgroundColor: '#fff',
         width: 60,
         height: 60,
@@ -40,22 +38,15 @@ const styles = StyleSheet.create({
         justifyContent: 'center',
         alignItems: 'center',
         elevation: 8,
-    },
-    menu: {
-        position: 'absolute',
-        bottom: 70,
-        alignItems: 'center',
-    },
-    button: {
-        backgroundColor: '#fff',
-        width: 50,
-        height: 50,
-        borderRadius: 25,
-        justifyContent: 'center',
-        alignItems: 'center',
-        marginBottom: 10,
-        elevation: 5,
-    },
+        zIndex: 9999,
+        shadowColor: '#000',
+        shadowOffset: {
+            width: 0,
+            height: 4,
+        },
+        shadowOpacity: 0.30,
+        shadowRadius: 4.65,
+    }
 });
 
 export default FloatingButtonTask;

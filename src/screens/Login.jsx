@@ -19,6 +19,8 @@ import LogoKTApp from '../../assets/images/logo-KT.png';
 import BackgroundImage from '../../assets/images/kt_city_scapes.png';
 import ReusableAlert from '../components/ReusableAlert';
 import { useFonts } from '../utils/UseFonts';
+import NotificationService from '../utils/notificationService';
+import { setupNotifications } from '../api/notification';
 
 const Login = () => {
     const [credentials, setCredentials] = useState({ username: '', password: '' });
@@ -58,15 +60,17 @@ const Login = () => {
             );
             return;
         }
-
+    
         try {
+            // Login process
             const data = await loginMobile(username, password);
             await AsyncStorage.setItem('userData', JSON.stringify(data));
-
+    
             if (data.token && data.access_permissions) {
                 const decodedToken = jwtDecode(data.token);
                 const { jobs_id, company_id, id, role_id } = decodedToken.data;
-
+    
+                // Store user data
                 await Promise.all([
                     AsyncStorage.setItem('token', data.token),
                     AsyncStorage.setItem('expiredToken', data.expires_token),
@@ -77,13 +81,28 @@ const Login = () => {
                     AsyncStorage.setItem('employee_name', username),
                     AsyncStorage.setItem('access_permissions', JSON.stringify(data.access_permissions)),
                 ]);
-
-                console.log('Access Permissions:', data.access_permissions);
-                showAlert('Login Berhasil! Anda akan diarahkan ke halaman utama.', 'success');
-                setTimeout(() => {
-                    setAlert((prev) => ({ ...prev, show: false }));
-                    navigation.navigate('App', { screen: 'Home' });
-                }, 1500);
+    
+                try {
+                    // Setup notifications
+                    await setupNotifications();
+                    
+                    console.log('Access Permissions:', data.access_permissions);
+                    showAlert('Login Berhasil! Anda akan diarahkan ke halaman utama.', 'success');
+    
+                    setTimeout(() => {
+                        setAlert((prev) => ({ ...prev, show: false }));
+                        navigation.navigate('App', { screen: 'Home' });
+                    }, 1500);
+                } catch (notificationError) {
+                    // Don't block login if notification setup fails
+                    console.error('Error setting up notifications:', notificationError);
+                    // Still proceed with login
+                    showAlert('Login Berhasil! Anda akan diarahkan ke halaman utama.', 'success');
+                    setTimeout(() => {
+                        setAlert((prev) => ({ ...prev, show: false }));
+                        navigation.navigate('App', { screen: 'Home' });
+                    }, 1500);
+                }
             } else {
                 throw new Error('Login gagal: Data tidak lengkap');
             }
