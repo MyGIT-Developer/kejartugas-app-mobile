@@ -47,6 +47,20 @@ export const getMyAdhocTasks = async (employeeId) => {
     }
 };
 
+export const getMyAdhocTasksAssigner = async (employeeId) => {
+    try {
+        const token = await AsyncStorage.getItem('token');
+        const response = await apiService.get(`/task-adhoc/pending-assigner/${employeeId}`, {
+            headers: {
+                Authorization: `Bearer ${token}`,
+            },
+        });
+        return response.data;
+    } catch (error) {
+        throw new Error(error.response?.data?.message || 'Fetching my adhoc tasks failed');
+    }
+};
+
 export const getPendingApprovalTasks = async (employeeId) => {
     try {
         const token = await AsyncStorage.getItem('token');

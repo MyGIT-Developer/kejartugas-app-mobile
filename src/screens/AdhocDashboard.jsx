@@ -30,6 +30,7 @@ import {
     cancelAdhocTask,
     approveAdhocTask,
     rejectAdhocTask,
+    getMyAdhocTasksAssigner,
 } from '../api/adhocTask';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
@@ -169,6 +170,17 @@ const AdhocDashboard = ({ navigation }) => {
             else setError(response.message || 'An error occurred');
         } catch (error) {
             setError('You do not have access to monitor adhoc tasks');
+            console.error('Error fetching all adhoc tasks:', error.message);
+
+            // Fallback to getMyAdhocTasksAssigner if access is denied
+            try {
+                const employeeId = await AsyncStorage.getItem('employeeId');
+                const fallbackResponse = await getMyAdhocTasksAssigner(employeeId);
+                setAdhocTasks(fallbackResponse.data); // Set tasks from fallback API
+                setError(null); // Clear error since fallback was successful
+            } catch (fallbackError) {
+                setError(fallbackError.message || 'Fetching my adhoc tasks failed');
+            }
         } finally {
             setLoading(false);
         }
@@ -360,7 +372,11 @@ const AdhocDashboard = ({ navigation }) => {
             <View style={[styles.taskItem, isSelected && styles.selectedTaskItem]} key={task.id}>
                 <View style={styles.taskContent}>
                     <View style={styles.taskHeader}>
-                        <Text style={[styles.taskTitle, fontsLoaded ? { fontFamily: 'Poppins-SemiBold' } : null]}>
+                        <Text
+                            style={[styles.taskTitle, fontsLoaded ? { fontFamily: 'Poppins-SemiBold' } : null]}
+                            numberOfLines={1} // Membatasi teks hanya satu baris
+                            ellipsizeMode="tail" // Menampilkan "..." jika teks terlalu panjang
+                        >
                             {task.adhoc_name}
                         </Text>
                         <View style={[styles.statusBox, { backgroundColor: getStatusColor(task.adhoc_status) }]}>
@@ -435,7 +451,7 @@ const AdhocDashboard = ({ navigation }) => {
             adhoc_image,
             adhoc_assigner_images,
         } = selectedTaskDetail;
-
+        const truncatedAdhocName = truncateText(adhoc_name, 30);
         const isAssigner = employeeId === String(selectedTaskDetail.adhoc_assign_by);
         const isAssignee = employee_tasks.some((task) => String(task.employee_id) === employeeId);
 
@@ -453,7 +469,7 @@ const AdhocDashboard = ({ navigation }) => {
             <ScrollView style={styles.myTaskDetailContent}>
                 <View style={styles.taskHeaderSection}>
                     <View style={styles.taskTitleWrapper}>
-                        <Text style={styles.taskMainTitle}>{adhoc_name}</Text>
+                        <Text style={styles.taskMainTitle}>{truncatedAdhocName}</Text>
                         <View style={[styles.statusBadge, { backgroundColor: getStatusColor(adhoc_status) }]}>
                             <Text style={[styles.statusText, { color: getStatusTextColor(adhoc_status) }]}>
                                 {getStatusText(adhoc_status)}
