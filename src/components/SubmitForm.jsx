@@ -83,41 +83,94 @@ const SubmitForm = ({ route }) => {
     };
 
     const handleSavePress = async () => {
-        // Validate inputs
-        if (!imageUri || !description.trim()) {
-            setAlertMessage(
-                !imageUri ? 'Mohon sertakan gambar untuk pengumpulan.' : 'Mohon isi keterangan pengumpulan.',
-            );
+        // Reset validation state
+        setIsSuccess(false);
+        
+        // Validate image
+        if (!imageUri) {
+            setAlertMessage('Mohon sertakan gambar untuk pengumpulan.');
+            setIsSuccess(false);
             setShowAlert(true);
             return;
         }
-
+    
+        // Validate description
+        if (!description || description.trim().length === 0) {
+            setAlertMessage('Mohon isi keterangan pengumpulan.');
+            setIsSuccess(false);
+            setShowAlert(true);
+            return;
+        }
+    
+        // Validate description length
+        if (description.trim().length < 10) {
+            setAlertMessage('Keterangan pengumpulan minimal 10 karakter.');
+            setIsSuccess(false);
+            setShowAlert(true);
+            return;
+        }
+    
         setIsLoading(true);
-
+    
         try {
+            // Validate required IDs
             const companyId = await AsyncStorage.getItem('companyId');
-
+            if (!companyId) {
+                throw new Error('Company ID tidak ditemukan');
+            }
+            
+            if (!adhocId) {
+                throw new Error('Adhoc ID tidak ditemukan');
+            }
+    
+            // Validate and process image
             let imageBase64 = '';
             if (imageUri) {
                 const fileInfo = await FileSystem.getInfoAsync(imageUri);
+                
+                // Validate file size (1MB = 1024 * 1024 bytes)
                 if (fileInfo.size > 1024 * 1024) {
-                    Alert.alert('Ukuran file terlalu besar', 'Mohon pilih gambar dengan ukuran maksimal 1MB.');
+                    setAlertMessage('Ukuran file terlalu besar. Mohon pilih gambar dengan ukuran maksimal 1MB.');
+                    setShowAlert(true);
                     setIsLoading(false);
                     return;
                 }
-                imageBase64 = await FileSystem.readAsStringAsync(imageUri, {
-                    encoding: FileSystem.EncodingType.Base64,
-                });
+    
+                try {
+                    imageBase64 = await FileSystem.readAsStringAsync(imageUri, {
+                        encoding: FileSystem.EncodingType.Base64,
+                    });
+                    
+                    // Validate if base64 conversion was successful
+                    if (!imageBase64) {
+                        throw new Error('Gagal memproses gambar');
+                    }
+                } catch (error) {
+                    throw new Error('Gagal memproses gambar: ' + error.message);
+                }
             }
-
-            await submitAdhocTask(adhocId, companyId, imageBase64, description);
+    
+            // Attempt to submit
+            const response = await submitAdhocTask(adhocId, companyId, imageBase64, description.trim());
+            
+            // Validate response
+            if (!response || response.error) {
+                throw new Error(response?.error || 'Gagal mengirim data');
+            }
+    
+            // Success handling
             setIsSuccess(true);
             setAlertMessage('Pengumpulan berhasil disimpan.');
             setShowAlert(true);
+            
+            // Optional: Clear form
+            setImageUri(null);
+            setDescription('');
+    
         } catch (error) {
-            console.error(error);
+            console.error('Submit Error:', error);
             setIsSuccess(false);
-            setAlertMessage('Pengumpulan gagal. Silakan coba lagi.');
+            setAlertMessage(error.message || 'Pengumpulan gagal. Silakan coba lagi.');
             setShowAlert(true);
         } finally {
             setIsLoading(false);

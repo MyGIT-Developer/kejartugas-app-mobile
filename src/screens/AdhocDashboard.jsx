@@ -225,6 +225,7 @@ const AdhocDashboard = ({ navigation }) => {
             setLoading(false);
         }
     };
+    
     // Function to fetch and display task details
     const fetchAndShowTaskDetail = async (taskId) => {
         try {

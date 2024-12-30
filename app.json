@@ -43,7 +43,6 @@
         "backgroundColor": "#FFFFFF"
       },
       "package": "com.innovation.kejartugas",
-      "googleServicesFile": "./google-services.json",
       "permissions": [
         "CAMERA",
         "READ_EXTERNAL_STORAGE",

@@ -73,63 +73,60 @@ const NotificationScreen = ({ navigation }) => {
             clearInterval(pollInterval);
         };
     }, [fetchNotifications]);
-    // Add error state if needed
-    const [error, setError] = useState(null);
 
     // Add loading state if needed
     const [isLoading, setIsLoading] = useState(false);
 
-    const handleNotificationPress = (notification) => {
-        // Mark as read
-        markAsRead(notification.id);
+    const handleNotificationPress = async (notification) => {
+        try {
+            // Show loading indicator
+            setIsLoading(true);
 
-        // Navigate based on notification type
-        switch (notification.notif_type) {
-            case 'new_task_notif':
-                navigation.navigate('Tugas', {
-                    taskId: notification.taskId,
-                    projectId: notification.projectId,
-                    mode: 'view',
-                });
-                break;
+            // Optimistic UI update: Mark as read in UI immediately
+            markAsRead(notification.id);
 
-            case 'submit_task_notif':
-                navigation.navigate('TaskOnReview', {
-                    taskId: notification.taskId,
-                    projectId: notification.projectId,
-                    mode: 'review',
-                });
-                break;
+            // Refetch notifications
+            await fetchNotifications();
 
-            case 'approve_task_notif':
-                navigation.navigate('Tugas', {
-                    taskId: notification.taskId,
-                    projectId: notification.projectId,
-                    mode: 'view',
-                    showCompletionStatus: true,
-                });
-                break;
+            // Common navigation parameters
+            const navigationParams = {
+                taskId: notification.taskId,
+                projectId: notification.projectId,
+                mode: 'view',
+            };
 
-            case 'reject_task_notif':
-                navigation.navigate('Tugas', {
-                    taskId: notification.taskId,
-                    projectId: notification.projectId,
-                    mode: 'edit',
-                    showRevisionComments: true,
-                });
-                break;
+            // Customize parameters based on notification type
+            switch (notification.notif_type) {
+                case 'new_task_notif':
+                    navigation.navigate('Tugas', navigationParams);
+                    break;
 
-            case 'hold_task_notif':
-                navigation.navigate('Tugas', {
-                    taskId: notification.taskId,
-                    projectId: notification.projectId,
-                    mode: 'view',
-                    showChangelog: true,
-                });
-                break;
+                case 'submit_task_notif':
+                    navigation.navigate('TaskOnReview', { ...navigationParams, mode: 'review' });
+                    break;
 
-            default:
-                console.log('Unknown notification type:', notification.notif_type);
+                case 'approve_task_notif':
+                    navigation.navigate('Tugas', { ...navigationParams, showCompletionStatus: true });
+                    break;
+
+                case 'reject_task_notif':
+                    navigation.navigate('Tugas', { ...navigationParams, mode: 'edit', showRevisionComments: true });
+                    break;
+
+                case 'hold_task_notif':
+                    navigation.navigate('Tugas', { ...navigationParams, showChangelog: true });
+                    break;
+
+                default:
+                    console.log('Unknown notification type:', notification.notif_type);
+                    alert('This notification type is not supported.');
+            }
+        } catch (error) {
+            console.error('Failed to handle notification:', error);
+            alert('An error occurred while processing the notification. Please try again.');
+        } finally {
+            // Hide loading indicator
+            setIsLoading(false);
         }
     };
 
@@ -177,42 +174,42 @@ const NotificationScreen = ({ navigation }) => {
         const diffInDays = Math.floor(diffInHours / 24);
         const diffInWeeks = Math.floor(diffInDays / 7);
         const diffInMonths = Math.floor(diffInDays / 30);
-    
+
         // For very recent updates
         if (diffInSeconds < 30) {
             return 'Baru saja';
         }
-        
+
         // Less than a minute
         if (diffInSeconds < 60) {
             return `${diffInSeconds} detik yang lalu`;
         }
-        
+
         // Less than an hour
         if (diffInMinutes < 60) {
             return `${diffInMinutes} menit yang lalu`;
         }
-        
+
         // Less than a day
         if (diffInHours < 24) {
             return `${diffInHours} jam yang lalu`;
         }
-        
+
         // Less than a week
         if (diffInDays < 7) {
             return `${diffInDays} hari yang lalu`;
         }
-        
+
         // Less than a month
         if (diffInWeeks < 4) {
             return `${diffInWeeks} minggu yang lalu`;
         }
-        
+
         // Less than a year
         if (diffInMonths < 12) {
             return `${diffInMonths} bulan yang lalu`;
         }
-    
+
         // More than a year, show full date
         return createdAt.toLocaleDateString('id-ID', {
             year: 'numeric',
@@ -220,23 +217,21 @@ const NotificationScreen = ({ navigation }) => {
             day: 'numeric',
         });
     };
-    
+
     // Optional: Auto-updating version
     const AutoUpdatingTime = ({ date }) => {
         const [timeAgo, setTimeAgo] = useState(formatTimeAgoDetailed(date));
-    
+
         useEffect(() => {
             // Update every minute for recent items
             const interval = setInterval(() => {
                 setTimeAgo(formatTimeAgoDetailed(date));
             }, 60000);
-    
+
             return () => clearInterval(interval);
         }, [date]);
-    
-        return (
-            <Text style={styles.notificationTime}>{timeAgo}</Text>
-        );
+
+        return <Text style={styles.notificationTime}>{timeAgo}</Text>;
     };
 
     const NotificationItem = ({ notification }) => (
@@ -298,7 +293,7 @@ const NotificationScreen = ({ navigation }) => {
                         <NotificationItem
                             key={notification.id}
                             notification={notification}
-                            onRead={()=>markAsRead(notification.id)}
+                            onRead={() => markAsRead(notification.id)}
                             // onNavigate={handleNotificationNavigation}
                         />
                     ))
@@ -428,3 +423,4 @@ const styles = StyleSheet.create({
 });
 
 export default NotificationScreen;
+    

@@ -71,7 +71,8 @@
     "react-native-table-component": "^1.2.2",
     "react-native-tooltip": "^5.2.0",
     "react-native-vector-icons": "^10.1.0",
-    "styled-components": "^6.1.12"
+    "styled-components": "^6.1.12",
+    "expo-task-manager": "~11.8.2"
   },
   "devDependencies": {
     "@babel/core": "^7.24.0",

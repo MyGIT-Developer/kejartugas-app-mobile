@@ -2,6 +2,38 @@ import NotificationService from '../utils/notificationService';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import apiService from '../utils/apiService';
 import { Platform } from 'react-native';
+import * as TaskManager from 'expo-task-manager';
+import * as Notifications from 'expo-notifications';
+import { useNavigation } from '@react-navigation/native';
+
+const BACKGROUND_NOTIFICATION_TASK = 'BACKGROUND_NOTIFICATION_TASK';
+
+const taskNotifTypes = [
+    'new_task_notif',
+    'submit_task_notif',
+    'approve_task_notif',
+    'reject_task_notif',
+    'hold_task_notif',
+];
+
+// Register the task before using it
+TaskManager.defineTask(BACKGROUND_NOTIFICATION_TASK, ({ data, error }) => {
+    if (error) {
+        console.error('Error handling background notification:', error);
+        return;
+    }
+
+    if (!data) {
+        console.log('No data with background notification');
+        return;
+    }
+
+    const { type, taskId, projectId } = data;
+    
+    // Note: useNavigation() cannot be used in a background task
+    // Instead, you should handle the navigation when the app is opened
+    console.log('Background notification received:', { type, taskId, projectId });
+});
 
 export const registerDeviceToken = async () => {
     try {
@@ -12,9 +44,6 @@ export const registerDeviceToken = async () => {
             AsyncStorage.getItem('companyId')
         ]);
 
-        // Debug log
-        console.log('Stored data:', { employeeId, companyId });
-
         if (!employeeId || !authToken) {
             console.log('Missing required data:', { employeeId, authToken });
             return null;
@@ -22,7 +51,6 @@ export const registerDeviceToken = async () => {
 
         // Get device token
         const deviceToken = await NotificationService.getExpoPushToken();
-        console.log('Device token:', deviceToken);
 
         if (!deviceToken) {
             console.log('Failed to get device token');
@@ -37,8 +65,6 @@ export const registerDeviceToken = async () => {
             device_type: Platform.OS
         };
 
-        console.log('Registering device with data:', requestData);
-
         // Make the API call
         const response = await apiService.post('/device/register', requestData, {
             headers: {
@@ -47,51 +73,88 @@ export const registerDeviceToken = async () => {
             }
         });
 
-        console.log('Device registration response:', response.data);
         return response.data;
 
     } catch (error) {
-        // Detailed error logging
         console.error('Device registration error:', {
             message: error.message,
             response: error.response?.data,
             status: error.response?.status,
-            requestData: error.config?.data,
-            endpoint: error.config?.url
         });
-
         throw error;
     }
 };
 
 export const setupNotifications = async () => {
     try {
-        // Register device first
-        const registrationResult = await registerDeviceToken();
-        console.log('Registration result:', registrationResult);
+        // Request permissions first
+        const { status: existingStatus } = await Notifications.getPermissionsAsync();
+        let finalStatus = existingStatus;
+        
+        if (existingStatus !== 'granted') {
+            const { status } = await Notifications.requestPermissionsAsync();
+            finalStatus = status;
+        }
+        
+        if (finalStatus !== 'granted') {
+            console.log('Failed to get push token for push notification!');
+            return;
+        }
+
+        // Register device
+        await registerDeviceToken();
 
         // Get employee ID for notification refresh
         const employeeId = await AsyncStorage.getItem('employeeId');
 
-        // Setup notification handlers
-        const cleanup = NotificationService.setupNotificationListeners(async (data) => {
-            console.log('Received notification:', data);
-            
-            if (employeeId) {
-                try {
-                    const notifications = await getNotificationByEmployee(employeeId);
-                    console.log('Updated notifications:', notifications);
-                } catch (error) {
-                    console.error('Error fetching notifications:', error);
+        // Register background task
+        await Notifications.registerTaskAsync(BACKGROUND_NOTIFICATION_TASK);
+
+        // Setup foreground handler
+        const foregroundSubscription = Notifications.addNotificationReceivedListener(
+            async (notification) => {
+                console.log('Received notification:', notification);
+                
+                if (employeeId) {
+                    try {
+                        await getNotificationByEmployee(employeeId);
+                    } catch (error) {
+                        console.error('Error fetching notifications:', error);
+                    }
                 }
             }
-        });
+        );
 
-        return cleanup;
+        // Setup notification response handler
+        const responseSubscription = Notifications.addNotificationResponseReceivedListener(
+            (response) => {
+                const data = response.notification.request.content.data;
+                handleNotificationInteraction(data);
+            }
+        );
+
+        // Return cleanup function
+        return () => {
+            foregroundSubscription.remove();
+            responseSubscription.remove();
+        };
     } catch (error) {
         console.error('Error setting up notifications:', error);
-        // Don't throw error to prevent blocking app startup
         return () => {};
+    }
+};
+
+export const handleNotificationInteraction = (data) => {
+    if (!data || !data.type) return;
+
+    const navigation = useNavigation();
+
+    if (taskNotifTypes.includes(data.type)) {
+        navigation.navigate('TaskDetails', { taskId: data.taskId });
+    } else if (data.type === 'project_update_notif') {
+        navigation.navigate('ProjectDetails', { projectId: data.projectId });
+    } else {
+        console.log('Unknown notification type:', data.type);
     }
 };
 

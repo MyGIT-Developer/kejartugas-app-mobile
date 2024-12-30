@@ -1,5 +1,5 @@
 import React, { useState, useCallback, useMemo, useEffect } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Dimensions, ScrollView, Alert, SafeAreaView } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Dimensions, ScrollView, Alert, SafeAreaView, Modal } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import DraggableModalTask from '../components/DraggableModalTask';
 import ReusableModalSuccess from '../components/TaskModalSuccess';
@@ -255,7 +255,331 @@ const DetailProjekDua = ({ data, onFetch }) => {
     const [modalType, setModalType] = useState('default'); // Initialize modalType state
     const [selectedTask, setSelectedTask] = useState(null);
     const [draggableModalVisible, setDraggableModalVisible] = useState(false);
+    const [activeFilters, setActiveFilters] = useState({
+        status: 'all',
+        deadlineRange: 'all',
+        startDate: '',
+        endDate: ''
+    });
+    const [tempFilters, setTempFilters] = useState({
+        status: 'all',
+        deadlineRange: 'all',
+        startDate: '',
+        endDate: ''
+    });
+    const [filterModalVisible, setFilterModalVisible] = useState(false);
+    const [sortDirection, setSortDirection] = useState('asc');
 
+    // Status priority for sorting
+    const statusPriority = {
+        'onPending': 1,    // Tersedia
+        'workingOnIt': 2,  // Dalam Pengerjaan
+        'onReview': 3,     // Dalam Peninjauan
+        'onHold': 4,       // Ditunda
+        'rejected': 5,     // Ditolak
+        'Completed': 6     // Selesai
+    };
+
+    // Status options for filter
+    const statusOptions = [
+        { value: 'all', label: 'Semua Status' },
+        { value: 'Completed', label: 'Selesai' },
+        { value: 'workingOnIt', label: 'Dalam Pengerjaan' },
+        { value: 'rejected', label: 'Ditolak' },
+        { value: 'onReview', label: 'Dalam Peninjauan' },
+        { value: 'onHold', label: 'Ditunda' },
+        { value: 'onPending', label: 'Tersedia' }
+    ];
+
+    // Deadline range options
+    const deadlineOptions = [
+        { value: 'all', label: 'Semua Deadline' },
+        { value: 'overdue', label: 'Terlambat' },
+        { value: 'today', label: 'Hari Ini' },
+        { value: 'week', label: 'Minggu Ini' },
+        { value: 'month', label: 'Bulan Ini' }
+    ];
+
+    const isTaskOverdue = (endDate) => {
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        const taskEnd = new Date(endDate);
+        return taskEnd < today;
+    };
+
+    const isTaskDueToday = (endDate) => {
+        const today = new Date();
+        const taskEnd = new Date(endDate);
+        return (
+            taskEnd.getDate() === today.getDate() &&
+            taskEnd.getMonth() === today.getMonth() &&
+            taskEnd.getFullYear() === today.getFullYear()
+        );
+    };
+
+    const isTaskDueThisWeek = (endDate) => {
+        const today = new Date();
+        const taskEnd = new Date(endDate);
+        const weekFromNow = new Date(today);
+        weekFromNow.setDate(today.getDate() + 7);
+        return taskEnd >= today && taskEnd <= weekFromNow;
+    };
+
+    const isTaskDueThisMonth = (endDate) => {
+        const today = new Date();
+        const taskEnd = new Date(endDate);
+        return (
+            taskEnd.getMonth() === today.getMonth() &&
+            taskEnd.getFullYear() === today.getFullYear()
+        );
+    };
+
+     // Function to sort tasks by status priority
+     const sortTasks = (tasks) => {
+        return [...tasks].sort((a, b) => {
+            const priorityA = statusPriority[a.task_status] || 999;
+            const priorityB = statusPriority[b.task_status] || 999;
+            return sortDirection === 'asc' 
+                ? priorityA - priorityB 
+                : priorityB - priorityA;
+        });
+    };
+
+      // Filter and sort tasks based on selected criteria
+    const filteredAndSortedTasks = useMemo(() => {
+        let result = data.tasks;
+
+        // Apply filters
+        result = result.filter(task => {
+            // Status filter
+            if (activeFilters.status !== 'all' && task.task_status !== activeFilters.status) {
+                return false;
+            }
+
+            // Deadline filter
+            if (activeFilters.deadlineRange !== 'all') {
+                switch (activeFilters.deadlineRange) {
+                    case 'overdue':
+                        if (!isTaskOverdue(task.end_date)) return false;
+                        break;
+                    case 'today':
+                        if (!isTaskDueToday(task.end_date)) return false;
+                        break;
+                    case 'week':
+                        if (!isTaskDueThisWeek(task.end_date)) return false;
+                        break;
+                    case 'month':
+                        if (!isTaskDueThisMonth(task.end_date)) return false;
+                        break;
+                }
+            }
+
+            return true;
+        });
+
+        // Apply sorting
+        return sortTasks(result);
+    }, [data.tasks, activeFilters, sortDirection]);
+
+    const handleApplyFilters = () => {
+        setActiveFilters(tempFilters);
+        setFilterModalVisible(false);
+    };
+
+    const handleResetFilters = () => {
+        const resetFilters = {
+            status: 'all',
+            deadlineRange: 'all',
+            startDate: '',
+            endDate: ''
+        };
+        setTempFilters(resetFilters);
+        setActiveFilters(resetFilters);
+    };
+
+    // Toggle sort direction
+    const toggleSort = () => {
+        setSortDirection(prev => prev === 'asc' ? 'desc' : 'asc');
+    };
+
+    // Filter Modal Component
+   // FilterModal component with improved behavior
+const FilterModal = () => {
+    // Local state for handling chip selections without re-renders
+    const [localFilters, setLocalFilters] = useState(tempFilters);
+
+    // Reset local filters when modal opens
+    useEffect(() => {
+        setLocalFilters(tempFilters);
+    }, [filterModalVisible]);
+
+    const handleChipPress = (type, value) => {
+        setLocalFilters(prev => ({
+            ...prev,
+            [type]: value
+        }));
+    };
+
+    const handleApply = () => {
+        setTempFilters(localFilters);
+        setActiveFilters(localFilters);
+        setFilterModalVisible(false);
+    };
+
+    const handleReset = () => {
+        const resetFilters = {
+            status: 'all',
+            deadlineRange: 'all',
+            startDate: '',
+            endDate: ''
+        };
+        setLocalFilters(resetFilters);
+        setTempFilters(resetFilters);
+        setActiveFilters(resetFilters);
+    };
+
+    return (
+        <Modal
+            animationType="slide"
+            transparent={true}
+            visible={filterModalVisible}
+            onRequestClose={() => {
+                setFilterModalVisible(false);
+                setLocalFilters(activeFilters);
+            }}
+        >
+            <TouchableOpacity 
+                style={styles.modalOverlay}
+                activeOpacity={1}
+                onPress={() => {
+                    setFilterModalVisible(false);
+                    setLocalFilters(activeFilters);
+                }}
+            >
+                <TouchableOpacity 
+                    activeOpacity={1} 
+                    style={styles.modalContent}
+                    onPress={e => e.stopPropagation()}
+                >
+                    <View style={styles.modalHeader}>
+                        <Text style={styles.modalTitle}>Filter Tugas</Text>
+                        <TouchableOpacity 
+                            onPress={() => {
+                                setFilterModalVisible(false);
+                                setLocalFilters(activeFilters);
+                            }}
+                            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                        >
+                            <Feather name="x" size={24} color="black" />
+                        </TouchableOpacity>
+                    </View>
+
+                    <View style={styles.filterSection}>
+                        <Text style={styles.filterLabel}>Status</Text>
+                        <ScrollView 
+                            horizontal 
+                            showsHorizontalScrollIndicator={false}
+                            style={styles.chipScrollView}
+                        >
+                            <View style={styles.chipContainer}>
+                                {statusOptions.map((option) => (
+                                    <TouchableOpacity
+                                        key={option.value}
+                                        style={[
+                                            styles.chip,
+                                            localFilters.status === option.value && styles.chipSelected
+                                        ]}
+                                        onPress={() => handleChipPress('status', option.value)}
+                                    >
+                                        <Text 
+                                            style={[
+                                                styles.chipText,
+                                                localFilters.status === option.value && styles.chipTextSelected
+                                            ]}
+                                        >
+                                            {option.label}
+                                        </Text>
+                                    </TouchableOpacity>
+                                ))}
+                            </View>
+                        </ScrollView>
+                    </View>
+
+                    <View style={styles.filterSection}>
+                        <Text style={styles.filterLabel}>Deadline</Text>
+                        <ScrollView 
+                            horizontal 
+                            showsHorizontalScrollIndicator={false}
+                            style={styles.chipScrollView}
+                        >
+                            <View style={styles.chipContainer}>
+                                {deadlineOptions.map((option) => (
+                                    <TouchableOpacity
+                                        key={option.value}
+                                        style={[
+                                            styles.chip,
+                                            localFilters.deadlineRange === option.value && styles.chipSelected
+                                        ]}
+                                        onPress={() => handleChipPress('deadlineRange', option.value)}
+                                    >
+                                        <Text 
+                                            style={[
+                                                styles.chipText,
+                                                localFilters.deadlineRange === option.value && styles.chipTextSelected
+                                            ]}
+                                        >
+                                            {option.label}
+                                        </Text>
+                                    </TouchableOpacity>
+                                ))}
+                            </View>
+                        </ScrollView>
+                    </View>
+
+                    <View style={styles.modalFooter}>
+                        <TouchableOpacity 
+                            style={styles.clearButton}
+                            onPress={handleReset}
+                        >
+                            <Text style={styles.clearButtonText}>Reset Filter</Text>
+                        </TouchableOpacity>
+                        <TouchableOpacity 
+                            style={styles.applyButton}
+                            onPress={handleApply}
+                        >
+                            <Text style={styles.applyButtonText}>Terapkan</Text>
+                        </TouchableOpacity>
+                    </View>
+                </TouchableOpacity>
+            </TouchableOpacity>
+        </Modal>
+    );
+};
+
+
+    // Action Buttons Component
+    const ActionButtons = () => (
+        <View style={styles.actionButtonsContainer}>
+            <TouchableOpacity 
+                style={styles.actionButton}
+                onPress={() => setFilterModalVisible(true)}
+            >
+                <Feather name="filter" size={20} color="#0E509E" />
+                <Text style={styles.actionButtonText}>Filter</Text>
+            </TouchableOpacity>
+            <TouchableOpacity 
+                style={styles.actionButton}
+                onPress={toggleSort}
+            >
+                <Feather 
+                    name={sortDirection === 'asc' ? 'arrow-up' : 'arrow-down'} 
+                    size={20} 
+                    color="#0E509E" 
+                />
+                <Text style={styles.actionButtonText}>Sort</Text>
+            </TouchableOpacity>
+        </View>
+    );
     const handleTaskDetailPress = async (task) => {
         const baseUrl = 'https://app.kejartugas.com/';
         try {
@@ -316,8 +640,10 @@ const DetailProjekDua = ({ data, onFetch }) => {
 
     return (
         <SafeAreaView style={styles.safeArea}>
-        <View style={styles.mainContainer}>
-        <View style={styles.headerSection}>
+            <View style={styles.mainContainer}>
+            <ActionButtons />
+
+                  <View style={styles.headerSection}>
                     <View style={styles.tableHeader}>
                         <Text style={[styles.headerCell, styles.indexHeaderCell]}>No</Text>
                         <Text style={[styles.headerCell, styles.taskNameHeaderCell]}>Nama Tugas</Text>
@@ -332,8 +658,8 @@ const DetailProjekDua = ({ data, onFetch }) => {
                         contentContainerStyle={styles.scrollViewContent}
                         showsVerticalScrollIndicator={false}
                     >
-                        {taskData && taskData.length > 0 ? (
-                            taskData.map((item, index) => (
+                        {filteredAndSortedTasks  && filteredAndSortedTasks .length > 0 ? (
+                            filteredAndSortedTasks .map((item, index) => (
                                 <TableRow
                                     key={item.id || index}
                                     item={item}
@@ -351,10 +677,11 @@ const DetailProjekDua = ({ data, onFetch }) => {
                 </View>
 
                 {/* Floating Button */}
-                <FloatingButtonTask 
-                    projectData={data} 
-                />
+                <FloatingButtonTask projectData={data} />
             </View>
+
+            
+            <FilterModal />
 
             {/* Modals */}
             {modalType === 'default' ? (
@@ -378,7 +705,7 @@ const DetailProjekDua = ({ data, onFetch }) => {
 };
 
 const styles = StyleSheet.create({
-      safeArea: {
+    safeArea: {
         flex: 1,
         backgroundColor: '#f5f5f5',
     },
@@ -526,6 +853,127 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         justifyContent: 'center',
         gap: 10,
+    },
+    actionButtonsContainer: {
+        flexDirection: 'row',
+        justifyContent: 'flex-end',
+        padding: 10,
+        gap: 10,
+    },
+    actionButton: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        backgroundColor: '#f5f5f5',
+        padding: 8,
+        borderRadius: 8,
+        gap: 5,
+    },
+    actionButtonText: {
+        color: '#0E509E',
+        fontSize: 14,
+        fontWeight: '500',
+    },
+    modalOverlay: {
+        flex: 1,
+        backgroundColor: 'rgba(0, 0, 0, 0.5)',
+        justifyContent: 'flex-end',
+    },
+    modalContent: {
+        backgroundColor: 'white',
+        borderTopLeftRadius: 20,
+        borderTopRightRadius: 20,
+        padding: 20,
+        maxHeight: '80%',
+    },
+    modalHeader: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        marginBottom: 20,
+        paddingHorizontal: 4,
+    },
+    modalTitle: {
+        fontSize: 18,
+        fontWeight: 'bold',
+        color: '#333',
+    },
+    filterSection: {
+        marginBottom: 20,
+    },
+    filterLabel: {
+        fontSize: 16,
+        fontWeight: '600',
+        marginBottom: 10,
+        paddingHorizontal: 4,
+        color: '#333',
+    },
+    chipScrollView: {
+        flexGrow: 0,
+    },
+    chipContainer: {
+        flexDirection: 'row',
+        paddingHorizontal: 4,
+        paddingVertical: 4,
+    },
+    chip: {
+        paddingHorizontal: 16,
+        paddingVertical: 8,
+        borderRadius: 20,
+        backgroundColor: '#F5F5F5',
+        marginRight: 8,
+        borderWidth: 1,
+        borderColor: '#E0E0E0',
+    },
+    chipSelected: {
+        backgroundColor: '#0E509E',
+        borderColor: '#0E509E',
+    },
+    chipText: {
+        color: '#666',
+        fontSize: 14,
+        fontWeight: '500',
+    },
+    chipTextSelected: {
+        color: 'white',
+    },
+    modalFooter: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        marginTop: 20,
+        paddingHorizontal: 4,
+    },
+    clearButton: {
+        padding: 12,
+        borderRadius: 8,
+        borderWidth: 1,
+        borderColor: '#0E509E',
+        minWidth: 100,
+        alignItems: 'center',
+    },
+    clearButtonText: {
+        color: '#0E509E',
+        fontSize: 14,
+        fontWeight: '500',
+    },
+    applyButton: {
+        padding: 12,
+        borderRadius: 8,
+        backgroundColor: '#0E509E',
+        minWidth: 100,
+        alignItems: 'center',
+    },
+    applyButtonText: {
+        color: 'white',
+        fontSize: 14,
+        fontWeight: '500',
+    },
+    headerRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+    },
+    filterButton: {
+        padding: 8,
     },
 });
 

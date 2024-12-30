@@ -60,25 +60,6 @@ class NotificationService {
 
     async sendLocalNotification(title, body, options = {}) {
         try {
-            const notificationId = options.data?.notificationId;
-            
-            // Prevent duplicate notifications
-            if (this.notificationQueue.has(notificationId)) {
-                return;
-            }
-
-            // Add to queue
-            this.notificationQueue.add(notificationId);
-
-            // Ensure minimum time between notifications
-            const currentTime = Date.now();
-            const timeSinceLastNotification = currentTime - this.lastNotificationTime;
-            if (timeSinceLastNotification < 2000) { // 2 seconds minimum
-                await new Promise(resolve => 
-                    setTimeout(resolve, 2000 - timeSinceLastNotification)
-                );
-            }
-
             await this.requestPermissions();
             
             await Notifications.scheduleNotificationAsync({
@@ -92,19 +73,12 @@ class NotificationService {
                     badge: 1,
                     color: '#0E509E',
                 },
-                trigger: null,
+                trigger: { // Set a trigger to display the notification
+                    seconds: 0, // Immediately display the notification
+                },
             });
-
-            this.lastNotificationTime = Date.now();
-
-            // Remove from queue after a delay
-            setTimeout(() => {
-                this.notificationQueue.delete(notificationId);
-            }, 5000);
-
         } catch (error) {
             console.error('Error sending local notification:', error);
-            this.notificationQueue.delete(options.data?.notificationId);
         }
     }
 
