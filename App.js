@@ -10,6 +10,7 @@ import notificationService from './src/utils/notificationService';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import {  setupNotifications } from './src/api/notification';
 
+
 // Create navigation ref for notifications
 export const navigationRef = React.createRef();
 
@@ -101,6 +102,7 @@ export default function App() {
         return React.cloneElement(origin, {
             style: [styles.defaultText, origin.props.style],
         });
+
     };
 
     return (
