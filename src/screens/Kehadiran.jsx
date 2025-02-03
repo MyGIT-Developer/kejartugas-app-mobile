@@ -108,7 +108,7 @@ const Kehadiran = () => {
     const fetchData = useCallback(async () => {
         if (!employeeId || !companyId) return;
         setIsLoading(true);
-
+    
         try {
             const { status } = await Location.requestForegroundPermissionsAsync();
             if (status !== 'granted') {
@@ -117,38 +117,63 @@ const Kehadiran = () => {
                 setIsLoading(false);
                 return;
             }
-
+    
             const [attendanceResponse, parameterResponse, locationResponse] = await Promise.all([
-                getAttendance(employeeId),
-                getParameter(companyId),
-                Location.getCurrentPositionAsync({}),
+                getAttendance(employeeId).catch(error => {
+                    // Check if it's the "No attendance records" case
+                    if (error.message === 'No attendance records found') {
+                        return { 
+                            attendance: [], 
+                            isCheckedInToday: 0  // Default to not checked in
+                        };
+                    }
+                    throw error; // Re-throw if it's a different error
+                }),
+                getParameter(companyId).catch(error => {
+                    console.error('Parameter fetch error:', error);
+                    // Return default values if parameter fetch fails
+                    return {
+                        data: {
+                            jam_telat: "09:00",  // Default late time
+                            radius: 100  // Default radius in meters
+                        }
+                    };
+                }),
+                Location.getCurrentPositionAsync({})
             ]);
-
+    
+            // Safely access parameter response data with defaults
+            const jamTelat = parameterResponse?.data?.jam_telat || "09:00";
+            const radius = parameterResponse?.data?.radius || 100;
+    
             const today = new Date().toISOString().split('T')[0];
             const todayAttendance = attendanceResponse.attendance.find((record) => {
                 const recordDate = new Date(record.checkin).toISOString().split('T')[0];
                 return recordDate === today;
             });
-
+    
             const checkedOutStatus = todayAttendance && todayAttendance.checkout ? true : false;
-            setAttendanceData(attendanceResponse.attendance);
+            setAttendanceData(attendanceResponse.attendance || []);
             setIsCheckedIn(attendanceResponse.isCheckedInToday);
             setIsCheckedOut(checkedOutStatus);
-            setJamTelat(parameterResponse.data.jam_telat);
-            setRadius(parameterResponse.data.radius);
-
+            setJamTelat(jamTelat);
+            setRadius(radius);
+    
             const { latitude, longitude } = locationResponse.coords;
             setLocation(`${latitude.toFixed(6)}, ${longitude.toFixed(6)}`);
-
+    
             const [reverseGeocodeResult] = await Location.reverseGeocodeAsync({ latitude, longitude });
             setLocationName(
                 reverseGeocodeResult
                     ? `${reverseGeocodeResult.street}, ${reverseGeocodeResult.city}, ${reverseGeocodeResult.region}, ${reverseGeocodeResult.country}`
-                    : 'Unable to retrieve location name',
+                    : 'Unable to retrieve location name'
             );
         } catch (error) {
-            console.error('Error fetching data:', error);
-            showAlert('Failed to fetch data. Please try again.', 'error');
+            // Only show error alert for actual errors, not for "No attendance records"
+            if (!error.message?.includes('No attendance records found')) {
+                console.error('Error fetching data:', error);
+                showAlert('Failed to fetch data. Please try again.', 'error');
+            }
         } finally {
             setIsLoading(false);
         }

@@ -108,6 +108,7 @@ const DetailKehadiran = () => {
         }
     };
 
+  
     const handleClockIn = async () => {
         if (!capturedImageBase64) {
             showAlert('Silahkan mengambil foto terlebih dahulu!', 'error');
@@ -121,28 +122,69 @@ const DetailKehadiran = () => {
 
         setIsUploading(true);
         try {
-            const response = await checkIn(
+            // Add payload validation
+            if (!employeeId || !companyId || !location) {
+                throw new Error('Missing required check-in data');
+            }
+
+            const checkInPayload = {
                 employeeId,
                 companyId,
-                isUserLate ? reasonInput : null,
-                capturedImageBase64,
+                reason: isUserLate ? reasonInput : null,
+                image: capturedImageBase64,
                 location,
-                isWFH,
+                isWFH
+            };
+
+            // Add response validation
+            const response = await checkIn(
+                checkInPayload.employeeId,
+                checkInPayload.companyId,
+                checkInPayload.reason,
+                checkInPayload.image,
+                checkInPayload.location,
+                checkInPayload.isWFH
             );
-            console.log('Check-in response:', response); // Log the server response
+
+            // Validate response
+            if (!response) {
+                throw new Error('No response received from server');
+            }
+
+            // Check if response has expected structure
+            if (response.success === false || !response.data) {
+                throw new Error(response.message || 'Check-in failed');
+            }
+
             showAlert('Anda berhasil check-in!', 'success');
             setTimeout(() => {
                 setAlert((prev) => ({ ...prev, show: false }));
                 navigation.navigate('App', { screen: 'Kehadiran' });
             }, 1500);
+
         } catch (error) {
             console.error('Check-in error:', error);
-            showAlert(`Error when checking in: ${error.message || 'Unknown error'}`, 'error');
+            
+            // Enhanced error handling with specific messages
+            let errorMessage = 'Terjadi kesalahan saat melakukan check-in.';
+            
+            if (error.message.includes('Missing required')) {
+                errorMessage = 'Data check-in tidak lengkap. Silakan coba lagi.';
+            } else if (error.response?.status === 401) {
+                errorMessage = 'Sesi Anda telah berakhir. Silakan login kembali.';
+                // Optional: Handle session expiry
+                // await handleSessionExpiry();
+            } else if (error.response?.status === 403) {
+                errorMessage = 'Anda tidak memiliki izin untuk melakukan check-in.';
+            } else if (error.response?.data?.message) {
+                errorMessage = error.response.data.message;
+            }
+
+            showAlert(errorMessage, 'error');
         } finally {
             setIsUploading(false);
         }
     };
-
     const showAlert = (message, type) => {
         setAlert({ show: true, type, message });
     };
