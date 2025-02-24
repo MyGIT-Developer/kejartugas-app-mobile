@@ -87,31 +87,39 @@ export const checkIn = async (employeeId, companyId, note, attendanceImageBase64
     }
 };
 
-export const checkOut = async (employeeId, companyId) => {
+export const checkOut = async (employeeId, companyId, location, location_name) => {
     try {
         const checkOutData = {
             action: 'checkout',
             employee_id: employeeId,
             company_id: companyId,
+            location: location,
+            location_name: location_name,
         };
+
         const response = await apiService.put(
             `/attendance/`,
-            checkOutData,
-            // {
-            //     params: {
-            //         action: 'checkout',
-            //         company_id: companyId,
-            //         employee_id: employeeId,
-            //     },
-            // },
+            checkOutData, // Correct payload here
             {
+                params: {
+                    action: 'checkout',
+                    company_id: companyId,
+                    employee_id: employeeId,
+                    location_name: location_name,
+                },
                 headers: {
                     Authorization: `Bearer ${await AsyncStorage.getItem('token')}`,
                 },
-            },
+            }
         );
-        return response.data.message;
+
+        if (!response || !response.data) {
+            throw new Error('No response data received from server');
+        }
+
+        return response.data; // Ensure it returns the full response, not just `message`
     } catch (error) {
         throw new Error(error.response?.data?.message || 'Checking out failed');
     }
 };
+

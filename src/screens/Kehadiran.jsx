@@ -272,15 +272,40 @@ const Kehadiran = () => {
 
     const handleClockOut = async () => {
         try {
-            const updateResponse = await checkOut(employeeId, companyId);
-            showAlert(`${updateResponse}`, 'success');
-            fetchData();
+            const checkOutPayload = {
+                employeeId,
+                companyId,
+                location,
+                location_name: locationName,
+            };
+    
+            const updateResponse = await checkOut(
+                checkOutPayload.employeeId,
+                checkOutPayload.companyId,
+                checkOutPayload.location,
+                checkOutPayload.location_name,
+            );
+    
+            if (!updateResponse) {
+                throw new Error('No response received from server');
+            }
+    
+            if (updateResponse.success === false || !updateResponse.data) {
+                throw new Error(updateResponse.message || 'Check-out Failed');
+            }
+    
+            showAlert(updateResponse.message, 'success'); // Show success message properly
+            await fetchData();
+            setTimeout(() => {
+                setAlert((prev) => ({ ...prev, show: false }));
+                navigation.navigate('App', { screen: 'Kehadiran' });
+            }, 1500);
         } catch (error) {
             const errorMessage = error.message || 'Unknown error';
-            showAlert(`${errorMessage}`, 'error');
+            showAlert(errorMessage, 'error'); // Show correct error message
         }
     };
-
+    
     const handleNextPage = () => {
         if (currentPage < totalPages - 1) {
             setCurrentPage(currentPage + 1);
