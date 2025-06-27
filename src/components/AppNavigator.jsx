@@ -32,14 +32,17 @@ const AppNavigator = () => {
         Profile: new Animated.Value(1),
     }).current;
 
-    const animateTab = useCallback((routeName, focused) => {
-        Animated.spring(scaleAnims[routeName], {
-            toValue: focused ? 1.2 : 1,
-            useNativeDriver: true,
-            tension: 100,
-            friction: 7,
-        }).start();
-    }, [scaleAnims]);
+    const animateTab = useCallback(
+        (routeName, focused) => {
+            Animated.spring(scaleAnims[routeName], {
+                toValue: focused ? 1.2 : 1,
+                useNativeDriver: true,
+                tension: 100,
+                friction: 7,
+            }).start();
+        },
+        [scaleAnims],
+    );
 
     const screenOptions = useCallback(
         ({ route }) => ({
@@ -61,16 +64,13 @@ const AppNavigator = () => {
             },
             tabBarBackground: () => (
                 <View style={styles.tabBarBackground}>
-                    <LinearGradient
-                        colors={['rgba(255, 255, 255, 0.95)', 'rgba(255, 255, 255, 0.85)']}
-                        style={styles.gradientBackground}
-                    />
+                    <View style={styles.solidBackground} />
                     <View style={styles.blurOverlay} />
                 </View>
             ),
             tabBarIcon: ({ focused }) => {
                 const Icon = SCREEN_OPTIONS[route.name].icon;
-                
+
                 // Animate when focus changes
                 React.useEffect(() => {
                     animateTab(route.name, focused);
@@ -84,13 +84,13 @@ const AppNavigator = () => {
                                 focused && styles.activeIconContainer,
                                 route.name === 'Kehadiran' && styles.kehadiranIconContainer(focused),
                                 route.name !== 'Kehadiran' && {
-                                    transform: [{ scale: scaleAnims[route.name] }]
-                                }
+                                    transform: [{ scale: scaleAnims[route.name] }],
+                                },
                             ]}
                         >
                             {route.name === 'Kehadiran' ? (
                                 <LinearGradient
-                                    colors={focused ? ['#667eea', '#764ba2'] : ['#4A90E2', '#357ABD']}
+                                    colors={focused ? ['#0E509E', '#5FA0DC'] : ['#0E509E', '#357ABD']}
                                     style={styles.kehadiranGradient}
                                     start={{ x: 0, y: 0 }}
                                     end={{ x: 1, y: 1 }}
@@ -99,14 +99,11 @@ const AppNavigator = () => {
                                 </LinearGradient>
                             ) : (
                                 <>
-                                    {focused && <View style={styles.activeIndicator} />}
                                     <Icon focused={focused} />
                                 </>
                             )}
                         </Animated.View>
-                        {focused && route.name !== 'Kehadiran' && (
-                            <View style={styles.activeDot} />
-                        )}
+                        {focused && route.name !== 'Kehadiran' && <View style={styles.activeDot} />}
                     </View>
                 );
             },
@@ -169,16 +166,21 @@ const styles = StyleSheet.create({
         flex: 1,
         borderRadius: 25,
     },
+    solidBackground: {
+        flex: 1,
+        borderRadius: 25,
+        backgroundColor: '#ffffff',
+    },
     blurOverlay: {
         position: 'absolute',
         top: 0,
         left: 0,
         right: 0,
         bottom: 0,
-        backgroundColor: 'rgba(255, 255, 255, 0.1)',
+        backgroundColor: 'rgba(0, 0, 0, 0.02)',
         borderRadius: 25,
         borderWidth: 1,
-        borderColor: 'rgba(255, 255, 255, 0.2)',
+        borderColor: 'rgba(0, 0, 0, 0.08)',
     },
     iconWrapper: {
         alignItems: 'center',
@@ -195,12 +197,14 @@ const styles = StyleSheet.create({
         position: 'relative',
     },
     activeIconContainer: {
-        backgroundColor: 'rgba(14, 80, 158, 0.1)',
-        shadowColor: '#0E509E',
-        shadowOpacity: 0.2,
-        shadowOffset: { width: 0, height: 4 },
-        shadowRadius: 8,
-        elevation: 5,
+        backgroundColor: 'transparent',
+        shadowColor: 'transparent',
+        shadowOpacity: 0,
+        shadowOffset: { width: 0, height: 0 },
+        shadowRadius: 0,
+        elevation: 0,
+        borderWidth: 0,
+        borderColor: 'transparent',
     },
     activeIndicator: {
         position: 'absolute',
@@ -210,8 +214,8 @@ const styles = StyleSheet.create({
         bottom: -2,
         borderRadius: 18,
         borderWidth: 2,
-        borderColor: '#0E509E',
-        opacity: 0.3,
+        borderColor: '#ffffff',
+        opacity: 0.6,
     },
     activeDot: {
         width: 6,
@@ -220,7 +224,7 @@ const styles = StyleSheet.create({
         backgroundColor: '#0E509E',
         marginTop: 4,
         shadowColor: '#0E509E',
-        shadowOpacity: 0.5,
+        shadowOpacity: 0.3,
         shadowOffset: { width: 0, height: 2 },
         shadowRadius: 4,
         elevation: 3,
@@ -233,7 +237,7 @@ const styles = StyleSheet.create({
         justifyContent: 'center',
         alignItems: 'center',
         overflow: 'hidden',
-        shadowColor: focused ? '#667eea' : '#4A90E2',
+        shadowColor: focused ? '#0E509E' : '#0E509E',
         shadowOpacity: 0.4,
         shadowOffset: { width: 0, height: 8 },
         shadowRadius: 16,
