@@ -3,102 +3,31 @@ import {
     View,
     Text,
     StyleSheet,
-    Dimensions,
     TouchableOpacity,
     ScrollView,
     RefreshControl,
-    Alert,
     Platform,
     SafeAreaView,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import { useNavigation, useRoute } from '@react-navigation/native';
+import { useNavigation } from '@react-navigation/native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { Feather, Ionicons } from '@expo/vector-icons';
-import { getHomeData } from '../api/general';
-const { width } = Dimensions.get('window');
-const cardWidth = (width - 60) / 2;
-import { fetchTaskById, fetchTotalTasksForEmployee } from '../api/task'; // Import the fetchTaskById function
+import { Feather } from '@expo/vector-icons';
+
+// Custom hooks
+import { useEmployeeData, useDashboardData, useTasksData, useNotifications } from '../hooks/useHomeData';
+
+// Components
+import { StatisticCard, StatisticSkeleton } from '../components/StatisticCard';
+import TaskCard from '../components/TaskCard';
+import NotificationIcon from '../components/NotificationIcon';
 import ReusableBottomPopUp from '../components/ReusableBottomPopUp';
 import Shimmer from '../components/Shimmer';
-import { getNotificationByEmployee } from '../api/notification';
-import NotificationService from '../utils/notificationService';
 
-const formatDate = (date) => {
-    const options = { year: 'numeric', month: 'long', day: 'numeric' };
-    return new Date(date).toLocaleDateString('id-ID', options);
-};
+// Utils
+import { groupTasksByProject, getGreeting } from '../utils/taskUtils';
 
-// Group tasks by project name
-const groupTasksByProject = (tasks) => {
-    const groupedTasks = {};
-    tasks.forEach((task) => {
-        groupedTasks[task.project_name] = groupedTasks[task.project_name] || [];
-        groupedTasks[task.project_name].push(task);
-    });
-    return groupedTasks;
-};
-
-const calculateRemainingDays = (endDate) => {
-    const today = new Date();
-    today.setHours(0, 0, 0, 0); // Set to beginning of day for accurate comparison
-    const end = new Date(endDate);
-    end.setHours(0, 0, 0, 0);
-    const timeDiff = end.getTime() - today.getTime();
-    return Math.ceil(timeDiff / (1000 * 3600 * 24));
-};
-
-const getStatusBadgeColor = (status, endDate) => {
-    if (status === 'Completed') {
-        return { color: '#C9F8C1', textColor: '#333333', label: 'Selesai' };
-    } else if (status === 'onPending') {
-        return { color: '#F0E08A', textColor: '#333333', label: 'Tersedia' };
-    } else if (status === 'onHold') {
-        return { color: '#F69292', textColor: '#811616', label: 'Ditunda' };
-    } else if (status === 'rejected') {
-        return { color: '#050404FF', textColor: '#811616', label: 'Ditolak' };
-    } else if (status === 'onReview') {
-        return { color: '#ffd000', textColor: '#333333', label: 'Dalam Peninjauan' };
-    }
-
-    const remainingDays = calculateRemainingDays(endDate, status);
-
-    if (remainingDays === 0) {
-        return { color: '#F69292', textColor: '#811616', label: 'Deadline Tugas Hari Ini' };
-    } else if (remainingDays < 0) {
-        return { color: '#F69292', textColor: '#811616', label: `Terlambat selama ${Math.abs(remainingDays)} hari` };
-    } else if (remainingDays > 0) {
-        return { color: '#FFE9CB', textColor: '#E07706', label: `Tersisa ${remainingDays} hari` };
-    }
-
-    // Existing status handling logic
-    switch (status) {
-        case 'workingOnIt':
-            return { color: '#CCC8C8', textColor: '#333333', label: 'Dalam Pengerjaan' };
-        case 'onReview':
-            return { color: '#ffd000', textColor: '#333333', label: 'Dalam Peninjauan' };
-        case 'rejected':
-            return { color: '#050404FF', textColor: '#811616', label: 'Ditolak' };
-        case 'onHold':
-            return { color: '#F69292', textColor: '#811616', label: 'Ditunda' };
-        case 'Completed':
-            return { color: '#C9F8C1', textColor: '#333333', label: 'Selesai' }; // Updated label
-        case 'onPending':
-            return { color: '#F0E08A', textColor: '#333333', label: 'Tersedia' };
-        default:
-            return { color: '#E0E0E0', textColor: '#333333', label: status };
-    }
-};
-
-const getStatusAppearance = (status) => {
-    switch (status) {
-        case 'workingOnIt':
-            return { color: '#CCC8C8', textColor: '#333333', label: 'Dalam Pengerjaan' };
-        case 'onReview':
-            return { color: '#ffd000', textColor: '#333333', label: 'Dalam Peninjauan' };
-    }
-};
-
+// Skeleton components
 const SkeletonTaskCard = () => {
     return (
         <View style={styles.taskCard}>
@@ -119,73 +48,7 @@ const SkeletonTaskCard = () => {
     );
 };
 
-const TaskCard = ({ projectName, tasks }) => {
-    const truncateText = (text, maxLength) => {
-        return text.length > maxLength ? text.substring(0, maxLength - 3) + '...' : text;
-    };
-
-    const renderStatusOrDays = (task) => {
-        const {
-            color: badgeColor,
-            textColor: badgeTextColor,
-            label: displayStatus,
-        } = getStatusBadgeColor(task.task_status, task.end_date);
-        return (
-            <View style={[styles.badge, { backgroundColor: badgeColor }]}>
-                <Text style={[styles.badgeText, { color: badgeTextColor }]} numberOfLines={1} ellipsizeMode="tail">
-                    {displayStatus}
-                </Text>
-            </View>
-        );
-    };
-
-    return (
-        <View style={styles.taskCard}>
-            <Text style={styles.projectTitle}>{projectName}</Text>
-            {tasks.slice(0, 3).map((task, index) => (
-                <View style={styles.taskSection} key={task.id || index}>
-                    <View style={styles.taskItem}>
-                        <View style={styles.taskInfo}>
-                            <Text style={styles.taskName}>{truncateText(task.task_name, 50)}</Text>
-                            <Text style={styles.taskDueDate}>Due: {formatDate(task.end_date)}</Text>
-                        </View>
-                        <View style={[styles.badge, { backgroundColor: getStatusAppearance(task.task_status).color }]}>
-                            <Text
-                                style={[styles.badgeText, { color: getStatusAppearance(task.task_status).textColor }]}
-                            >
-                                {getStatusAppearance(task.task_status).label}
-                            </Text>
-                        </View>
-                    </View>
-                    {task.task_status === 'workingOnIt' && renderStatusOrDays(task)}
-                </View>
-            ))}
-        </View>
-    );
-};
-
-const StatisticSkeleton = () => (
-    <View style={[styles.statisticCard, { borderColor: '#e0e0e0' }]}>
-        <View style={[styles.textContainer, { gap: 5, display: 'flex', flexDirection: 'column', marginRight: 10 }]}>
-            <Shimmer width={60} height={25} style={styles.shimmerTitle} />
-            <Shimmer width={50} height={20} style={styles.shimmerTitle} />
-        </View>
-        <Shimmer width={50} height={55} style={styles.shimmerTitle} />
-    </View>
-);
-
-const StatisticCard = ({ value, description, color, icon, onPress }) => (
-    <TouchableOpacity onPress={onPress}>
-        <View style={[styles.statisticCard, { borderColor: color }]}>
-            <View style={styles.textContainer}>
-                <Text style={styles.valueText}>{value}</Text>
-                <Text style={styles.descriptionText}>{description}</Text>
-            </View>
-            <Feather name={icon} size={30} color={color} style={styles.icon} />
-        </View>
-    </TouchableOpacity>
-);
-
+// Menu button component
 const MenuButton = ({ icon, description, onPress }) => (
     <TouchableOpacity style={styles.menuButtonContainer} onPress={onPress}>
         <View style={styles.statCard}>
@@ -195,143 +58,48 @@ const MenuButton = ({ icon, description, onPress }) => (
     </TouchableOpacity>
 );
 
-const getGreeting = () => {
-    const currentHour = new Date().getHours();
-    if (currentHour < 12) {
-        return 'Selamat Pagi';
-    } else if (currentHour < 15) {
-        return 'Selamat Siang';
-    } else if (currentHour < 19) {
-        return 'Selamat Sore';
-    } else {
-        return 'Selamat Malam';
-    }
-};
-
 const Home = () => {
-    const [employeeData, setEmployeeData] = useState({
-        name: '',
-        id: '',
-        companyId: '',
-        roleId: '',
-        token: '',
-    });
-    const [dashboardData, setDashboardData] = useState(null);
-    const [tasks, setTasks] = useState([]);
-    const [greeting, setGreeting] = useState(getGreeting());
-    const navigation = useNavigation();
-    const [refreshing, setRefreshing] = useState(false);
-    const [isLoading, setIsLoading] = useState(true);
-    const [error, setError] = useState(null);
-    const [alert, setAlert] = useState({ show: false, type: 'success', message: '' });
-    const [projects, setProjects] = useState([]);
-    const [accessPermissions, setAccessPermissions] = useState([]);
-    const [notifications, setNotifications] = useState([]); // To store notifications
-    const [unreadCount, setUnreadCount] = useState(0);
+    // Custom hooks for data management
+    const employeeData = useEmployeeData();
+    const { dashboardData, isLoading: dashboardLoading, refetch: refetchDashboard } = useDashboardData(employeeData);
+    const { tasks, projects, isLoading: tasksLoading, refetch: refetchTasks } = useTasksData(employeeData);
+    const {
+        notifications,
+        unreadCount,
+        refetch: refetchNotifications,
+        setNotifications,
+        setUnreadCount,
+    } = useNotifications(employeeData);
 
-    const checkAccessPermission = async () => {
+    // Local state
+    const [greeting, setGreeting] = useState(getGreeting());
+    const [refreshing, setRefreshing] = useState(false);
+    const [alert, setAlert] = useState({ show: false, type: 'success', message: '' });
+    const [accessPermissions, setAccessPermissions] = useState([]);
+
+    const navigation = useNavigation();
+    const isLoading = dashboardLoading || tasksLoading;
+
+    // Check access permissions
+    const checkAccessPermission = useCallback(async () => {
         try {
             const accessPermissions = await AsyncStorage.getItem('access_permissions');
             const permissions = JSON.parse(accessPermissions) || [];
             setAccessPermissions(permissions);
         } catch (error) {
             console.error('Error checking access permission:', error);
-            setAccessPermissions([]); // Ensure permissions is an empty array on error
-        } finally {
-            setIsLoading(false); // Set loading to false regardless of success or error
+            setAccessPermissions([]);
         }
-    };
-
-    useEffect(() => {
-        checkAccessPermission();
     }, []);
 
-    const handleMenuPress = (menuId) => {
-        switch (menuId) {
-            case 'adhoc':
-                navigation.navigate('AdhocDashboard');
-                break;
-            case 'leave':
-                // Alert.alert('Fitur Belum Tersedia', 'Mohon maaf, fitur Cuti sedang dalam pengembangan.', [
-                //     { text: 'OK', onPress: () => console.log('OK Pressed') },
-                // ]);
-                showAlert('Fitur Belum Tersedia. Mohon maaf, fitur Cuti sedang dalam pengembangan.', 'error');
-                break;
-            case 'claim':
-                // Alert.alert('Fitur Belum Tersedia', 'Mohon maaf, fitur Klaim sedang dalam pengembangan.', [
-                //     { text: 'OK', onPress: () => console.log('OK Pressed') },
-                // ]);
-                showAlert('Fitur Belum Tersedia. Mohon maaf, fitur Klaim sedang dalam pengembangan.', 'error');
-                break;
-        }
-    };
-
-    const handlePress = (stat) => {
-        // Determine the required permission for the intended screen based on the stat description
-        let requiredPermission;
-
-        switch (stat.description) {
-            case 'Projek Dalam Pengerjaan':
-                requiredPermission = accessPermissions.access_project; // Define the required permission for this screen
-                break;
-            case 'Total Projek Selesai':
-                requiredPermission = accessPermissions.access_project; // Define the required permission for this screen
-                break;
-            case 'Tugas Dalam Pengerjaan':
-                requiredPermission = accessPermissions.access_tasks; // Define the required permission for this screen
-                break;
-            case 'Tugas Selesai':
-                requiredPermission = accessPermissions.access_tasks; // Define the required permission for this screen
-                break;
-            default:
-                // Alert.alert('Fitur Belum Tersedia', 'Tidak ada Fitur', [
-                //     { text: 'OK', onPress: () => console.log('OK Pressed') },
-                // ]);;
-                showAlert('Fitur Belum Tersedia.', 'error');
-                return;
-        }
-
-        if (!requiredPermission) {
-            // Show an alert or message indicating no access
-            // Alert.alert('You do not have permission to access this feature.', 'Anda tidak memiliki akses ke dalam fitur ini', [
-            //     { text: 'OK', onPress: () => console.log('OK Pressed') },
-            // ]);
-            showAlert('You do not have permission to access this feature.', 'error');
-            return;
-        }
-
-        // Navigate based on the description
-        switch (stat.description) {
-            case 'Projek Dalam Pengerjaan':
-                navigation.navigate('ProjectOnWorking');
-                break;
-            case 'Total Projek Selesai':
-                navigation.navigate('ProjectList');
-                break;
-            case 'Tugas Dalam Pengerjaan':
-                navigation.navigate('Tugas');
-                break;
-            case 'Tugas Selesai':
-                navigation.navigate('Tugas');
-                break;
-            default:
-                break; // Default case is covered above
-        }
-    };
-
-    const showAlert = (message, type) => {
-        setAlert({ show: true, type, message });
-        setTimeout(() => setAlert((prev) => ({ ...prev, show: false })), 3000);
-    };
-
-    const checkTokenExpiration = async () => {
+    // Token expiration check
+    const checkTokenExpiration = useCallback(async () => {
         try {
             const expiredToken = await AsyncStorage.getItem('expiredToken');
             if (expiredToken) {
                 const tokenExpiration = new Date(expiredToken);
                 const now = new Date();
                 if (now > tokenExpiration) {
-                    // Token has expired, logout and navigate to login screen
                     await AsyncStorage.multiRemove([
                         'employee_name',
                         'employeeId',
@@ -349,236 +117,83 @@ const Home = () => {
         } catch (error) {
             console.error('Error checking token expiration:', error);
         }
-    };
+    }, [navigation]);
 
-    const [notificationsSeen, setNotificationsSeen] = useState(new Set());
-const [lastFetchTime, setLastFetchTime] = useState(Date.now());
+    // Show alert helper
+    const showAlert = useCallback((message, type) => {
+        setAlert({ show: true, type, message });
+        setTimeout(() => setAlert((prev) => ({ ...prev, show: false })), 3000);
+    }, []);
 
-const fetchNotifications = async () => {
-    setIsLoading(true);
-
-    try {
-        const currentTime = Date.now();
-        const response = await getNotificationByEmployee(employeeData.id);
-        const notifications = response.data;
-
-        // Find new unread notifications that came after last fetch
-        const newUnreadNotifications = notifications.filter(notification => 
-            !notification.is_read && 
-            !notificationsSeen.has(notification.id) &&
-            new Date(notification.created_at) > new Date(lastFetchTime)
-        );
-
-        // Show notifications only for new ones
-        if (newUnreadNotifications.length > 0) {
-            for (const notification of newUnreadNotifications) {
-                await handleLocalNotification(notification);
-                // Add to seen notifications
-                setNotificationsSeen(prev => new Set([...prev, notification.id]));
+    // Menu and navigation handlers
+    const handleMenuPress = useCallback(
+        (menuId) => {
+            switch (menuId) {
+                case 'adhoc':
+                    navigation.navigate('AdhocDashboard');
+                    break;
+                case 'leave':
+                    showAlert('Fitur Belum Tersedia. Mohon maaf, fitur Cuti sedang dalam pengembangan.', 'error');
+                    break;
+                case 'claim':
+                    showAlert('Fitur Belum Tersedia. Mohon maaf, fitur Klaim sedang dalam pengembangan.', 'error');
+                    break;
             }
-        }
+        },
+        [navigation],
+    );
 
-        // Update state
-        setNotifications(notifications);
-        setLastFetchTime(currentTime);
-        const unread = notifications.filter((notif) => !notif.is_read).length;
-        setUnreadCount(unread);
+    const handlePress = useCallback(
+        (stat) => {
+            let requiredPermission;
 
-    } catch (error) {
-        console.error('Error fetching notifications:', error);
-    } finally {
-        setIsLoading(false);
-    }
-};
-
-const handleLocalNotification = async (notification) => {
-    try {
-        let title = 'New Notification';
-        let body = notification.message;
-
-        switch (notification.notif_type) {
-            case 'TASK_ASSIGNED':
-                title = '🔔 New Task Assignment';
-                break;
-            case 'TASK_UPDATE':
-                title = '📝 Task Update';
-                break;
-            case 'TASK_COMMENT':
-                title = '💬 New Comment';
-                break;
-            // Add more cases as needed
-            default:
-                title = '🔔 New Notification';
-        }
-
-        await NotificationService.sendLocalNotification(
-            title,
-            body,
-            {
-                data: {
-                    type: notification.notif_type,
-                    taskId: notification.task_id,
-                    notificationId: notification.id
-                }
-            }
-        );
-    } catch (error) {
-        console.error('Error sending local notification:', error);
-    }
-};
-
-
-// Update your notification fetch interval
-useEffect(() => {
-    let intervalId;
-
-    if (employeeData.id) {
-        // Initial fetch
-        fetchNotifications();
-
-        // Set up interval for subsequent fetches
-        intervalId = setInterval(() => {
-            fetchNotifications();
-        }, 60000); // Check every minute instead of 30 seconds
-    }
-
-    return () => {
-        if (intervalId) {
-            clearInterval(intervalId);
-        }
-    };
-}, [employeeData.id]);
-
-// Optional: Persist seen notifications
-useEffect(() => {
-    const saveSeenNotifications = async () => {
-        try {
-            await AsyncStorage.setItem(
-                'seenNotifications', 
-                JSON.stringify(Array.from(notificationsSeen))
-            );
-        } catch (error) {
-            console.error('Error saving seen notifications:', error);
-        }
-    };
-
-    if (notificationsSeen.size > 0) {
-        saveSeenNotifications();
-    }
-}, [notificationsSeen]);
-
-// Load saved seen notifications on mount
-useEffect(() => {
-    const loadSeenNotifications = async () => {
-        try {
-            const stored = await AsyncStorage.getItem('seenNotifications');
-            if (stored) {
-                setNotificationsSeen(new Set(JSON.parse(stored)));
-            }
-        } catch (error) {
-            console.error('Error loading seen notifications:', error);
-        }
-    };
-
-    loadSeenNotifications();
-}, []);
-
-    const fetchTasks = async () => {
-        setIsLoading(true);
-        setError(null);
-        try {
-            const employeeId = await AsyncStorage.getItem('employeeId');
-            if (!employeeId) {
-                throw new Error('ID Karyawan tidak ditemukan');
+            switch (stat.description) {
+                case 'Projek Dalam Pengerjaan':
+                case 'Total Projek Selesai':
+                    requiredPermission = accessPermissions.access_project;
+                    break;
+                case 'Tugas Dalam Pengerjaan':
+                case 'Tugas Selesai':
+                    requiredPermission = accessPermissions.access_tasks;
+                    break;
+                default:
+                    showAlert('Fitur Belum Tersedia.', 'error');
+                    return;
             }
 
-            const data = await fetchTotalTasksForEmployee(employeeId);
+            if (!requiredPermission) {
+                showAlert('You do not have permission to access this feature.', 'error');
+                return;
+            }
 
-            const sortedTasks = data.employeeTasks
-                .filter((task) => task.task_status === 'onReview' || task.task_status === 'workingOnIt')
-                .sort((a, b) => new Date(b.start_date) - new Date(a.start_date));
+            // Navigate based on the description
+            switch (stat.description) {
+                case 'Projek Dalam Pengerjaan':
+                    navigation.navigate('ProjectOnWorking');
+                    break;
+                case 'Total Projek Selesai':
+                    navigation.navigate('ProjectList');
+                    break;
+                case 'Tugas Dalam Pengerjaan':
+                case 'Tugas Selesai':
+                    navigation.navigate('Tugas');
+                    break;
+            }
+        },
+        [accessPermissions, navigation, showAlert],
+    );
 
-            setTasks(sortedTasks);
+    // Refresh control
+    const onRefresh = useCallback(async () => {
+        setRefreshing(true);
+        await checkTokenExpiration();
+        await Promise.all([refetchTasks(), refetchDashboard(), refetchNotifications()]);
+        setRefreshing(false);
+    }, [checkTokenExpiration, refetchTasks, refetchDashboard, refetchNotifications]);
 
-            const projectsMap = new Map();
-            sortedTasks.forEach((task) => {
-                if (!projectsMap.has(task.project_id)) {
-                    projectsMap.set(task.project_id, {
-                        project_id: task.project_id,
-                        project_name: task.project_name,
-                        tasks: [],
-                    });
-                }
-                projectsMap.get(task.project_id).tasks.push(task);
-            });
-            setProjects(Array.from(projectsMap.values()));
-
-            // Store task IDs in AsyncStorage
-            await Promise.all(
-                sortedTasks.map((task) => AsyncStorage.setItem(`task_${task.id}`, JSON.stringify(task.id))),
-            );
-        } catch (error) {
-            setError('Gagal mengambil tugas. Silakan coba lagi nanti.');
-            showAlert(error.response?.data?.message || 'An error occurred', 'error');
-        } finally {
-            setIsLoading(false);
-        }
-    };
-
-    const fetchHomeData = useCallback(async () => {
-        if (!employeeData.companyId || !employeeData.id || !employeeData.roleId || !employeeData.token) return;
-        setIsLoading(true);
-        try {
-            const response = await getHomeData(
-                employeeData.companyId,
-                employeeData.id,
-                employeeData.roleId,
-                employeeData.token,
-            );
-            setDashboardData(response);
-        } catch (error) {
-            console.error('Error fetching home data:', error);
-            showAlert('Failed to fetch home data', 'error');
-        } finally {
-            setIsLoading(false);
-        }
-    }, [employeeData]);
-
-    // Modify your refresh control
-const onRefresh = useCallback(async () => {
-    setRefreshing(true);
-    setIsLoading(true);
-    await checkTokenExpiration();
-    await Promise.all([
-        fetchTasks(),
-        fetchHomeData(),
-        // Update last fetch time before fetching new notifications
-        fetchNotifications(),
-    ]);
-    setRefreshing(false);
-    setIsLoading(false);
-}, [fetchHomeData]);
-
+    // Effects
     useEffect(() => {
-        const fetchEmployeeData = async () => {
-            try {
-                const keys = ['employee_name', 'employeeId', 'companyId', 'userRole', 'token'];
-                const values = await AsyncStorage.multiGet(keys);
-                const data = Object.fromEntries(values);
-                setEmployeeData({
-                    name: data.employee_name,
-                    id: data.employeeId,
-                    companyId: data.companyId,
-                    roleId: data.userRole,
-                    token: data.token,
-                });
-            } catch (error) {
-                console.error('Error fetching data from AsyncStorage:', error);
-                showAlert('Failed to fetch employee data', 'error');
-            }
-        };
-
-        fetchEmployeeData();
+        checkAccessPermission();
         checkTokenExpiration();
 
         // Update greeting every minute
@@ -587,13 +202,9 @@ const onRefresh = useCallback(async () => {
         }, 60000);
 
         return () => clearInterval(intervalId);
-    }, []);
+    }, [checkAccessPermission, checkTokenExpiration]);
 
-    useEffect(() => {
-        fetchTasks();
-        fetchHomeData();
-    }, [fetchHomeData]);
-
+    // Prepare data for rendering
     const groupedTasks = groupTasksByProject(tasks);
 
     const statistics = dashboardData
@@ -625,31 +236,17 @@ const onRefresh = useCallback(async () => {
           ]
         : [];
 
-    const NotificationIcon = ({ unreadCount, onPress }) => (
-        <TouchableOpacity
-            style={styles.notificationButton}
-            onPress={() =>
-                navigation.navigate('NotificationScreen', {
-                    notifications: notifications,
-                    onNotificationsUpdate: (updatedNotifications) => {
-                        setNotifications(updatedNotifications);
-                        setUnreadCount(updatedNotifications.filter((n) => !n.read).length);
-                        AsyncStorage.setItem('notifications', JSON.stringify(updatedNotifications));
-                    },
-                })
-            }
-            activeOpacity={0.7}
-        >
-            <View style={styles.iconContainer}>
-                <Feather name="bell" size={24} color="white" />
-                {unreadCount > 0 && (
-                    <View style={styles.badgeContainer}>
-                        <Text style={styles.badgeText}>{unreadCount > 99 ? '99+' : unreadCount}</Text>
-                    </View>
-                )}
-            </View>
-        </TouchableOpacity>
-    );
+    // Notification navigation handler
+    const handleNotificationPress = useCallback(() => {
+        navigation.navigate('NotificationScreen', {
+            notifications: notifications,
+            onNotificationsUpdate: (updatedNotifications) => {
+                setNotifications(updatedNotifications);
+                setUnreadCount(updatedNotifications.filter((n) => !n.read).length);
+                AsyncStorage.setItem('notifications', JSON.stringify(updatedNotifications));
+            },
+        });
+    }, [navigation, notifications, setNotifications, setUnreadCount]);
 
     return (
         <View style={styles.container}>
@@ -669,7 +266,7 @@ const onRefresh = useCallback(async () => {
                                 </Text>
                             </View>
                             <View style={styles.headerRight}>
-                                <NotificationIcon unreadCount={unreadCount} />
+                                <NotificationIcon unreadCount={unreadCount} onPress={handleNotificationPress} />
                             </View>
                         </View>
                     </SafeAreaView>
@@ -807,45 +404,6 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         alignItems: 'center',
     },
-    notificationButton: {
-        padding: 8,
-        marginLeft: 8,
-    },
-    iconContainer: {
-        position: 'relative',
-        width: 40,
-        height: 40,
-        justifyContent: 'center',
-        alignItems: 'center',
-        backgroundColor: 'rgba(255, 255, 255, 0.1)',
-        borderRadius: 20,
-    },
-    badgeContainer: {
-        position: 'absolute',
-        top: -2,
-        right: -2,
-        minWidth: 20,
-        height: 20,
-        paddingHorizontal: 2,
-        backgroundColor: '#fc5953',
-        borderRadius: 10,
-        justifyContent: 'center',
-        alignItems: 'center',
-        shadowColor: '#000',
-        shadowOffset: {
-            width: 0,
-            height: 2,
-        },
-        shadowOpacity: 0.25,
-        shadowRadius: 3.84,
-        elevation: 5,
-    },
-    badgeText: {
-        color: 'white',
-        fontSize: 10,
-        fontFamily: 'Poppins-Bold',
-        textAlign: 'center',
-    },
     scrollViewContent: {
         flexGrow: 1,
         paddingTop: 20,
@@ -858,55 +416,6 @@ const styles = StyleSheet.create({
         gap: 20,
         marginBottom: 20,
     },
-    statisticCard: {
-        width: cardWidth,
-        height: 80, // Reduced height
-        backgroundColor: 'white',
-        borderRadius: 10,
-        padding: 12, // Reduced padding
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        borderWidth: 2,
-        shadowColor: '#000',
-        shadowOffset: {
-            width: 0,
-            height: 2,
-        },
-        shadowOpacity: 0.25,
-        shadowRadius: 3.84,
-        elevation: 5,
-    },
-    textContainer: {
-        flex: 1,
-        justifyContent: 'center',
-    },
-    valueText: {
-        fontSize: 24, // Reduced font size
-        color: 'black',
-        fontFamily: 'Poppins-Bold',
-        letterSpacing: -0.5,
-        lineHeight: 30, // Added line height for better control
-    },
-    descriptionText: {
-        fontSize: 11, // Reduced font size
-        color: 'black',
-        fontFamily: 'Poppins-Medium',
-        letterSpacing: -0.3,
-        lineHeight: 13, // Added line height for better control
-    },
-    icon: {
-        marginLeft: 8, // Reduced margin
-    },
-    midContainer: {
-        padding: 20,
-    },
-    buttonGridContainer: {
-        flexDirection: 'row',
-        flexWrap: 'wrap',
-        justifyContent: 'space-between',
-        marginTop: 10,
-    },
     menuContainer: {
         flexDirection: 'row',
         justifyContent: 'space-around',
@@ -914,13 +423,11 @@ const styles = StyleSheet.create({
         paddingVertical: 16,
         marginBottom: 10,
     },
-
     menuButtonContainer: {
         alignItems: 'center',
         justifyContent: 'center',
         width: '30%',
     },
-
     statCard: {
         backgroundColor: 'white',
         borderRadius: 10,
@@ -939,7 +446,6 @@ const styles = StyleSheet.create({
         shadowRadius: 3,
         elevation: 2,
     },
-
     menuButtonText: {
         fontSize: 12,
         color: '#1C1C1E',
@@ -973,75 +479,6 @@ const styles = StyleSheet.create({
         backgroundColor: '#F2F2F7',
         marginBottom: 70,
     },
-    scrollContent: {
-        flexGrow: 1,
-    },
-    taskCard: {
-        backgroundColor: 'white',
-        borderRadius: 10,
-        padding: 16,
-        marginBottom: 16,
-        elevation: 3,
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.1,
-        shadowRadius: 4,
-    },
-    projectTitle: {
-        fontSize: 18,
-        marginBottom: 12,
-        color: '#1C1C1E',
-        fontFamily: 'Poppins-Bold',
-    },
-    taskSection: {
-        marginBottom: 12,
-        paddingVertical: 8,
-        borderBottomWidth: 1,
-        borderBottomColor: '#E9E9EB',
-        gap: 10,
-    },
-    taskItem: {
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        alignItems: 'flex-start',
-    },
-    taskInfo: {
-        flex: 1,
-        marginRight: 10,
-        gap: 10,
-    },
-    taskName: {
-        fontSize: 16,
-        color: '#1C1C1E',
-        fontFamily: 'Poppins-Medium',
-        marginBottom: 4,
-    },
-    taskDueDate: {
-        fontSize: 12,
-        color: '#8E8E93',
-        fontFamily: 'Poppins-Regular',
-    },
-    badge: {
-        paddingHorizontal: 8,
-        paddingVertical: 4,
-        borderRadius: 12,
-        alignSelf: 'flex-start',
-    },
-    badgeText: {
-        fontSize: 12,
-        fontFamily: 'Poppins-Medium',
-    },
-    detailButton: {
-        paddingHorizontal: 12,
-        paddingVertical: 6,
-        backgroundColor: '#0E509E',
-        borderRadius: 6,
-    },
-    detailButtonText: {
-        color: 'white',
-        fontSize: 12,
-        fontFamily: 'Poppins-Medium',
-    },
     moreInfoContainer: {
         backgroundColor: '#0E509E',
         padding: 12,
@@ -1070,20 +507,41 @@ const styles = StyleSheet.create({
         fontFamily: 'Poppins-Medium',
         textAlign: 'center',
     },
+    // Skeleton styles
+    taskCard: {
+        backgroundColor: 'white',
+        borderRadius: 10,
+        padding: 16,
+        marginBottom: 16,
+        elevation: 3,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.1,
+        shadowRadius: 4,
+    },
+    taskSection: {
+        marginBottom: 12,
+        paddingVertical: 8,
+        borderBottomWidth: 1,
+        borderBottomColor: '#E9E9EB',
+        gap: 10,
+    },
+    taskItem: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'flex-start',
+    },
+    taskInfo: {
+        flex: 1,
+        marginRight: 10,
+        gap: 10,
+    },
     shimmerTitle: {
         borderRadius: 4,
-    },
-    shimmerSubtitle: {
-        marginBottom: 15,
     },
     shimmerStatus: {
         top: 0,
         borderRadius: 4,
-    },
-    shimmerButton: {
-        position: 'absolute',
-        bottom: 20,
-        left: 20,
     },
 });
 

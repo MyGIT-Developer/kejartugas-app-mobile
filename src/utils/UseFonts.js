@@ -1,5 +1,4 @@
 import * as Font from 'expo-font';
-import * as SplashScreen from 'expo-splash-screen';
 import { useEffect, useState } from 'react';
 
 export const useFonts = () => {
@@ -8,7 +7,6 @@ export const useFonts = () => {
     useEffect(() => {
         const loadFonts = async () => {
             try {
-                await SplashScreen.preventAutoHideAsync(); // Prevent splash screen from hiding
                 await Font.loadAsync({
                     'Poppins-Regular': require('../../assets/fonts/Poppins-Regular.ttf'),
                     'Poppins-Bold': require('../../assets/fonts/Poppins-Bold.ttf'),
@@ -19,8 +17,7 @@ export const useFonts = () => {
                 setFontsLoaded(true);
             } catch (error) {
                 console.error('Error loading fonts:', error);
-            } finally {
-                await SplashScreen.hideAsync(); // Hide splash screen after loading
+                setFontsLoaded(true); // Set to true even if error to prevent infinite loading
             }
         };
 
