@@ -15,7 +15,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useNavigation } from '@react-navigation/native';
 import { jwtDecode } from 'jwt-decode';
 import { loginMobile } from '../api/auth';
-import LogoKTApp from '../../assets/images/logo-KT.png';
+import LogoKTApp from '../../assets/images/kt_logo_app.png';
 import BackgroundImage from '../../assets/images/kt_city_scapes.png';
 import ReusableAlert from '../components/ReusableAlert';
 import { useFonts } from '../utils/UseFonts';
@@ -55,21 +55,21 @@ const Login = () => {
                 !username && !password
                     ? 'Username dan Password harus diisi'
                     : !username
-                    ? 'Username harus diisi'
-                    : 'Password harus diisi',
+                      ? 'Username harus diisi'
+                      : 'Password harus diisi',
             );
             return;
         }
-    
+
         try {
             // Login process
             const data = await loginMobile(username, password);
             await AsyncStorage.setItem('userData', JSON.stringify(data));
-    
+
             if (data.token && data.access_permissions) {
                 const decodedToken = jwtDecode(data.token);
                 const { jobs_id, company_id, id, role_id } = decodedToken.data;
-    
+
                 // Store user data
                 await Promise.all([
                     AsyncStorage.setItem('token', data.token),
@@ -81,14 +81,14 @@ const Login = () => {
                     AsyncStorage.setItem('employee_name', username),
                     AsyncStorage.setItem('access_permissions', JSON.stringify(data.access_permissions)),
                 ]);
-    
+
                 try {
                     // Setup notifications
                     await setupNotifications();
-                    
+
                     console.log('Access Permissions:', data.access_permissions);
                     showAlert('Login Berhasil! Anda akan diarahkan ke halaman utama.', 'success');
-    
+
                     setTimeout(() => {
                         setAlert((prev) => ({ ...prev, show: false }));
                         navigation.navigate('App', { screen: 'Home' });

@@ -8,7 +8,4 @@ const config = getDefaultConfig(__dirname);
 config.resolver.platforms = ['native', 'android', 'ios'];
 config.resolver.resolverMainFields = ['react-native', 'browser', 'main'];
 
-// Block web-specific packages
-config.resolver.blockList = [/react-dom/, /@iconify\/react/, /lucide-react$/];
-
 module.exports = config;
