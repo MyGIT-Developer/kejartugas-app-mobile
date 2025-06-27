@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import {
     View,
     Text,
@@ -8,11 +8,15 @@ import {
     RefreshControl,
     Platform,
     SafeAreaView,
+    Animated,
+    Dimensions,
+    Easing,
 } from 'react-native';
+import * as Haptics from 'expo-haptics';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useNavigation } from '@react-navigation/native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { Feather } from '@expo/vector-icons';
+import { Feather, Ionicons } from '@expo/vector-icons';
 
 // Custom hooks
 import { useEmployeeData, useDashboardData, useTasksData, useNotifications } from '../hooks/useHomeData';
@@ -27,36 +31,111 @@ import Shimmer from '../components/Shimmer';
 // Utils
 import { groupTasksByProject, getGreeting } from '../utils/taskUtils';
 
-// Skeleton components
+const { width } = Dimensions.get('window');
+
+// Enhanced Skeleton components with animations
 const SkeletonTaskCard = () => {
+    const [pulseAnim] = useState(new Animated.Value(0.4));
+
+    useEffect(() => {
+        const pulse = Animated.loop(
+            Animated.sequence([
+                Animated.timing(pulseAnim, {
+                    toValue: 1,
+                    duration: 1200,
+                    easing: Easing.inOut(Easing.ease),
+                    useNativeDriver: true,
+                }),
+                Animated.timing(pulseAnim, {
+                    toValue: 0.4,
+                    duration: 1200,
+                    easing: Easing.inOut(Easing.ease),
+                    useNativeDriver: true,
+                }),
+            ]),
+        );
+        pulse.start();
+        return () => pulse.stop();
+    }, []);
+
     return (
-        <View style={styles.taskCard}>
-            <Shimmer width={200} height={30} style={styles.shimmerTitle} />
+        <Animated.View style={[styles.skeletonCard, { opacity: pulseAnim }]}>
+            <View style={styles.skeletonHeader}>
+                <Shimmer width={180} height={18} style={styles.shimmerTitle} />
+                <Shimmer width={40} height={16} style={styles.shimmerBadge} />
+            </View>
             {[...Array(3)].map((_, index) => (
-                <View style={styles.taskSection} key={index}>
-                    <View style={[styles.taskItem]}>
-                        <View style={styles.taskInfo}>
-                            <Shimmer width={170} height={20} style={styles.shimmerTitle} />
-                            <Shimmer width={140} height={20} style={styles.shimmerTitle} />
+                <View style={styles.skeletonTaskSection} key={index}>
+                    <View style={styles.skeletonTaskItem}>
+                        <View style={styles.skeletonTaskInfo}>
+                            <Shimmer width={160} height={16} style={styles.shimmerText} />
+                            <Shimmer width={120} height={14} style={styles.shimmerSubtext} />
                         </View>
-                        <Shimmer width={50} height={20} style={styles.shimmerStatus} />
+                        <Shimmer width={60} height={24} style={styles.shimmerStatus} />
                     </View>
-                    <Shimmer width={150} height={20} style={styles.shimmerTitle} />
                 </View>
             ))}
-        </View>
+        </Animated.View>
     );
 };
 
-// Menu button component
-const MenuButton = ({ icon, description, onPress }) => (
-    <TouchableOpacity style={styles.menuButtonContainer} onPress={onPress}>
-        <View style={styles.statCard}>
-            <Feather name={icon} size={24} color="#148FFF" />
-        </View>
-        <Text style={styles.menuButtonText}>{description}</Text>
-    </TouchableOpacity>
-);
+// Enhanced Menu button component with animations
+const MenuButton = ({ icon, description, onPress }) => {
+    const scaleAnim = useRef(new Animated.Value(1)).current;
+
+    const handlePressIn = () => {
+        try {
+            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+        } catch (error) {
+            console.log('Haptics error in MenuButton:', error);
+        }
+        Animated.spring(scaleAnim, {
+            toValue: 0.95,
+            useNativeDriver: true,
+            tension: 150,
+            friction: 4,
+        }).start();
+    };
+
+    const handlePressOut = () => {
+        Animated.spring(scaleAnim, {
+            toValue: 1,
+            useNativeDriver: true,
+            tension: 150,
+            friction: 4,
+        }).start();
+    };
+
+    const handlePress = () => {
+        console.log('MenuButton pressed:', description);
+        if (onPress) {
+            onPress();
+        }
+    };
+
+    return (
+        <TouchableOpacity
+            style={styles.menuButtonContainer}
+            onPress={handlePress}
+            onPressIn={handlePressIn}
+            onPressOut={handlePressOut}
+            activeOpacity={0.8}
+            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+        >
+            <Animated.View
+                style={[
+                    styles.menuIconContainer,
+                    {
+                        transform: [{ scale: scaleAnim }],
+                    },
+                ]}
+            >
+                <Feather name={icon} size={24} color="#148FFF" />
+            </Animated.View>
+            <Text style={styles.menuButtonText}>{description}</Text>
+        </TouchableOpacity>
+    );
+};
 
 const Home = () => {
     // Custom hooks for data management
@@ -76,6 +155,12 @@ const Home = () => {
     const [refreshing, setRefreshing] = useState(false);
     const [alert, setAlert] = useState({ show: false, type: 'success', message: '' });
     const [accessPermissions, setAccessPermissions] = useState([]);
+
+    // Animation refs
+    const scrollY = useRef(new Animated.Value(0)).current;
+    const fadeAnim = useRef(new Animated.Value(0)).current;
+    const slideAnim = useRef(new Animated.Value(50)).current;
+    const statsAnimations = useRef([...Array(4)].map(() => new Animated.Value(0))).current;
 
     const navigation = useNavigation();
     const isLoading = dashboardLoading || tasksLoading;
@@ -119,32 +204,55 @@ const Home = () => {
         }
     }, [navigation]);
 
-    // Show alert helper
+    // Show alert helper with debug logging
     const showAlert = useCallback((message, type) => {
+        console.log('showAlert called:', { message, type });
         setAlert({ show: true, type, message });
-        setTimeout(() => setAlert((prev) => ({ ...prev, show: false })), 3000);
+        setTimeout(() => {
+            console.log('Alert timeout reached, hiding alert');
+            setAlert((prev) => ({ ...prev, show: false }));
+        }, 3000);
     }, []);
 
-    // Menu and navigation handlers
+    // Enhanced menu and navigation handlers with haptic feedback
     const handleMenuPress = useCallback(
         (menuId) => {
+            console.log('Menu pressed:', menuId); // Debug log
+            try {
+                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+            } catch (error) {
+                console.log('Haptics error:', error);
+            }
+
             switch (menuId) {
                 case 'adhoc':
-                    navigation.navigate('AdhocDashboard');
+                    console.log('Navigating to AdhocDashboard');
+                    try {
+                        navigation.navigate('AdhocDashboard');
+                    } catch (navError) {
+                        console.error('Navigation error:', navError);
+                        showAlert('Error navigating to Ad Hoc Dashboard', 'error');
+                    }
                     break;
                 case 'leave':
+                    console.log('Showing leave alert');
                     showAlert('Fitur Belum Tersedia. Mohon maaf, fitur Cuti sedang dalam pengembangan.', 'error');
                     break;
                 case 'claim':
+                    console.log('Showing claim alert');
                     showAlert('Fitur Belum Tersedia. Mohon maaf, fitur Klaim sedang dalam pengembangan.', 'error');
                     break;
+                default:
+                    console.log('Unknown menu ID:', menuId);
+                    showAlert('Menu tidak dikenal', 'error');
             }
         },
-        [navigation],
+        [navigation, showAlert],
     );
 
     const handlePress = useCallback(
         (stat) => {
+            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
             let requiredPermission;
 
             switch (stat.description) {
@@ -183,13 +291,50 @@ const Home = () => {
         [accessPermissions, navigation, showAlert],
     );
 
-    // Refresh control
+    // Enhanced refresh control with haptic feedback
     const onRefresh = useCallback(async () => {
+        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
         setRefreshing(true);
         await checkTokenExpiration();
         await Promise.all([refetchTasks(), refetchDashboard(), refetchNotifications()]);
         setRefreshing(false);
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     }, [checkTokenExpiration, refetchTasks, refetchDashboard, refetchNotifications]);
+
+    // Entrance animations
+    useEffect(() => {
+        const animateEntrance = () => {
+            Animated.parallel([
+                Animated.timing(fadeAnim, {
+                    toValue: 1,
+                    duration: 800,
+                    easing: Easing.out(Easing.ease),
+                    useNativeDriver: true,
+                }),
+                Animated.timing(slideAnim, {
+                    toValue: 0,
+                    duration: 800,
+                    easing: Easing.out(Easing.back(1.1)),
+                    useNativeDriver: true,
+                }),
+                Animated.stagger(
+                    150,
+                    statsAnimations.map((anim) =>
+                        Animated.spring(anim, {
+                            toValue: 1,
+                            tension: 50,
+                            friction: 7,
+                            useNativeDriver: true,
+                        }),
+                    ),
+                ),
+            ]).start();
+        };
+
+        if (!isLoading && dashboardData) {
+            animateEntrance();
+        }
+    }, [isLoading, dashboardData, fadeAnim, slideAnim, statsAnimations]);
 
     // Effects
     useEffect(() => {
@@ -236,8 +381,9 @@ const Home = () => {
           ]
         : [];
 
-    // Notification navigation handler
+    // Notification navigation handler with haptic feedback
     const handleNotificationPress = useCallback(() => {
+        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
         navigation.navigate('NotificationScreen', {
             notifications: notifications,
             onNotificationsUpdate: (updatedNotifications) => {
@@ -248,9 +394,30 @@ const Home = () => {
         });
     }, [navigation, notifications, setNotifications, setUnreadCount]);
 
+    // Header animation based on scroll
+    const headerOpacity = scrollY.interpolate({
+        inputRange: [0, 100],
+        outputRange: [1, 0.9],
+        extrapolate: 'clamp',
+    });
+
+    const headerScale = scrollY.interpolate({
+        inputRange: [0, 100],
+        outputRange: [1, 0.98],
+        extrapolate: 'clamp',
+    });
+
     return (
         <View style={styles.container}>
-            <View style={styles.headerWrapper}>
+            <Animated.View
+                style={[
+                    styles.headerWrapper,
+                    {
+                        opacity: headerOpacity,
+                        transform: [{ scale: headerScale }],
+                    },
+                ]}
+            >
                 <LinearGradient
                     colors={['#0E509E', '#5FA0DC', '#9FD2FF']}
                     style={styles.headerGradient}
@@ -259,97 +426,199 @@ const Home = () => {
                 >
                     <SafeAreaView style={styles.safeArea}>
                         <View style={styles.headerContainer}>
-                            <View style={styles.greetingContainer}>
+                            <Animated.View
+                                style={[
+                                    styles.greetingContainer,
+                                    {
+                                        opacity: fadeAnim,
+                                        transform: [{ translateY: slideAnim }],
+                                    },
+                                ]}
+                            >
                                 <Text style={styles.greetingText}>{greeting}</Text>
                                 <Text style={styles.nameText} numberOfLines={1} ellipsizeMode="tail">
                                     {employeeData.name}
                                 </Text>
-                            </View>
+                            </Animated.View>
                             <View style={styles.headerRight}>
                                 <NotificationIcon unreadCount={unreadCount} onPress={handleNotificationPress} />
                             </View>
                         </View>
                     </SafeAreaView>
                 </LinearGradient>
-            </View>
+            </Animated.View>
 
-            <ScrollView
+            <Animated.ScrollView
                 contentContainerStyle={styles.scrollViewContent}
+                showsVerticalScrollIndicator={false}
                 refreshControl={
                     <RefreshControl
                         refreshing={refreshing}
                         onRefresh={onRefresh}
                         colors={['#0E509E']}
                         tintColor="#0E509E"
+                        progressBackgroundColor="#F8F9FA"
                     />
                 }
+                onScroll={Animated.event([{ nativeEvent: { contentOffset: { y: scrollY } } }], {
+                    useNativeDriver: false,
+                })}
+                scrollEventThrottle={16}
             >
-                <View style={styles.upperGridContainer}>
+                {/* Statistics Cards */}
+                <Animated.View
+                    style={[
+                        styles.upperGridContainer,
+                        {
+                            opacity: fadeAnim,
+                            transform: [{ translateY: slideAnim }],
+                        },
+                    ]}
+                >
                     {statistics.map((stat, index) =>
                         isLoading ? (
                             <StatisticSkeleton key={index} color={stat.color} />
                         ) : (
-                            <StatisticCard
+                            <Animated.View
                                 key={index}
-                                {...stat}
-                                onPress={() => handlePress(stat)} // Tambahkan onPress untuk navigasi
-                            />
+                                style={{
+                                    transform: [{ scale: statsAnimations[index] }],
+                                }}
+                            >
+                                <StatisticCard {...stat} onPress={() => handlePress(stat)} />
+                            </Animated.View>
                         ),
                     )}
-                </View>
-                {/* Menu buttons between containers */}
-                <View style={styles.menuContainer}>
-                    <MenuButton icon="users" description="Tugas Ad Hoc" onPress={() => handleMenuPress('adhoc')} />
-                    <MenuButton icon="credit-card" description="Cuti" onPress={() => handleMenuPress('leave')} />
-                    <MenuButton icon="check-circle" description="Klaim" onPress={() => handleMenuPress('claim')} />
-                </View>
-                <View style={styles.lowerContainer}>
+                </Animated.View>
+
+                {/* Enhanced Menu Section */}
+                <Animated.View
+                    style={[
+                        styles.menuSection,
+                        {
+                            opacity: fadeAnim,
+                            transform: [{ translateY: slideAnim }],
+                        },
+                    ]}
+                    pointerEvents="box-none"
+                >
+                    <View style={styles.menuContainer} pointerEvents="box-none">
+                        <MenuButton
+                            icon="users"
+                            description="Tugas Ad Hoc"
+                            onPress={() => {
+                                console.log('Ad Hoc button pressed');
+                                handleMenuPress('adhoc');
+                            }}
+                        />
+                        <MenuButton
+                            icon="calendar"
+                            description="Cuti"
+                            onPress={() => {
+                                console.log('Cuti button pressed');
+                                handleMenuPress('leave');
+                            }}
+                        />
+                        <MenuButton
+                            icon="credit-card"
+                            description="Klaim"
+                            onPress={() => {
+                                console.log('Klaim button pressed');
+                                handleMenuPress('claim');
+                            }}
+                        />
+                    </View>
+                </Animated.View>
+
+                {/* Tasks Section with Enhanced UI */}
+                <Animated.View
+                    style={[
+                        styles.lowerContainer,
+                        {
+                            opacity: fadeAnim,
+                            transform: [{ translateY: slideAnim }],
+                        },
+                    ]}
+                >
                     <View style={styles.sectionHeader}>
                         <Text style={styles.sectionTitle}>Tugas Saya</Text>
-                        <TouchableOpacity onPress={() => navigation.navigate('Tugas')}>
+                        <TouchableOpacity
+                            onPress={() => navigation.navigate('Tugas')}
+                            style={styles.sectionLinkContainer}
+                        >
                             <Text style={styles.sectionLink}>Lihat Semua</Text>
+                            <Feather name="arrow-right" size={16} color="#0E509E" style={styles.sectionLinkIcon} />
                         </TouchableOpacity>
                     </View>
 
                     <View style={styles.tasksContainer}>
                         {isLoading ? (
                             <>
-                                {Object.keys(groupedTasks)
-                                    .slice(0, 3)
-                                    .map((projectName, index) => (
-                                        <SkeletonTaskCard key={`skeleton-${index}`} />
-                                    ))}
+                                {[...Array(3)].map((_, index) => (
+                                    <SkeletonTaskCard key={`skeleton-${index}`} />
+                                ))}
                             </>
                         ) : groupedTasks && Object.keys(groupedTasks).length > 0 ? (
                             <>
                                 {Object.keys(groupedTasks)
                                     .slice(0, 3)
                                     .map((projectName, index) => (
-                                        <TaskCard
+                                        <Animated.View
                                             key={index}
-                                            projectName={projectName}
-                                            tasks={groupedTasks[projectName]}
-                                        />
+                                            style={{
+                                                opacity: fadeAnim,
+                                                transform: [
+                                                    {
+                                                        translateY: Animated.add(
+                                                            slideAnim,
+                                                            new Animated.Value(index * 10),
+                                                        ),
+                                                    },
+                                                ],
+                                            }}
+                                        >
+                                            <TaskCard projectName={projectName} tasks={groupedTasks[projectName]} />
+                                        </Animated.View>
                                     ))}
                                 {Object.keys(groupedTasks).length > 3 && (
                                     <TouchableOpacity
                                         style={styles.moreInfoContainer}
                                         onPress={() => navigation.navigate('Tugas')}
+                                        activeOpacity={0.8}
                                     >
                                         <Text style={styles.moreInfoText}>
                                             {`Lihat ${Object.keys(groupedTasks).length - 3} proyek lainnya`}
                                         </Text>
+                                        <Feather
+                                            name="arrow-right"
+                                            size={16}
+                                            color="white"
+                                            style={styles.moreInfoIcon}
+                                        />
                                     </TouchableOpacity>
                                 )}
                             </>
                         ) : (
-                            <View style={styles.noTasksBox}>
-                                <Text style={styles.noTasksText}>Tidak ada tugas saat ini.</Text>
-                            </View>
+                            <Animated.View
+                                style={[
+                                    styles.noTasksBox,
+                                    {
+                                        opacity: fadeAnim,
+                                        transform: [{ scale: fadeAnim }],
+                                    },
+                                ]}
+                            >
+                                <Feather name="inbox" size={48} color="#C7C7CC" style={styles.noTasksIcon} />
+                                <Text style={styles.noTasksText}>Tidak ada tugas saat ini</Text>
+                                <Text style={styles.noTasksSubtext}>
+                                    Semua tugas telah selesai atau belum ada tugas baru
+                                </Text>
+                            </Animated.View>
                         )}
                     </View>
-                </View>
-            </ScrollView>
+                </Animated.View>
+            </Animated.ScrollView>
+
             <ReusableBottomPopUp
                 show={alert.show}
                 alertType={alert.type}
@@ -363,15 +632,21 @@ const Home = () => {
 const styles = StyleSheet.create({
     container: {
         flex: 1,
+        backgroundColor: '#F8F9FA',
     },
     headerWrapper: {
         width: '100%',
         zIndex: 10,
+        elevation: 8,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.1,
+        shadowRadius: 8,
     },
     headerGradient: {
-        paddingBottom: 20,
-        borderBottomRightRadius: 30,
-        borderBottomLeftRadius: 30,
+        paddingBottom: 24,
+        borderBottomRightRadius: 32,
+        borderBottomLeftRadius: 32,
     },
     safeArea: {
         width: '100%',
@@ -380,25 +655,27 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         justifyContent: 'space-between',
         alignItems: 'center',
-        paddingHorizontal: 20,
+        paddingHorizontal: 24,
         paddingTop: Platform.OS === 'ios' ? 0 : 40,
-        paddingBottom: 15,
+        paddingBottom: 20,
     },
     greetingContainer: {
         flex: 1,
         marginRight: 16,
     },
     greetingText: {
-        fontSize: 14,
+        fontSize: 15,
         color: 'rgba(255, 255, 255, 0.9)',
         fontFamily: 'Poppins-Regular',
         marginBottom: 4,
+        letterSpacing: 0.3,
     },
     nameText: {
-        fontSize: 20,
+        fontSize: 22,
         color: 'white',
         fontFamily: 'Poppins-SemiBold',
-        lineHeight: 28,
+        lineHeight: 30,
+        letterSpacing: 0.5,
     },
     headerRight: {
         flexDirection: 'row',
@@ -406,142 +683,225 @@ const styles = StyleSheet.create({
     },
     scrollViewContent: {
         flexGrow: 1,
-        paddingTop: 20,
+        paddingTop: 24,
         paddingBottom: 40,
     },
     upperGridContainer: {
         flexDirection: 'row',
         flexWrap: 'wrap',
         justifyContent: 'center',
-        gap: 20,
-        marginBottom: 20,
+        gap: 16,
+        marginBottom: 24,
+        paddingHorizontal: 16,
+    },
+    menuSection: {
+        backgroundColor: 'white',
+        marginHorizontal: 16,
+        borderRadius: 20,
+        paddingVertical: 20,
+        paddingHorizontal: 8,
+        marginBottom: 24,
+        elevation: 3,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.1,
+        shadowRadius: 8,
+        pointerEvents: 'box-none',
     },
     menuContainer: {
         flexDirection: 'row',
         justifyContent: 'space-around',
-        paddingHorizontal: 16,
-        paddingVertical: 16,
-        marginBottom: 10,
+        alignItems: 'center',
+        pointerEvents: 'box-none',
     },
     menuButtonContainer: {
         alignItems: 'center',
         justifyContent: 'center',
-        width: '30%',
+        flex: 1,
+        paddingVertical: 8,
+        paddingHorizontal: 4,
+        pointerEvents: 'auto',
     },
-    statCard: {
+    menuIconContainer: {
         backgroundColor: 'white',
-        borderRadius: 10,
-        padding: 12,
+        borderRadius: 16,
+        padding: 16,
         alignItems: 'center',
         justifyContent: 'center',
-        width: 48,
-        height: 48,
-        marginBottom: 4,
-        shadowColor: '#000',
-        shadowOffset: {
-            width: 0,
-            height: 2,
-        },
-        shadowOpacity: 0.1,
-        shadowRadius: 3,
-        elevation: 2,
+        width: 56,
+        height: 56,
+        marginBottom: 8,
+        elevation: 4,
+        shadowColor: '#148FFF',
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.15,
+        shadowRadius: 8,
+        borderWidth: 1,
+        borderColor: 'rgba(20, 143, 255, 0.1)',
     },
     menuButtonText: {
-        fontSize: 12,
+        fontSize: 13,
         color: '#1C1C1E',
         fontFamily: 'Poppins-Medium',
         textAlign: 'center',
-        marginTop: 4,
+        lineHeight: 18,
+        letterSpacing: 0.2,
     },
     lowerContainer: {
-        marginTop: 20,
+        marginTop: 8,
         paddingHorizontal: 16,
     },
     sectionHeader: {
         flexDirection: 'row',
         justifyContent: 'space-between',
         alignItems: 'center',
-        marginBottom: 16,
+        marginBottom: 20,
+        paddingHorizontal: 4,
     },
     sectionTitle: {
-        fontSize: 14,
-        color: '#0E509E',
-        fontFamily: 'Poppins-Medium',
+        fontSize: 18,
+        color: '#1C1C1E',
+        fontFamily: 'Poppins-SemiBold',
+        letterSpacing: 0.3,
+    },
+    sectionLinkContainer: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        paddingVertical: 8,
+        paddingHorizontal: 12,
+        borderRadius: 12,
+        backgroundColor: 'rgba(14, 80, 158, 0.1)',
     },
     sectionLink: {
         fontSize: 14,
         color: '#0E509E',
         fontFamily: 'Poppins-Medium',
+        marginRight: 4,
+    },
+    sectionLinkIcon: {
+        marginLeft: 2,
     },
     tasksContainer: {
-        minHeight: 100,
-        borderRadius: 10,
-        backgroundColor: '#F2F2F7',
-        marginBottom: 70,
+        minHeight: 120,
+        borderRadius: 16,
+        backgroundColor: 'transparent',
+        gap: 16,
+        paddingBottom: 20,
     },
     moreInfoContainer: {
         backgroundColor: '#0E509E',
-        padding: 12,
-        borderRadius: 8,
+        paddingVertical: 16,
+        paddingHorizontal: 20,
+        borderRadius: 16,
         alignItems: 'center',
+        justifyContent: 'center',
+        flexDirection: 'row',
         marginTop: 8,
+        elevation: 3,
+        shadowColor: '#0E509E',
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.2,
+        shadowRadius: 8,
     },
     moreInfoText: {
-        fontSize: 14,
+        fontSize: 15,
         color: 'white',
         fontFamily: 'Poppins-Medium',
+        marginRight: 8,
+        letterSpacing: 0.3,
+    },
+    moreInfoIcon: {
+        marginLeft: 4,
     },
     noTasksBox: {
         backgroundColor: 'white',
-        padding: 16,
-        borderRadius: 10,
-        elevation: 3,
+        paddingVertical: 40,
+        paddingHorizontal: 24,
+        borderRadius: 20,
+        alignItems: 'center',
+        justifyContent: 'center',
+        elevation: 2,
         shadowColor: '#000',
         shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.1,
-        shadowRadius: 4,
+        shadowOpacity: 0.05,
+        shadowRadius: 8,
+        borderWidth: 1,
+        borderColor: 'rgba(199, 199, 204, 0.3)',
+    },
+    noTasksIcon: {
+        marginBottom: 16,
+        opacity: 0.6,
     },
     noTasksText: {
-        fontSize: 12,
+        fontSize: 16,
         color: '#1C1C1E',
-        fontFamily: 'Poppins-Medium',
+        fontFamily: 'Poppins-SemiBold',
         textAlign: 'center',
+        marginBottom: 8,
+        letterSpacing: 0.2,
     },
-    // Skeleton styles
-    taskCard: {
+    noTasksSubtext: {
+        fontSize: 14,
+        color: '#8E8E93',
+        fontFamily: 'Poppins-Regular',
+        textAlign: 'center',
+        lineHeight: 20,
+        letterSpacing: 0.1,
+    },
+    // Enhanced Skeleton styles
+    skeletonCard: {
         backgroundColor: 'white',
-        borderRadius: 10,
-        padding: 16,
+        borderRadius: 16,
+        padding: 20,
         marginBottom: 16,
-        elevation: 3,
+        elevation: 2,
         shadowColor: '#000',
         shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.1,
-        shadowRadius: 4,
+        shadowOpacity: 0.05,
+        shadowRadius: 8,
+        borderWidth: 1,
+        borderColor: 'rgba(0, 0, 0, 0.05)',
     },
-    taskSection: {
+    skeletonHeader: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        marginBottom: 16,
+        paddingBottom: 12,
+        borderBottomWidth: 1,
+        borderBottomColor: '#F2F2F7',
+    },
+    skeletonTaskSection: {
         marginBottom: 12,
         paddingVertical: 8,
-        borderBottomWidth: 1,
-        borderBottomColor: '#E9E9EB',
-        gap: 10,
     },
-    taskItem: {
+    skeletonTaskItem: {
         flexDirection: 'row',
         justifyContent: 'space-between',
         alignItems: 'flex-start',
+        marginBottom: 8,
     },
-    taskInfo: {
+    skeletonTaskInfo: {
         flex: 1,
-        marginRight: 10,
-        gap: 10,
+        marginRight: 12,
     },
     shimmerTitle: {
+        borderRadius: 6,
+        marginBottom: 4,
+    },
+    shimmerText: {
         borderRadius: 4,
+        marginBottom: 6,
+    },
+    shimmerSubtext: {
+        borderRadius: 4,
+        marginBottom: 4,
     },
     shimmerStatus: {
-        top: 0,
-        borderRadius: 4,
+        borderRadius: 12,
+    },
+    shimmerBadge: {
+        borderRadius: 8,
     },
 });
 
