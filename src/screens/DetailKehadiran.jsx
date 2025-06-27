@@ -127,16 +127,26 @@ const DetailKehadiran = () => {
                 mediaTypes: MediaTypeOptions.Images,
                 allowsEditing: false,
                 quality: 0.8,
+                allowsMultipleSelection: false,
+                exif: false,
             });
 
             if (!result.canceled && result.assets && result.assets[0].uri) {
                 const compressedBase64 = await compressAndConvertToBase64(result.assets[0].uri);
                 setCapturedImage(result.assets[0].uri);
                 setCapturedImageBase64(compressedBase64);
-                showAlert('Foto berhasil diambil!', 'success');
+
+                // Enhanced success feedback
+                if (Platform.OS === 'ios') {
+                    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+                }
+                showAlert('Foto berhasil diambil! 📸', 'success');
             }
         } catch (error) {
             console.error('Camera error:', error);
+            if (Platform.OS === 'ios') {
+                Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+            }
             showAlert('Terjadi kesalahan saat mengambil foto', 'error');
         }
     };
@@ -291,25 +301,43 @@ const DetailKehadiran = () => {
                         </View>
 
                         {!capturedImage ? (
-                            <TouchableOpacity style={styles.cameraButton} onPress={triggerCamera} activeOpacity={0.8}>
-                                <View style={styles.cameraIconContainer}>
-                                    <Ionicons name="camera" size={32} color="white" />
-                                </View>
-                                <Text style={styles.cameraButtonText}>Ambil Foto</Text>
-                                <Text style={styles.cameraSubtext}>Tap untuk mengambil foto</Text>
-                            </TouchableOpacity>
-                        ) : (
-                            <View style={styles.imagePreviewContainer}>
-                                <Image source={{ uri: capturedImage }} style={styles.previewImage} />
+                            <Animated.View
+                                style={{
+                                    opacity: fadeAnim,
+                                    transform: [{ translateY: slideAnim }],
+                                }}
+                            >
                                 <TouchableOpacity
-                                    style={styles.retakeButton}
+                                    style={styles.cameraButton}
                                     onPress={triggerCamera}
                                     activeOpacity={0.8}
                                 >
-                                    <Ionicons name="camera" size={16} color="white" />
-                                    <Text style={styles.retakeButtonText}>Ambil Ulang</Text>
+                                    <View style={styles.cameraIconContainer}>
+                                        <Ionicons name="camera" size={32} color="white" />
+                                    </View>
+                                    <Text style={styles.cameraButtonText}>Ambil Foto</Text>
+                                    <Text style={styles.cameraSubtext}>Tap untuk mengambil foto</Text>
                                 </TouchableOpacity>
-                            </View>
+                            </Animated.View>
+                        ) : (
+                            <Animated.View
+                                style={{
+                                    opacity: fadeAnim,
+                                    transform: [{ scale: fadeAnim }],
+                                }}
+                            >
+                                <View style={styles.imagePreviewContainer}>
+                                    <Image source={{ uri: capturedImage }} style={styles.previewImage} />
+                                    <TouchableOpacity
+                                        style={styles.retakeButton}
+                                        onPress={triggerCamera}
+                                        activeOpacity={0.8}
+                                    >
+                                        <Ionicons name="camera" size={16} color="white" />
+                                        <Text style={styles.retakeButtonText}>Ambil Ulang</Text>
+                                    </TouchableOpacity>
+                                </View>
+                            </Animated.View>
                         )}
                     </View>
 
@@ -362,7 +390,7 @@ const DetailKehadiran = () => {
                     ) : (
                         <View style={styles.buttonContent}>
                             <Ionicons name="checkmark-circle" size={20} color="white" />
-                            <Text style={styles.buttonText}>Clock In</Text>
+                            <Text style={styles.buttonText}>{isUserLate ? 'Clock In (Terlambat)' : 'Clock In'}</Text>
                         </View>
                     )}
                 </TouchableOpacity>

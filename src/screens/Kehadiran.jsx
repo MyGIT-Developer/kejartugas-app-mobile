@@ -103,7 +103,12 @@ const Kehadiran = () => {
     const [isLoading, setIsLoading] = useState(true);
     const [fadeAnim] = useState(new Animated.Value(0));
     const [slideAnim] = useState(new Animated.Value(50));
+    const [scaleAnim] = useState(new Animated.Value(0.8));
+    const [buttonPulseAnim] = useState(new Animated.Value(1));
+    const [statsSlideAnim] = useState(new Animated.Value(-100));
     const [showStats, setShowStats] = useState(false);
+    const [showHistory, setShowHistory] = useState(false);
+    const [historySlideAnim] = useState(new Animated.Value(-100));
     const navigation = useNavigation();
 
     const itemsPerPage = 7;
@@ -251,18 +256,42 @@ const Kehadiran = () => {
     useEffect(() => {
         setIsLoading(true);
 
-        // Start animations
-        Animated.parallel([
-            Animated.timing(fadeAnim, {
-                toValue: 1,
-                duration: 800,
-                useNativeDriver: true,
-            }),
-            Animated.timing(slideAnim, {
-                toValue: 0,
-                duration: 800,
-                useNativeDriver: true,
-            }),
+        // Start entrance animations with stagger effect
+        Animated.sequence([
+            Animated.parallel([
+                Animated.timing(fadeAnim, {
+                    toValue: 1,
+                    duration: 600,
+                    useNativeDriver: true,
+                }),
+                Animated.spring(slideAnim, {
+                    toValue: 0,
+                    tension: 80,
+                    friction: 8,
+                    useNativeDriver: true,
+                }),
+                Animated.spring(scaleAnim, {
+                    toValue: 1,
+                    tension: 100,
+                    friction: 8,
+                    useNativeDriver: true,
+                }),
+            ]),
+            // Button pulse animation after entrance
+            Animated.loop(
+                Animated.sequence([
+                    Animated.timing(buttonPulseAnim, {
+                        toValue: 1.05,
+                        duration: 1500,
+                        useNativeDriver: true,
+                    }),
+                    Animated.timing(buttonPulseAnim, {
+                        toValue: 1,
+                        duration: 1500,
+                        useNativeDriver: true,
+                    }),
+                ]),
+            ),
         ]).start();
 
         const now = new Date();
@@ -290,16 +319,35 @@ const Kehadiran = () => {
             return;
         }
         try {
-            // Add haptic feedback for better UX
+            // Enhanced haptic feedback with button animation
             if (Platform.OS === 'ios') {
                 Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
             }
-            navigation.navigate('DetailKehadiran', { location, locationName, jamTelat, radius });
+
+            // Enhanced button press animation with spring effect
+            Animated.sequence([
+                Animated.timing(scaleAnim, {
+                    toValue: 0.95,
+                    duration: 150,
+                    useNativeDriver: true,
+                }),
+                Animated.spring(scaleAnim, {
+                    toValue: 1,
+                    tension: 100,
+                    friction: 5,
+                    useNativeDriver: true,
+                }),
+            ]).start();
+
+            // Add a subtle delay for better perceived performance
+            setTimeout(() => {
+                navigation.navigate('DetailKehadiran', { location, locationName, jamTelat, radius });
+            }, 200);
         } catch (error) {
             console.error('Navigation error:', error);
             showAlert('Terjadi kesalahan saat navigasi. Silakan coba lagi.', 'error');
         }
-    }, [location, locationName, jamTelat, radius, navigation]);
+    }, [location, locationName, jamTelat, radius, navigation, scaleAnim]);
 
     const handleClockOut = async () => {
         try {
@@ -347,7 +395,19 @@ const Kehadiran = () => {
             if (Platform.OS === 'ios') {
                 Haptics.selectionAsync();
             }
-            setCurrentPage(currentPage + 1);
+            // Add smooth transition animation
+            Animated.timing(slideAnim, {
+                toValue: 30,
+                duration: 200,
+                useNativeDriver: true,
+            }).start(() => {
+                setCurrentPage(currentPage + 1);
+                Animated.timing(slideAnim, {
+                    toValue: 0,
+                    duration: 300,
+                    useNativeDriver: true,
+                }).start();
+            });
         }
     };
 
@@ -356,7 +416,19 @@ const Kehadiran = () => {
             if (Platform.OS === 'ios') {
                 Haptics.selectionAsync();
             }
-            setCurrentPage(currentPage - 1);
+            // Add smooth transition animation
+            Animated.timing(slideAnim, {
+                toValue: -30,
+                duration: 200,
+                useNativeDriver: true,
+            }).start(() => {
+                setCurrentPage(currentPage - 1);
+                Animated.timing(slideAnim, {
+                    toValue: 0,
+                    duration: 300,
+                    useNativeDriver: true,
+                }).start();
+            });
         }
     };
 
@@ -443,11 +515,33 @@ const Kehadiran = () => {
             <View style={styles.statsContainer}>
                 <TouchableOpacity
                     style={styles.statsHeader}
-                    onPress={() => setShowStats(!showStats)}
+                    onPress={() => {
+                        if (Platform.OS === 'ios') {
+                            Haptics.selectionAsync();
+                        }
+                        setShowStats(!showStats);
+
+                        // Animate the stats section
+                        Animated.timing(statsSlideAnim, {
+                            toValue: showStats ? -100 : 0,
+                            duration: 300,
+                            useNativeDriver: true,
+                        }).start();
+                    }}
                     activeOpacity={0.7}
                 >
                     <Text style={styles.statsTitle}>Ringkasan Kehadiran</Text>
-                    <Ionicons name={showStats ? 'chevron-up' : 'chevron-down'} size={20} color="#6B7280" />
+                    <Animated.View
+                        style={{
+                            transform: [
+                                {
+                                    rotate: showStats ? '180deg' : '0deg',
+                                },
+                            ],
+                        }}
+                    >
+                        <Ionicons name="chevron-down" size={20} color="#6B7280" />
+                    </Animated.View>
                 </TouchableOpacity>
 
                 {showStats && (
@@ -456,6 +550,7 @@ const Kehadiran = () => {
                             styles.statsGrid,
                             {
                                 opacity: fadeAnim,
+                                transform: [{ translateY: statsSlideAnim }],
                             },
                         ]}
                     >
@@ -725,35 +820,49 @@ const Kehadiran = () => {
 
                         <View style={styles.buttonContainer}>
                             {isLoading ? (
-                                <CircularButton
-                                    title="Memuat..."
-                                    colors={['#E5E7EB', '#D1D5DB', '#9CA3AF']}
-                                    disabled={true}
-                                />
+                                <Animated.View style={{ transform: [{ scale: scaleAnim }] }}>
+                                    <CircularButton
+                                        title="Memuat..."
+                                        colors={['#E5E7EB', '#D1D5DB', '#9CA3AF']}
+                                        disabled={true}
+                                    />
+                                </Animated.View>
                             ) : isCheckedIn == 0 ? (
-                                <CircularButton
-                                    title="Clock In"
-                                    colors={['#4A90E2', '#357ABD', '#2E5984']}
-                                    onPress={handleClockIn}
-                                />
+                                <Animated.View
+                                    style={{
+                                        transform: [{ scale: scaleAnim }, { scale: buttonPulseAnim }],
+                                    }}
+                                >
+                                    <CircularButton
+                                        title="Clock In"
+                                        colors={['#4A90E2', '#357ABD', '#2E5984']}
+                                        onPress={handleClockIn}
+                                    />
+                                </Animated.View>
                             ) : isCheckedIn == 1 && isCheckedOut == false ? (
-                                <CircularButton
-                                    title="Clock Out"
-                                    onPress={handleClockOut}
-                                    colors={['#EF4444', '#DC2626', '#B91C1C']}
-                                />
+                                <Animated.View style={{ transform: [{ scale: scaleAnim }] }}>
+                                    <CircularButton
+                                        title="Clock Out"
+                                        onPress={handleClockOut}
+                                        colors={['#EF4444', '#DC2626', '#B91C1C']}
+                                    />
+                                </Animated.View>
                             ) : isCheckedIn == 1 && isCheckedOut == true ? (
-                                <CircularButton
-                                    title="Selesai"
-                                    colors={['#E5E7EB', '#D1D5DB', '#9CA3AF']}
-                                    disabled={true}
-                                />
+                                <Animated.View style={{ transform: [{ scale: scaleAnim }] }}>
+                                    <CircularButton
+                                        title="Selesai"
+                                        colors={['#10B981', '#059669', '#047857']}
+                                        disabled={true}
+                                    />
+                                </Animated.View>
                             ) : (
-                                <CircularButton
-                                    title="Clock In"
-                                    colors={['#4A90E2', '#357ABD', '#2E5984']}
-                                    disabled={true}
-                                />
+                                <Animated.View style={{ transform: [{ scale: scaleAnim }] }}>
+                                    <CircularButton
+                                        title="Clock In"
+                                        colors={['#4A90E2', '#357ABD', '#2E5984']}
+                                        disabled={true}
+                                    />
+                                </Animated.View>
                             )}
                         </View>
                     </Animated.View>
@@ -763,67 +872,201 @@ const Kehadiran = () => {
                         {/* Attendance Stats */}
                         {!isLoading && <AttendanceStats />}
 
-                        <View style={styles.historySectionHeader}>
-                            <Text style={styles.historySectionTitle}>Riwayat Kehadiran</Text>
-                            <View style={styles.totalRecords}>
-                                <Text style={styles.totalRecordsText}>{attendanceData.length} catatan</Text>
+                        <TouchableOpacity
+                            style={styles.historySectionHeader}
+                            onPress={() => {
+                                if (Platform.OS === 'ios') {
+                                    Haptics.selectionAsync();
+                                }
+
+                                const newShowHistory = !showHistory;
+                                setShowHistory(newShowHistory);
+
+                                // Enhanced animation with spring effect
+                                Animated.parallel([
+                                    Animated.spring(historySlideAnim, {
+                                        toValue: newShowHistory ? 0 : -50,
+                                        tension: 80,
+                                        friction: 8,
+                                        useNativeDriver: true,
+                                    }),
+                                    Animated.timing(fadeAnim, {
+                                        toValue: newShowHistory ? 1 : 0.7,
+                                        duration: 300,
+                                        useNativeDriver: true,
+                                    }),
+                                ]).start();
+                            }}
+                            activeOpacity={0.7}
+                        >
+                            <View style={styles.historyTitleContainer}>
+                                <View style={styles.historyTitleWrapper}>
+                                    <Ionicons name="time-outline" size={22} color="#4A90E2" />
+                                    <Text style={styles.historySectionTitle}>Riwayat Kehadiran</Text>
+                                </View>
+                                <Animated.View
+                                    style={{
+                                        transform: [
+                                            {
+                                                rotate: showHistory ? '180deg' : '0deg',
+                                            },
+                                        ],
+                                    }}
+                                >
+                                    <Ionicons name="chevron-down" size={20} color="#6B7280" />
+                                </Animated.View>
                             </View>
-                        </View>
-
-                        {isLoading ? (
-                            <View style={styles.historyContainer}>
-                                {Array(3)
-                                    .fill()
-                                    .map((_, index) => (
-                                        <ShimmerTaskCard key={index} />
-                                    ))}
-                            </View>
-                        ) : paginatedDateViews.length > 0 ? (
-                            <>
-                                <View style={styles.historyContainer}>{paginatedDateViews}</View>
-                                {/* Pagination - Always show if there are multiple pages */}
-                                {totalPages > 1 && (
-                                    <View style={styles.paginationControls}>
-                                        <TouchableOpacity
-                                            onPress={handlePreviousPage}
-                                            disabled={currentPage === 0}
-                                            style={[
-                                                styles.paginationButton,
-                                                currentPage === 0 && styles.disabledPaginationButton,
-                                            ]}
-                                        >
-                                            <Ionicons
-                                                name="chevron-back"
-                                                size={20}
-                                                color={currentPage === 0 ? '#D1D5DB' : '#4A90E2'}
-                                            />
-                                        </TouchableOpacity>
-
-                                        <View style={styles.pageIndicator}>
-                                            <Text style={styles.pageText}>
-                                                {currentPage + 1} / {totalPages}
-                                            </Text>
-                                        </View>
-
-                                        <TouchableOpacity
-                                            onPress={handleNextPage}
-                                            disabled={currentPage === totalPages - 1}
-                                            style={[
-                                                styles.paginationButton,
-                                                currentPage === totalPages - 1 && styles.disabledPaginationButton,
-                                            ]}
-                                        >
-                                            <Ionicons
-                                                name="chevron-forward"
-                                                size={20}
-                                                color={currentPage === totalPages - 1 ? '#D1D5DB' : '#4A90E2'}
-                                            />
-                                        </TouchableOpacity>
-                                    </View>
+                            <View style={styles.totalRecordsContainer}>
+                                <View style={styles.totalRecords}>
+                                    <Ionicons name="document-text" size={14} color="white" />
+                                    <Text style={styles.totalRecordsText}>{attendanceData.length} catatan</Text>
+                                </View>
+                                {attendanceData.length > 0 && (
+                                    <Text style={styles.lastUpdateText}>
+                                        Update terakhir: {new Date().toLocaleDateString('id-ID')}
+                                    </Text>
                                 )}
-                            </>
-                        ) : (
-                            <EmptyState />
+                            </View>
+                        </TouchableOpacity>
+
+                        {!showHistory && attendanceData.length > 0 && (
+                            <Animated.View
+                                style={[
+                                    styles.collapsedIndicator,
+                                    {
+                                        opacity: fadeAnim.interpolate({
+                                            inputRange: [0.7, 1],
+                                            outputRange: [0.6, 1],
+                                        }),
+                                        transform: [
+                                            {
+                                                scale: buttonPulseAnim.interpolate({
+                                                    inputRange: [1, 1.05],
+                                                    outputRange: [1, 1.02],
+                                                }),
+                                            },
+                                        ],
+                                    },
+                                ]}
+                            >
+                                <Text style={styles.collapsedText}>
+                                    👆 Tap untuk melihat {attendanceData.length} riwayat kehadiran
+                                </Text>
+                            </Animated.View>
+                        )}
+
+                        {showHistory && (
+                            <Animated.View
+                                style={{
+                                    opacity: fadeAnim,
+                                    transform: [
+                                        {
+                                            translateY: historySlideAnim.interpolate({
+                                                inputRange: [-50, 0],
+                                                outputRange: [-20, 0],
+                                                extrapolate: 'clamp',
+                                            }),
+                                        },
+                                        {
+                                            scale: fadeAnim.interpolate({
+                                                inputRange: [0.7, 1],
+                                                outputRange: [0.95, 1],
+                                                extrapolate: 'clamp',
+                                            }),
+                                        },
+                                    ],
+                                }}
+                            >
+                                {isLoading ? (
+                                    <Animated.View
+                                        style={[
+                                            styles.historyContainer,
+                                            {
+                                                opacity: fadeAnim,
+                                                transform: [{ translateY: historySlideAnim }],
+                                            },
+                                        ]}
+                                    >
+                                        {Array(3)
+                                            .fill()
+                                            .map((_, index) => (
+                                                <ShimmerTaskCard key={index} />
+                                            ))}
+                                    </Animated.View>
+                                ) : paginatedDateViews.length > 0 ? (
+                                    <>
+                                        <Animated.View
+                                            style={[
+                                                styles.historyContainer,
+                                                {
+                                                    opacity: fadeAnim,
+                                                    transform: [{ translateY: historySlideAnim }],
+                                                },
+                                            ]}
+                                        >
+                                            {paginatedDateViews}
+                                        </Animated.View>
+                                        {/* Pagination - Always show if there are multiple pages */}
+                                        {totalPages > 1 && (
+                                            <Animated.View
+                                                style={[
+                                                    styles.paginationControls,
+                                                    {
+                                                        opacity: fadeAnim,
+                                                        transform: [{ translateY: historySlideAnim }],
+                                                    },
+                                                ]}
+                                            >
+                                                <TouchableOpacity
+                                                    onPress={handlePreviousPage}
+                                                    disabled={currentPage === 0}
+                                                    style={[
+                                                        styles.paginationButton,
+                                                        currentPage === 0 && styles.disabledPaginationButton,
+                                                    ]}
+                                                >
+                                                    <Ionicons
+                                                        name="chevron-back"
+                                                        size={20}
+                                                        color={currentPage === 0 ? '#D1D5DB' : '#4A90E2'}
+                                                    />
+                                                </TouchableOpacity>
+
+                                                <View style={styles.pageIndicator}>
+                                                    <Text style={styles.pageText}>
+                                                        {currentPage + 1} / {totalPages}
+                                                    </Text>
+                                                </View>
+
+                                                <TouchableOpacity
+                                                    onPress={handleNextPage}
+                                                    disabled={currentPage === totalPages - 1}
+                                                    style={[
+                                                        styles.paginationButton,
+                                                        currentPage === totalPages - 1 &&
+                                                            styles.disabledPaginationButton,
+                                                    ]}
+                                                >
+                                                    <Ionicons
+                                                        name="chevron-forward"
+                                                        size={20}
+                                                        color={currentPage === totalPages - 1 ? '#D1D5DB' : '#4A90E2'}
+                                                    />
+                                                </TouchableOpacity>
+                                            </Animated.View>
+                                        )}
+                                    </>
+                                ) : (
+                                    <Animated.View
+                                        style={{
+                                            opacity: fadeAnim,
+                                            transform: [{ translateY: historySlideAnim }],
+                                        }}
+                                    >
+                                        <EmptyState />
+                                    </Animated.View>
+                                )}
+                            </Animated.View>
                         )}
                     </View>
                 </View>
@@ -1007,27 +1250,66 @@ const styles = StyleSheet.create({
     },
 
     historySectionHeader: {
+        flexDirection: 'column',
+        marginBottom: 20,
+        backgroundColor: 'white',
+        borderRadius: 20,
+        padding: 20,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.12,
+        shadowRadius: 12,
+        elevation: 8,
+        borderLeftWidth: 4,
+        borderLeftColor: '#4A90E2',
+    },
+    historyTitleContainer: {
         flexDirection: 'row',
-        justifyContent: 'space-between',
         alignItems: 'center',
-        marginBottom: 16,
-        paddingHorizontal: 4,
+        justifyContent: 'space-between',
+        marginBottom: 12,
+    },
+    historyTitleWrapper: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 10,
+        flex: 1,
     },
     historySectionTitle: {
-        fontSize: 20,
+        fontSize: 22,
         fontWeight: '700',
         color: '#1F2937',
+        letterSpacing: -0.5,
+    },
+    totalRecordsContainer: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        marginTop: 8,
     },
     totalRecords: {
+        flexDirection: 'row',
+        alignItems: 'center',
         backgroundColor: '#4A90E2',
-        paddingHorizontal: 12,
-        paddingVertical: 6,
-        borderRadius: 12,
+        paddingHorizontal: 14,
+        paddingVertical: 8,
+        borderRadius: 16,
+        gap: 6,
+        shadowColor: '#4A90E2',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.3,
+        shadowRadius: 4,
+        elevation: 4,
     },
     totalRecordsText: {
         color: 'white',
-        fontSize: 12,
+        fontSize: 13,
         fontWeight: '600',
+    },
+    lastUpdateText: {
+        fontSize: 11,
+        color: '#9CA3AF',
+        fontStyle: 'italic',
     },
     historyContainer: {
         gap: 16,
@@ -1237,6 +1519,51 @@ const styles = StyleSheet.create({
     },
     shimmerSubtitle: {
         borderRadius: 4,
+    },
+
+    // Collapsed Indicator
+    collapsedIndicator: {
+        backgroundColor: '#F8FAFC',
+        borderRadius: 12,
+        padding: 16,
+        alignItems: 'center',
+        marginTop: 12,
+        borderWidth: 1,
+        borderColor: '#E5E7EB',
+        borderStyle: 'dashed',
+    },
+    collapsedText: {
+        fontSize: 14,
+        color: '#6B7280',
+        fontWeight: '500',
+        textAlign: 'center',
+    },
+
+    // Empty History
+    emptyHistoryCard: {
+        backgroundColor: 'white',
+        borderRadius: 16,
+        padding: 40,
+        alignItems: 'center',
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.05,
+        shadowRadius: 8,
+        elevation: 2,
+    },
+    emptyHistoryTitle: {
+        fontSize: 18,
+        fontWeight: '600',
+        color: '#374151',
+        marginTop: 16,
+        marginBottom: 8,
+    },
+    emptyHistorySubtitle: {
+        fontSize: 14,
+        color: '#6B7280',
+        textAlign: 'center',
+        lineHeight: 20,
+        maxWidth: 280,
     },
 
     // Access Denied
