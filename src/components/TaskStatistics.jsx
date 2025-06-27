@@ -1,0 +1,73 @@
+import React from 'react';
+import { View, Text, StyleSheet } from 'react-native';
+
+const TaskStatistics = ({ tasks }) => {
+    const totalTasks = Object.values(tasks).reduce((total, taskArray) => total + taskArray.length, 0);
+    const completedTasks = tasks.completed.length;
+    const inProgressTasks = tasks.inProgress.length;
+    const pendingReview = tasks.inReview.length;
+
+    if (totalTasks === 0) return null;
+
+    return (
+        <View style={styles.container}>
+            <View style={styles.statItem}>
+                <Text style={styles.statNumber}>{totalTasks}</Text>
+                <Text style={styles.statLabel}>Total</Text>
+            </View>
+            <View style={styles.separator} />
+            <View style={styles.statItem}>
+                <Text style={styles.statNumber}>{inProgressTasks}</Text>
+                <Text style={styles.statLabel}>Dikerjakan</Text>
+            </View>
+            <View style={styles.separator} />
+            <View style={styles.statItem}>
+                <Text style={styles.statNumber}>{pendingReview}</Text>
+                <Text style={styles.statLabel}>Review</Text>
+            </View>
+            <View style={styles.separator} />
+            <View style={styles.statItem}>
+                <Text style={styles.statNumber}>{completedTasks}</Text>
+                <Text style={styles.statLabel}>Selesai</Text>
+            </View>
+        </View>
+    );
+};
+
+const styles = StyleSheet.create({
+    container: {
+        flexDirection: 'row',
+        backgroundColor: 'white',
+        borderRadius: 12,
+        padding: 16,
+        marginBottom: 20,
+        elevation: 2,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.1,
+        shadowRadius: 4,
+    },
+    statItem: {
+        flex: 1,
+        alignItems: 'center',
+    },
+    statNumber: {
+        fontSize: 24,
+        fontFamily: 'Poppins-Bold',
+        color: '#0E509E',
+        marginBottom: 4,
+    },
+    statLabel: {
+        fontSize: 12,
+        fontFamily: 'Poppins-Regular',
+        color: '#666',
+        textAlign: 'center',
+    },
+    separator: {
+        width: 1,
+        backgroundColor: '#E0E0E0',
+        marginHorizontal: 8,
+    },
+});
+
+export default TaskStatistics;

@@ -126,6 +126,8 @@ export const useNotifications = (employeeData) => {
     const [unreadCount, setUnreadCount] = useState(0);
     const [notificationsSeen, setNotificationsSeen] = useState(new Set());
     const [lastFetchTime, setLastFetchTime] = useState(Date.now());
+    const [isLoading, setIsLoading] = useState(false);
+    const [retryCount, setRetryCount] = useState(0);
 
     const handleLocalNotification = async (notification) => {
         try {
@@ -159,7 +161,16 @@ export const useNotifications = (employeeData) => {
     };
 
     const fetchNotifications = useCallback(async () => {
-        if (!employeeData.id) return;
+        if (!employeeData.id || isLoading) return;
+
+        // Rate limiting: prevent too many requests
+        const timeSinceLastFetch = Date.now() - lastFetchTime;
+        if (timeSinceLastFetch < 30000) {
+            // Minimum 30 seconds between calls
+            return;
+        }
+
+        setIsLoading(true);
 
         try {
             const currentTime = Date.now();
@@ -186,17 +197,39 @@ export const useNotifications = (employeeData) => {
             setLastFetchTime(currentTime);
             const unread = notifications.filter((notif) => !notif.is_read).length;
             setUnreadCount(unread);
+            setRetryCount(0); // Reset retry count on success
         } catch (error) {
             console.error('Error fetching notifications:', error);
+
+            // Implement exponential backoff for retries
+            setRetryCount((prev) => prev + 1);
+
+            // Don't retry if we've already tried too many times
+            if (retryCount >= 3) {
+                console.log('Max retry attempts reached for notifications');
+                return;
+            }
+        } finally {
+            setIsLoading(false);
         }
-    }, [employeeData.id, lastFetchTime, notificationsSeen]);
+    }, [employeeData.id, lastFetchTime, notificationsSeen, isLoading, retryCount]);
 
     useEffect(() => {
         let intervalId;
 
         if (employeeData.id) {
-            fetchNotifications();
-            intervalId = setInterval(fetchNotifications, 60000);
+            // Initial fetch with delay
+            const timeoutId = setTimeout(() => {
+                fetchNotifications();
+            }, 5000); // Wait 5 seconds before first fetch
+
+            // Set up interval with increased time to reduce API calls
+            intervalId = setInterval(fetchNotifications, 120000); // Every 2 minutes instead of 1
+
+            return () => {
+                clearTimeout(timeoutId);
+                clearInterval(intervalId);
+            };
         }
 
         return () => {
@@ -204,7 +237,7 @@ export const useNotifications = (employeeData) => {
                 clearInterval(intervalId);
             }
         };
-    }, [fetchNotifications]);
+    }, [employeeData.id]); // Remove fetchNotifications from dependencies to prevent excessive calls
 
     // Load saved seen notifications on mount
     useEffect(() => {

@@ -13,16 +13,20 @@ import {
     FlatList,
     Image,
     ActivityIndicator,
+    Animated,
+    Dimensions,
 } from 'react-native';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import * as ImagePicker from 'expo-image-picker';
 import * as FileSystem from 'expo-file-system';
-import { Feather } from '@expo/vector-icons';
+import { Feather, MaterialIcons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { getEmployeeByCompany } from '../api/general';
 import { createAdhocTask } from '../api/adhocTask';
 import ReusableAlert from '../components/ReusableAlert';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+
+const { width } = Dimensions.get('window');
 
 const AddAdhocTask = ({ navigation }) => {
     const [adhocName, setAdhocName] = useState('');
@@ -48,6 +52,9 @@ const AddAdhocTask = ({ navigation }) => {
     const [alertType, setAlertType] = useState('success');
     const [alertMessage, setAlertMessage] = useState('');
     const [isLoading, setIsLoading] = useState(false);
+    const [scaleAnim] = useState(new Animated.Value(1));
+    const [fadeAnim] = useState(new Animated.Value(1));
+    const [isLoadingEmployees, setIsLoadingEmployees] = useState(false);
 
     // Fetch employees when modal opens
     useEffect(() => {
@@ -58,7 +65,7 @@ const AddAdhocTask = ({ navigation }) => {
 
     const fetchEmployees = async () => {
         try {
-            console.log('Fetching employees...');
+            setIsLoadingEmployees(true);
             const companyId = await AsyncStorage.getItem('companyId');
             const token = await AsyncStorage.getItem('token');
 
@@ -66,16 +73,14 @@ const AddAdhocTask = ({ navigation }) => {
                 throw new Error('Company ID not found');
             }
 
-            console.log(`Company ID: ${companyId}`);
-            console.log(`Authorization Token: ${token}`);
-
             const response = await getEmployeeByCompany(companyId);
-            console.log('Employee data fetched successfully:', response);
-
-            setEmployees(response); // Assuming the API returns the employee list directly
+            setEmployees(response || []); // Ensure it's always an array
         } catch (error) {
             console.error('Error fetching employee data:', error);
+            setEmployees([]); // Set empty array on error
             Alert.alert('Error', error.message || 'Failed to fetch employees');
+        } finally {
+            setIsLoadingEmployees(false);
         }
     };
 
@@ -156,18 +161,31 @@ const AddAdhocTask = ({ navigation }) => {
             }
         }
     };
-    // Handle input focus
+    // Handle input focus with animation
     const handleFocus = (inputName) => {
         setFocusedInput(inputName);
+        Animated.spring(scaleAnim, {
+            toValue: 1.02,
+            useNativeDriver: true,
+        }).start();
     };
 
-    // Handle input blur
+    // Handle input blur with animation
     const handleBlur = () => {
         setFocusedInput(null);
+        Animated.spring(scaleAnim, {
+            toValue: 1,
+            useNativeDriver: true,
+        }).start();
     };
     const handleFieldClick = (field) => {
         setSelectedField(field); // Set the field being selected (assignTo or approval)
         setIsModalVisible(true); // Show the modal
+
+        // Fetch employees if not already loaded
+        if (employees.length === 0) {
+            fetchEmployees();
+        }
     };
 
     const handleEmployeeSelect = (employee) => {
@@ -178,6 +196,8 @@ const AddAdhocTask = ({ navigation }) => {
             } else {
                 setAssignTo([...assignTo, employee]); // Add employee if not already selected
             }
+            // Don't close modal for multi-select
+            return;
         } else if (selectedField === 'approval1') {
             setApproval1(employee);
         } else if (selectedField === 'approval2') {
@@ -187,30 +207,47 @@ const AddAdhocTask = ({ navigation }) => {
         } else if (selectedField === 'approval4') {
             setApproval4(employee);
         }
-        setIsModalVisible(false); // Hide the modal after selecting
+
+        // Close modal for single selections (approvals)
+        setIsModalVisible(false);
     };
 
     const renderEmployeeItem = ({ item }) => {
         const isSelected = selectedField === 'assignTo' ? assignTo.some((emp) => emp.id === item.id) : false;
         return (
             <TouchableOpacity
-                style={[styles.employeeItem, isSelected ? styles.selectedItem : null]}
+                style={[styles.employeeItem, isSelected && styles.selectedEmployeeItem]}
                 onPress={() => handleEmployeeSelect(item)}
+                activeOpacity={0.8}
             >
-                <Text style={styles.employeeName}>{item.employee_name}</Text>
-                <Text style={styles.employeeDetails}>
-                    {item.job_name} - {item.team_name}
-                </Text>
+                <View style={styles.employeeInfo}>
+                    <View style={styles.employeeAvatar}>
+                        <MaterialIcons name="person" size={20} color={isSelected ? '#FFF' : '#4A90E2'} />
+                    </View>
+                    <View style={styles.employeeDetails}>
+                        <Text style={[styles.employeeName, isSelected && styles.selectedEmployeeName]}>
+                            {item.employee_name}
+                        </Text>
+                        <Text style={[styles.employeeSubtitle, isSelected && styles.selectedEmployeeSubtitle]}>
+                            {item.job_name} • {item.team_name}
+                        </Text>
+                    </View>
+                </View>
+                {isSelected && <MaterialIcons name="check-circle" size={20} color="#4CAF50" />}
             </TouchableOpacity>
         );
     };
 
     const filterEmployees = () => {
+        // First filter out disabled employees
+        const activeEmployees = employees.filter((emp) => !emp.disable);
+
         if (selectedField && selectedField.startsWith('approval')) {
             const selectedApprovals = [approval1?.id, approval2?.id, approval3?.id, approval4?.id];
-            return employees.filter((emp) => !selectedApprovals.includes(emp.id)); // Filter out already selected approvals
+            const filtered = activeEmployees.filter((emp) => !selectedApprovals.includes(emp.id));
+            return filtered;
         }
-        return employees;
+        return activeEmployees;
     };
 
     const handleSubmit = async () => {
@@ -296,214 +333,352 @@ const AddAdhocTask = ({ navigation }) => {
             navigation.goBack();
         }
     };
-    // Modified input style function
-    const getInputStyle = (inputName) => {
-        return [styles.input, focusedInput === inputName && styles.focusedInput];
-    };
     return (
         <SafeAreaView style={styles.container}>
             <StatusBar barStyle="light-content" backgroundColor="#4A90E2" />
 
-            <LinearGradient colors={['#4A90E2', '#4A90E2']} style={styles.header}>
+            {/* Modern Header with Gradient */}
+            <LinearGradient colors={['#4A90E2', '#357ABD']} style={styles.header}>
                 <View style={styles.headerContent}>
-                    <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
-                        <Feather name="chevron-left" size={24} color="#FFF" />
+                    <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton} activeOpacity={0.7}>
+                        <Feather name="arrow-left" size={24} color="#FFF" />
                     </TouchableOpacity>
-                    <Text style={styles.headerTitle}>Tugas Harian</Text>
-                    <View style={styles.placeholder} />
+                    <Text style={styles.headerTitle}>Buat Tugas Baru</Text>
+                    <View style={styles.headerRightSpace} />
                 </View>
             </LinearGradient>
 
-            <ScrollView style={styles.scrollView}>
-                <View style={styles.formContainer}>
-                    <Text style={styles.label}>Nama Tugas</Text>
-                    <TextInput
-                        value={adhocName}
-                        onChangeText={setAdhocName}
-                        placeholder="Masukkan Nama Tugas Anda"
-                        style={getInputStyle('adhocName')}
-                        onFocus={() => handleFocus('adhocName')}
-                        onBlur={handleBlur}
-                    />
-                    <View style={styles.row}>
-                        <View style={styles.column}>
-                            <Text style={styles.label}>Mulai</Text>
-                            <TouchableOpacity onPress={() => setShowStartPicker(true)}>
-                                <TextInput value={formatDate(startDate)} editable={false} style={styles.dateInput} />
-                            </TouchableOpacity>
+            <ScrollView
+                style={styles.scrollView}
+                showsVerticalScrollIndicator={false}
+                contentContainerStyle={styles.scrollContent}
+            >
+                {/* Form Card Container */}
+                <View style={styles.formCard}>
+                    {/* Task Info Section */}
+                    <View style={styles.section}>
+                        <View style={styles.sectionHeader}>
+                            <MaterialIcons name="assignment" size={20} color="#4A90E2" />
+                            <Text style={styles.sectionTitle}>Informasi Tugas</Text>
                         </View>
 
-                        <View style={styles.column}>
-                            <Text style={styles.label}>Selesai</Text>
-                            <TouchableOpacity onPress={() => setShowEndPicker(true)}>
-                                <TextInput value={formatDate(endDate)} editable={false} style={styles.dateInput} />
-                            </TouchableOpacity>
-                        </View>
-                    </View>
-
-                    <View style={styles.row}>
-                        <View style={styles.column}>
-                            <Text style={styles.label}>Ditugaskan Kepada</Text>
-                            <TouchableOpacity onPress={() => handleFieldClick('assignTo')}>
-                                <TextInput
-                                    value={
-                                        assignTo.length > 0 ? assignTo.map((emp) => emp.employee_name).join(', ') : ''
-                                    }
-                                    style={styles.input}
-                                    editable={false}
-                                    placeholder="Pilih Pegawai"
-                                />
-                            </TouchableOpacity>
-                        </View>
-                        <View style={styles.column}>
-                            <Text style={styles.label}>Durasi</Text>
-                            <TextInput value={duration} style={styles.input} editable={false} />
-                        </View>
-                    </View>
-
-                    <View style={styles.row}>
-                        <View style={styles.column}>
-                            <Text style={styles.label}>Approval 1</Text>
-                            <TouchableOpacity onPress={() => handleFieldClick('approval1')}>
-                                <TextInput
-                                    value={approval1?.employee_name || ''}
-                                    style={styles.input}
-                                    editable={false}
-                                    placeholder="Pilih Approval 1"
-                                />
-                            </TouchableOpacity>
-                        </View>
-
-                        <View style={styles.column}>
-                            <Text style={styles.label}>Approval 2</Text>
-                            <TouchableOpacity
-                                onPress={() => handleFieldClick('approval2')}
-                                disabled={!approval1} // Disable if approval1 not selected
+                        <View style={styles.inputContainer}>
+                            <Text style={styles.label}>Nama Tugas *</Text>
+                            <Animated.View
+                                style={[
+                                    styles.inputWrapper,
+                                    focusedInput === 'adhocName' && styles.focusedInputWrapper,
+                                    { transform: [{ scale: focusedInput === 'adhocName' ? scaleAnim : 1 }] },
+                                ]}
                             >
                                 <TextInput
-                                    value={approval2?.employee_name || ''}
-                                    style={[styles.input, !approval1 && styles.disabledInput]}
-                                    editable={false}
-                                    placeholder="Pilih Approval 2"
+                                    value={adhocName}
+                                    onChangeText={setAdhocName}
+                                    placeholder="Masukkan nama tugas yang akan dikerjakan"
+                                    placeholderTextColor="#999"
+                                    style={styles.textInput}
+                                    onFocus={() => handleFocus('adhocName')}
+                                    onBlur={handleBlur}
                                 />
-                            </TouchableOpacity>
+                            </Animated.View>
+                        </View>
+
+                        <View style={styles.inputContainer}>
+                            <Text style={styles.label}>Deskripsi Tugas</Text>
+                            <Animated.View
+                                style={[
+                                    styles.inputWrapper,
+                                    styles.textAreaWrapper,
+                                    focusedInput === 'adhocDesc' && styles.focusedInputWrapper,
+                                    { transform: [{ scale: focusedInput === 'adhocDesc' ? scaleAnim : 1 }] },
+                                ]}
+                            >
+                                <TextInput
+                                    value={adhocDesc}
+                                    onChangeText={setAdhocDesc}
+                                    placeholder="Tambahkan deskripsi atau keterangan tugas (opsional)"
+                                    placeholderTextColor="#999"
+                                    multiline={true}
+                                    numberOfLines={4}
+                                    style={[styles.textInput, styles.textArea]}
+                                    onFocus={() => handleFocus('adhocDesc')}
+                                    onBlur={handleBlur}
+                                />
+                            </Animated.View>
                         </View>
                     </View>
 
-                    <View style={styles.row}>
-                        <View style={styles.column}>
-                            <Text style={styles.label}>Approval 3</Text>
-                            <TouchableOpacity
-                                onPress={() => handleFieldClick('approval3')}
-                                disabled={!approval2} // Disable if approval2 not selected
-                            >
-                                <TextInput
-                                    value={approval3?.employee_name || ''}
-                                    style={[styles.input, !approval2 && styles.disabledInput]}
-                                    editable={false}
-                                    placeholder="Pilih Approval 3"
-                                />
-                            </TouchableOpacity>
+                    {/* Timeline Section */}
+                    <View style={styles.section}>
+                        <View style={styles.sectionHeader}>
+                            <MaterialIcons name="schedule" size={20} color="#4A90E2" />
+                            <Text style={styles.sectionTitle}>Jadwal Tugas</Text>
                         </View>
 
-                        <View style={styles.column}>
-                            <Text style={styles.label}>Approval 4</Text>
-                            <TouchableOpacity
-                                onPress={() => handleFieldClick('approval4')}
-                                disabled={!approval3} // Disable if approval3 not selected
-                            >
-                                <TextInput
-                                    value={approval4?.employee_name || ''}
-                                    style={[styles.input, !approval3 && styles.disabledInput]}
-                                    editable={false}
-                                    placeholder="Pilih Approval 4"
-                                />
-                            </TouchableOpacity>
+                        <View style={styles.dateRow}>
+                            <View style={styles.dateColumn}>
+                                <Text style={styles.label}>Tanggal Mulai</Text>
+                                <TouchableOpacity
+                                    onPress={() => setShowStartPicker(true)}
+                                    style={styles.dateButton}
+                                    activeOpacity={0.8}
+                                >
+                                    <MaterialIcons name="event" size={18} color="#4A90E2" />
+                                    <Text style={styles.dateText}>{formatDate(startDate)}</Text>
+                                </TouchableOpacity>
+                            </View>
+
+                            <View style={styles.dateColumn}>
+                                <Text style={styles.label}>Tanggal Selesai</Text>
+                                <TouchableOpacity
+                                    onPress={() => setShowEndPicker(true)}
+                                    style={styles.dateButton}
+                                    activeOpacity={0.8}
+                                >
+                                    <MaterialIcons name="event" size={18} color="#4A90E2" />
+                                    <Text style={styles.dateText}>{formatDate(endDate)}</Text>
+                                </TouchableOpacity>
+                            </View>
+                        </View>
+
+                        <View style={styles.durationContainer}>
+                            <Text style={styles.label}>Durasi Estimasi</Text>
+                            <View style={styles.durationBadge}>
+                                <MaterialIcons name="timer" size={16} color="#4A90E2" />
+                                <Text style={styles.durationText}>{duration}</Text>
+                            </View>
                         </View>
                     </View>
 
-                    <Text style={styles.label}>Pilih Foto Tugas</Text>
-                    {image ? (
-                        <TouchableOpacity onPress={pickImage}>
-                            <Image source={{ uri: image }} style={styles.selectedImage} />
-                        </TouchableOpacity>
-                    ) : (
-                        <TouchableOpacity onPress={pickImage} style={styles.uploadButton}>
-                            <Feather name="paperclip" size={20} color="#FFF" />
-                            <Text style={styles.uploadText}>Pilih Bukti</Text>
-                        </TouchableOpacity>
-                    )}
+                    {/* Assignment Section */}
+                    <View style={styles.section}>
+                        <View style={styles.sectionHeader}>
+                            <MaterialIcons name="people" size={20} color="#4A90E2" />
+                            <Text style={styles.sectionTitle}>Penugasan</Text>
+                        </View>
 
-                    {/* {imageInfo && (
-                        <Text style={styles.infoText}>
-                            File Size: {imageInfo.size} bytes{'\n'}
-                            URI: {imageInfo.uri}
-                        </Text>
-                    )} */}
+                        <View style={styles.inputContainer}>
+                            <Text style={styles.label}>Ditugaskan Kepada *</Text>
+                            <TouchableOpacity
+                                onPress={() => handleFieldClick('assignTo')}
+                                style={styles.selectButton}
+                                activeOpacity={0.8}
+                            >
+                                <View style={styles.selectContent}>
+                                    <MaterialIcons name="person-add" size={18} color="#4A90E2" />
+                                    <Text style={[styles.selectText, assignTo.length === 0 && styles.placeholderText]}>
+                                        {assignTo.length > 0
+                                            ? assignTo.map((emp) => emp.employee_name).join(', ')
+                                            : 'Pilih karyawan yang akan mengerjakan tugas'}
+                                    </Text>
+                                </View>
+                                <MaterialIcons name="chevron-right" size={20} color="#999" />
+                            </TouchableOpacity>
+                            {assignTo.length > 0 && (
+                                <View style={styles.selectedEmployeesContainer}>
+                                    {assignTo.map((emp, index) => (
+                                        <View key={emp.id} style={styles.employeeChip}>
+                                            <Text style={styles.employeeChipText}>{emp.employee_name}</Text>
+                                        </View>
+                                    ))}
+                                </View>
+                            )}
+                        </View>
+                    </View>
 
-                    <Text style={styles.label}>Keterangan</Text>
-                    <TextInput
-                        value={adhocDesc}
-                        onChangeText={setAdhocDesc}
-                        placeholder="Tidak Ada Keterangan"
-                        multiline={true}
-                        numberOfLines={4}
-                        style={[styles.textArea, focusedInput === 'adhocDesc' && styles.focusedInput]}
-                        onFocus={() => handleFocus('adhocDesc')}
-                        onBlur={handleBlur}
-                    />
+                    {/* Approval Section */}
+                    <View style={styles.section}>
+                        <View style={styles.sectionHeader}>
+                            <MaterialIcons name="verified-user" size={20} color="#4A90E2" />
+                            <Text style={styles.sectionTitle}>Persetujuan</Text>
+                        </View>
 
-                    {showStartPicker && (
-                        <DateTimePicker value={startDate} mode="date" display="default" onChange={onStartDateChange} />
-                    )}
+                        <View style={styles.approvalGrid}>
+                            {[
+                                { key: 'approval1', value: approval1, label: 'Approval 1', enabled: true },
+                                { key: 'approval2', value: approval2, label: 'Approval 2', enabled: !!approval1 },
+                                { key: 'approval3', value: approval3, label: 'Approval 3', enabled: !!approval2 },
+                                { key: 'approval4', value: approval4, label: 'Approval 4', enabled: !!approval3 },
+                            ].map((approval, index) => (
+                                <View key={approval.key} style={styles.approvalItem}>
+                                    <Text style={[styles.label, !approval.enabled && styles.disabledLabel]}>
+                                        {approval.label}
+                                    </Text>
+                                    <TouchableOpacity
+                                        onPress={() => handleFieldClick(approval.key)}
+                                        style={[styles.approvalButton, !approval.enabled && styles.disabledButton]}
+                                        disabled={!approval.enabled}
+                                        activeOpacity={0.8}
+                                    >
+                                        <View style={styles.approvalContent}>
+                                            <MaterialIcons
+                                                name={approval.value ? 'person' : 'person-outline'}
+                                                size={16}
+                                                color={approval.enabled ? '#4A90E2' : '#ccc'}
+                                            />
+                                            <Text
+                                                style={[
+                                                    styles.approvalText,
+                                                    !approval.enabled && styles.disabledText,
+                                                    !approval.value && styles.placeholderText,
+                                                ]}
+                                            >
+                                                {approval.value?.employee_name || `Pilih ${approval.label}`}
+                                            </Text>
+                                        </View>
+                                        {approval.enabled && (
+                                            <MaterialIcons name="chevron-right" size={16} color="#999" />
+                                        )}
+                                    </TouchableOpacity>
+                                </View>
+                            ))}
+                        </View>
+                    </View>
 
-                    {showEndPicker && (
-                        <DateTimePicker value={endDate} mode="date" display="default" onChange={onEndDateChange} />
-                    )}
+                    {/* Attachment Section */}
+                    <View style={styles.section}>
+                        <View style={styles.sectionHeader}>
+                            <MaterialIcons name="attach-file" size={20} color="#4A90E2" />
+                            <Text style={styles.sectionTitle}>Lampiran</Text>
+                        </View>
+
+                        {image ? (
+                            <View style={styles.imageContainer}>
+                                <TouchableOpacity onPress={pickImage} activeOpacity={0.8}>
+                                    <Image source={{ uri: image }} style={styles.selectedImage} />
+                                </TouchableOpacity>
+                                <TouchableOpacity
+                                    onPress={() => setImage(null)}
+                                    style={styles.removeImageButton}
+                                    activeOpacity={0.8}
+                                >
+                                    <MaterialIcons name="close" size={16} color="#fff" />
+                                </TouchableOpacity>
+                            </View>
+                        ) : (
+                            <TouchableOpacity onPress={pickImage} style={styles.uploadButton} activeOpacity={0.8}>
+                                <View style={styles.uploadContent}>
+                                    <MaterialIcons name="cloud-upload" size={32} color="#4A90E2" />
+                                    <Text style={styles.uploadTitle}>Pilih Foto Tugas</Text>
+                                    <Text style={styles.uploadSubtitle}>Tambahkan gambar sebagai referensi tugas</Text>
+                                </View>
+                            </TouchableOpacity>
+                        )}
+                    </View>
                 </View>
+
+                {/* Date Pickers */}
+                {showStartPicker && (
+                    <DateTimePicker value={startDate} mode="date" display="default" onChange={onStartDateChange} />
+                )}
+
+                {showEndPicker && (
+                    <DateTimePicker value={endDate} mode="date" display="default" onChange={onEndDateChange} />
+                )}
             </ScrollView>
 
-            <View style={styles.submitButtonContainer}>
+            {/* Fixed Submit Button */}
+            <View style={styles.submitContainer}>
                 <TouchableOpacity
                     style={[styles.submitButton, isLoading && styles.submitButtonDisabled]}
                     onPress={handleSubmit}
                     disabled={isLoading}
+                    activeOpacity={0.8}
                 >
-                    {isLoading ? (
-                        <ActivityIndicator color="#FFF" size="small" />
-                    ) : (
-                        <Text style={styles.submitButtonText}>Simpan</Text>
-                    )}
+                    <LinearGradient
+                        colors={isLoading ? ['#ccc', '#aaa'] : ['#4A90E2', '#357ABD']}
+                        style={styles.submitGradient}
+                    >
+                        {isLoading ? (
+                            <View style={styles.loadingContainer}>
+                                <ActivityIndicator color="#FFF" size="small" />
+                                <Text style={styles.submitButtonText}>Menyimpan...</Text>
+                            </View>
+                        ) : (
+                            <View style={styles.submitContent}>
+                                <MaterialIcons name="save" size={20} color="#FFF" />
+                                <Text style={styles.submitButtonText}>Simpan Tugas</Text>
+                            </View>
+                        )}
+                    </LinearGradient>
                 </TouchableOpacity>
             </View>
+
+            {/* Reusable Alert */}
             <ReusableAlert
                 show={showAlert}
                 alertType={alertType}
                 message={alertMessage}
                 onConfirm={handleAlertConfirm}
             />
-            {/* Modal for employee selection */}
+
+            {/* Modern Employee Selection Modal */}
             <Modal
-                animationType="fade"
+                animationType="slide"
                 transparent={true}
                 visible={isModalVisible}
                 onRequestClose={() => setIsModalVisible(false)}
             >
-                <View style={styles.modalContainer}>
-                    <View style={styles.modalContent}>
-                        <Text style={styles.modalTitle}>Pilih Pegawai</Text>
-                        {employees.length > 0 ? (
-                            <FlatList
-                                data={filterEmployees()}
-                                keyExtractor={(item) => item.id.toString()}
-                                renderItem={renderEmployeeItem}
-                            />
-                        ) : (
-                            <Text>No employees available</Text>
+                <View style={styles.modalOverlay}>
+                    <View style={styles.modalContainer}>
+                        <View style={styles.modalHeader}>
+                            <Text style={styles.modalTitle}>
+                                {selectedField === 'assignTo' ? 'Pilih Karyawan' : 'Pilih Approval'}
+                            </Text>
+                            <TouchableOpacity onPress={() => setIsModalVisible(false)} style={styles.modalCloseIcon}>
+                                <MaterialIcons name="close" size={24} color="#666" />
+                            </TouchableOpacity>
+                        </View>
+
+                        <View style={styles.modalContent}>
+                            {isLoadingEmployees ? (
+                                <View style={styles.loadingState}>
+                                    <ActivityIndicator size="large" color="#4A90E2" />
+                                    <Text style={styles.loadingText}>Memuat daftar karyawan...</Text>
+                                </View>
+                            ) : employees.length > 0 ? (
+                                <FlatList
+                                    data={filterEmployees()}
+                                    keyExtractor={(item) => item.id.toString()}
+                                    renderItem={renderEmployeeItem}
+                                    showsVerticalScrollIndicator={true}
+                                    ItemSeparatorComponent={() => <View style={styles.employeeSeparator} />}
+                                    style={styles.employeeList}
+                                    contentContainerStyle={{ paddingBottom: 20 }}
+                                    bounces={true}
+                                    removeClippedSubviews={false}
+                                    initialNumToRender={10}
+                                    windowSize={10}
+                                />
+                            ) : (
+                                <View style={styles.emptyState}>
+                                    <MaterialIcons name="people-outline" size={48} color="#ccc" />
+                                    <Text style={styles.emptyStateText}>Tidak ada karyawan tersedia</Text>
+                                    <TouchableOpacity
+                                        onPress={fetchEmployees}
+                                        style={styles.retryButton}
+                                        activeOpacity={0.8}
+                                    >
+                                        <Text style={styles.retryButtonText}>Coba Lagi</Text>
+                                    </TouchableOpacity>
+                                </View>
+                            )}
+                        </View>
+
+                        {/* Show Done button for multi-select (assignTo) */}
+                        {selectedField === 'assignTo' && (
+                            <View style={styles.modalFooter}>
+                                <TouchableOpacity
+                                    onPress={() => setIsModalVisible(false)}
+                                    style={styles.doneButton}
+                                    activeOpacity={0.8}
+                                >
+                                    <Text style={styles.doneButtonText}>
+                                        Selesai {assignTo.length > 0 ? `(${assignTo.length} dipilih)` : ''}
+                                    </Text>
+                                </TouchableOpacity>
+                            </View>
                         )}
-                        <TouchableOpacity style={styles.modalCloseButton} onPress={() => setIsModalVisible(false)}>
-                            <Text style={styles.modalCloseButtonText}>Tutup</Text>
-                        </TouchableOpacity>
                     </View>
                 </View>
             </Modal>
@@ -514,177 +689,474 @@ const AddAdhocTask = ({ navigation }) => {
 const styles = StyleSheet.create({
     container: {
         flex: 1,
-        backgroundColor: '#fff',
+        backgroundColor: '#f8f9fa',
+    },
+    header: {
+        paddingTop: 10,
+        paddingBottom: 15,
+        paddingHorizontal: 20,
+        elevation: 4,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.1,
+        shadowRadius: 4,
+    },
+    headerContent: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+    },
+    backButton: {
+        padding: 8,
+        borderRadius: 20,
+        backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    },
+    headerTitle: {
+        color: '#FFF',
+        fontSize: 20,
+        fontWeight: '700',
+        letterSpacing: 0.5,
+    },
+    headerRightSpace: {
+        width: 40,
     },
     scrollView: {
         flex: 1,
     },
-    header: {
-        height: 60,
-        justifyContent: 'center',
-        paddingHorizontal: 16,
+    scrollContent: {
+        paddingBottom: 100,
     },
-    headerContent: {
+    formCard: {
+        margin: 16,
+        backgroundColor: '#fff',
+        borderRadius: 16,
+        padding: 20,
+        elevation: 2,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 1 },
+        shadowOpacity: 0.1,
+        shadowRadius: 3,
+    },
+    section: {
+        marginBottom: 24,
+    },
+    sectionHeader: {
         flexDirection: 'row',
-        justifyContent: 'space-between',
         alignItems: 'center',
+        marginBottom: 16,
+        paddingBottom: 8,
+        borderBottomWidth: 1,
+        borderBottomColor: '#f0f0f0',
     },
-    backButton: {
-        padding: 8,
+    sectionTitle: {
+        fontSize: 16,
+        fontWeight: '600',
+        color: '#333',
+        marginLeft: 8,
     },
-    headerTitle: {
-        color: '#FFF',
-        fontSize: 18,
-        fontWeight: 'bold',
-    },
-    placeholder: {
-        width: 24,
-    },
-    formContainer: {
-        padding: 16,
-        paddingBottom: 32,
+    inputContainer: {
+        marginBottom: 16,
     },
     label: {
         fontSize: 14,
-        fontWeight: 'bold',
+        fontWeight: '600',
+        color: '#555',
         marginBottom: 8,
-        color: '#333',
     },
-    // Add new styles for focused state
-    focusedInput: {
+    disabledLabel: {
+        color: '#bbb',
+    },
+    inputWrapper: {
+        borderWidth: 1.5,
+        borderColor: '#e1e5e9',
+        borderRadius: 12,
+        backgroundColor: '#fff',
+        transition: 'all 0.2s ease',
+    },
+    focusedInputWrapper: {
         borderColor: '#4A90E2',
-        borderWidth: 2,
+        elevation: 2,
+        shadowColor: '#4A90E2',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.2,
+        shadowRadius: 4,
     },
-    input: {
-        borderWidth: 1,
-        borderColor: '#ddd',
-        borderRadius: 4,
-        padding: 8,
-        marginBottom: 16,
-        backgroundColor: '#fff',
-        height: 40,
+    textInput: {
+        paddingHorizontal: 16,
+        paddingVertical: 12,
+        fontSize: 16,
+        color: '#333',
+        fontWeight: '400',
     },
-
-    textArea: {
-        borderWidth: 1,
-        borderColor: '#ddd',
-        borderRadius: 4,
-        padding: 8,
-        marginBottom: 16,
+    textAreaWrapper: {
         minHeight: 100,
+    },
+    textArea: {
+        minHeight: 80,
         textAlignVertical: 'top',
+        paddingTop: 12,
     },
-    dateInput: {
-        borderWidth: 1,
-        borderColor: '#ddd',
-        borderRadius: 4,
-        padding: 8,
-        marginBottom: 16,
-        backgroundColor: '#fff',
-        height: 40,
-    },
-    disabledInput: {
-        backgroundColor: '#f0f0f0',
-        color: '#aaa',
-    },
-    row: {
+    dateRow: {
         flexDirection: 'row',
         justifyContent: 'space-between',
+        gap: 12,
+    },
+    dateColumn: {
+        flex: 1,
+    },
+    dateButton: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        padding: 12,
+        backgroundColor: '#fff',
+        borderWidth: 1.5,
+        borderColor: '#e1e5e9',
+        borderRadius: 12,
+        gap: 8,
+    },
+    dateText: {
+        fontSize: 16,
+        color: '#333',
+        fontWeight: '500',
+    },
+    durationContainer: {
+        marginTop: 16,
+    },
+    durationBadge: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        alignSelf: 'flex-start',
+        backgroundColor: '#f8f9ff',
+        paddingHorizontal: 12,
+        paddingVertical: 8,
+        borderRadius: 20,
+        gap: 6,
+    },
+    durationText: {
+        fontSize: 14,
+        color: '#4A90E2',
+        fontWeight: '600',
+    },
+    selectButton: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        padding: 12,
+        backgroundColor: '#fff',
+        borderWidth: 1.5,
+        borderColor: '#e1e5e9',
+        borderRadius: 12,
+    },
+    selectContent: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        flex: 1,
+        gap: 8,
+    },
+    selectText: {
+        fontSize: 16,
+        color: '#333',
+        fontWeight: '500',
+        flex: 1,
+    },
+    placeholderText: {
+        color: '#999',
+        fontWeight: '400',
+    },
+    selectedEmployeesContainer: {
+        flexDirection: 'row',
+        flexWrap: 'wrap',
+        marginTop: 8,
+        gap: 8,
+    },
+    employeeChip: {
+        backgroundColor: '#4A90E2',
+        paddingHorizontal: 12,
+        paddingVertical: 6,
+        borderRadius: 16,
+    },
+    employeeChipText: {
+        color: '#fff',
+        fontSize: 12,
+        fontWeight: '500',
+    },
+    approvalGrid: {
+        gap: 12,
+    },
+    approvalItem: {
         marginBottom: 8,
     },
-    column: {
-        flex: 1,
-        marginRight: 8,
-    },
-    pickerContainer: {
-        borderWidth: 1,
-        borderColor: '#ddd',
-        borderRadius: 4,
-        marginBottom: 16,
-        backgroundColor: '#fff',
-        height: 40,
-        justifyContent: 'center',
-    },
-    picker: {
-        height: 40,
-    },
-    uploadButton: {
-        backgroundColor: '#4A90E2',
-        padding: 12,
-        borderRadius: 4,
-        marginBottom: 16,
+    approvalButton: {
         flexDirection: 'row',
-        justifyContent: 'center',
         alignItems: 'center',
+        justifyContent: 'space-between',
+        padding: 12,
+        backgroundColor: '#fff',
+        borderWidth: 1.5,
+        borderColor: '#e1e5e9',
+        borderRadius: 12,
     },
-    uploadText: {
-        color: '#FFF',
-        marginLeft: 8,
+    disabledButton: {
+        backgroundColor: '#f8f9fa',
+        borderColor: '#e9ecef',
+    },
+    approvalContent: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        flex: 1,
+        gap: 8,
+    },
+    approvalText: {
+        fontSize: 16,
+        color: '#333',
+        fontWeight: '500',
+        flex: 1,
+    },
+    disabledText: {
+        color: '#bbb',
+    },
+    imageContainer: {
+        position: 'relative',
+        alignItems: 'center',
     },
     selectedImage: {
         width: '100%',
         height: 200,
-        borderRadius: 10,
-        marginBottom: 16,
-        resizeMode: 'contain',
+        borderRadius: 12,
+        resizeMode: 'cover',
     },
-    submitButtonContainer: {
+    removeImageButton: {
+        position: 'absolute',
+        top: 8,
+        right: 8,
+        backgroundColor: 'rgba(0, 0, 0, 0.6)',
+        borderRadius: 12,
+        padding: 4,
+    },
+    uploadButton: {
+        backgroundColor: '#f0f7ff',
+        borderWidth: 2,
+        borderColor: '#4A90E2',
+        borderStyle: 'dashed',
+        borderRadius: 12,
+        padding: 24,
+        alignItems: 'center',
+    },
+    uploadContent: {
+        alignItems: 'center',
+        gap: 8,
+    },
+    uploadTitle: {
+        fontSize: 16,
+        fontWeight: '600',
+        color: '#4A90E2',
+    },
+    uploadSubtitle: {
+        fontSize: 12,
+        color: '#999',
+        textAlign: 'center',
+    },
+    submitContainer: {
+        position: 'absolute',
+        bottom: 0,
+        left: 0,
+        right: 0,
+        backgroundColor: '#fff',
         padding: 16,
-        backgroundColor: 'white',
+        paddingBottom: 20,
         borderTopWidth: 1,
-        borderTopColor: '#ddd',
+        borderTopColor: '#f0f0f0',
+        elevation: 8,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: -2 },
+        shadowOpacity: 0.1,
+        shadowRadius: 4,
     },
     submitButton: {
-        backgroundColor: '#4A90E2',
-        padding: 15,
-        borderRadius: 8,
+        borderRadius: 12,
+        overflow: 'hidden',
+        elevation: 2,
+        shadowColor: '#4A90E2',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.3,
+        shadowRadius: 4,
+    },
+    submitButtonDisabled: {
+        elevation: 0,
+        shadowOpacity: 0,
+    },
+    submitGradient: {
+        paddingVertical: 16,
+        paddingHorizontal: 24,
         alignItems: 'center',
         justifyContent: 'center',
     },
-    submitButtonDisabled: {
-        opacity: 0.7,
+    loadingContainer: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 8,
+    },
+    submitContent: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 8,
     },
     submitButtonText: {
         color: '#FFF',
         fontSize: 16,
-        fontWeight: 'bold',
+        fontWeight: '700',
+        letterSpacing: 0.5,
+    },
+    modalOverlay: {
+        flex: 1,
+        backgroundColor: 'rgba(0, 0, 0, 0.5)',
+        justifyContent: 'flex-end',
     },
     modalContainer: {
-        flex: 1,
-        justifyContent: 'center',
-        backgroundColor: 'rgba(0,0,0,0.5)',
+        backgroundColor: '#fff',
+        borderTopLeftRadius: 20,
+        borderTopRightRadius: 20,
+        height: '80%',
+        paddingTop: 20,
     },
-    modalContent: {
-        backgroundColor: 'white',
-        marginHorizontal: 20,
-        borderRadius: 10,
-        padding: 20,
-        maxHeight: '70%',
+    modalHeader: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        paddingHorizontal: 20,
+        paddingBottom: 16,
+        borderBottomWidth: 1,
+        borderBottomColor: '#f0f0f0',
     },
     modalTitle: {
         fontSize: 18,
-        fontWeight: 'bold',
-        marginBottom: 10,
+        fontWeight: '700',
+        color: '#333',
+    },
+    modalCloseIcon: {
+        padding: 4,
+    },
+    modalContent: {
+        flex: 1,
+        paddingHorizontal: 20,
+        paddingTop: 16,
+        minHeight: 300,
     },
     employeeItem: {
-        padding: 10,
-        borderBottomWidth: 1,
-        borderBottomColor: '#ddd',
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        paddingVertical: 16,
+        paddingHorizontal: 16,
+        borderRadius: 12,
+        backgroundColor: '#fff',
+        marginVertical: 4,
+        borderWidth: 1,
+        borderColor: '#f0f0f0',
+        elevation: 1,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 1 },
+        shadowOpacity: 0.1,
+        shadowRadius: 2,
     },
-    selectedItem: {
-        backgroundColor: '#E0E0E0', // Highlight selected items
+    selectedEmployeeItem: {
+        backgroundColor: '#e3f2fd',
+        borderWidth: 1,
+        borderColor: '#4A90E2',
     },
-    modalCloseButton: {
-        marginTop: 10,
-        padding: 10,
+    employeeInfo: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        flex: 1,
+        gap: 12,
+    },
+    employeeAvatar: {
+        width: 40,
+        height: 40,
+        borderRadius: 20,
+        backgroundColor: '#f0f0f0',
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
+    employeeDetails: {
+        flex: 1,
+    },
+    employeeName: {
+        fontSize: 16,
+        fontWeight: '600',
+        color: '#333',
+        marginBottom: 2,
+    },
+    selectedEmployeeName: {
+        color: '#4A90E2',
+    },
+    employeeSubtitle: {
+        fontSize: 12,
+        color: '#666',
+    },
+    selectedEmployeeSubtitle: {
+        color: '#4A90E2',
+    },
+    employeeSeparator: {
+        height: 1,
+        backgroundColor: '#f0f0f0',
+        marginVertical: 4,
+    },
+    emptyState: {
+        alignItems: 'center',
+        justifyContent: 'center',
+        paddingVertical: 40,
+    },
+    emptyStateText: {
+        fontSize: 16,
+        color: '#999',
+        marginTop: 12,
+        textAlign: 'center',
+    },
+    loadingState: {
+        alignItems: 'center',
+        justifyContent: 'center',
+        paddingVertical: 40,
+    },
+    loadingText: {
+        fontSize: 16,
+        color: '#666',
+        marginTop: 12,
+        textAlign: 'center',
+    },
+    employeeList: {
+        flex: 1,
+        marginTop: 8,
+    },
+    retryButton: {
         backgroundColor: '#4A90E2',
-        borderRadius: 5,
+        paddingHorizontal: 20,
+        paddingVertical: 10,
+        borderRadius: 8,
+        marginTop: 16,
+    },
+    retryButtonText: {
+        color: '#fff',
+        fontSize: 14,
+        fontWeight: '600',
+    },
+    modalFooter: {
+        paddingHorizontal: 20,
+        paddingVertical: 16,
+        borderTopWidth: 1,
+        borderTopColor: '#f0f0f0',
+    },
+    doneButton: {
+        backgroundColor: '#4A90E2',
+        paddingVertical: 12,
+        paddingHorizontal: 24,
+        borderRadius: 8,
         alignItems: 'center',
     },
-    modalCloseButtonText: {
+    doneButtonText: {
         color: '#fff',
         fontSize: 16,
-        fontWeight: 'bold',
+        fontWeight: '600',
     },
 });
 

@@ -65,34 +65,34 @@ const formatDateConcise = (dateString) => {
 const getStatusColor = (status) => {
     switch (status) {
         case 'working_on_it':
-            return '#FFF9C4'; // Light yellow
+            return '#FFE082'; // Warm yellow
         case 'completed':
-            return '#E8F5E9'; // Light green
+            return '#A5D6A7'; // Fresh green
         case 'waiting_for_approval':
-            return '#E3F2FD'; // Light blue
+            return '#90CAF9'; // Soft blue
         case 'rejected':
-            return '#FFCDD2'; // Light red
+            return '#FFAB91'; // Soft red-orange
         case 'cancelled':
-            return '#FFEBEE'; // Light red
+            return '#FFCDD2'; // Light red
         default:
-            return '#F5F5F5'; // Light grey
+            return '#E0E0E0'; // Light grey
     }
 };
 
 const getStatusTextColor = (status) => {
     switch (status) {
         case 'working_on_it':
-            return '#FBC02D'; // Dark yellow
+            return '#F57C00'; // Orange
         case 'completed':
-            return '#4CAF50'; // Green
+            return '#2E7D32'; // Dark green
         case 'waiting_for_approval':
-            return '#2196F3'; // Blue
+            return '#1565C0'; // Dark blue
         case 'rejected':
-            return '#D32F2F'; // Dark red
+            return '#D84315'; // Dark orange-red
         case 'cancelled':
-            return '#D32F2F'; // Dark red
+            return '#C62828'; // Dark red
         default:
-            return '#757575'; // Grey
+            return '#424242'; // Dark grey
     }
 };
 
@@ -225,7 +225,7 @@ const AdhocDashboard = ({ navigation }) => {
             setLoading(false);
         }
     };
-    
+
     // Function to fetch and display task details
     const fetchAndShowTaskDetail = async (taskId) => {
         try {
@@ -375,12 +375,15 @@ const AdhocDashboard = ({ navigation }) => {
                     <View style={styles.taskHeader}>
                         <Text
                             style={[styles.taskTitle, fontsLoaded ? { fontFamily: 'Poppins-SemiBold' } : null]}
-                            numberOfLines={1} // Membatasi teks hanya satu baris
-                            ellipsizeMode="tail" // Menampilkan "..." jika teks terlalu panjang
+                            numberOfLines={2}
+                            ellipsizeMode="tail"
                         >
                             {task.adhoc_name}
                         </Text>
-                        <View style={[styles.statusBox, { backgroundColor: getStatusColor(task.adhoc_status) }]}>
+                    </View>
+
+                    <View style={styles.taskMiddleSection}>
+                        <View style={[styles.statusBadge, { backgroundColor: getStatusColor(task.adhoc_status) }]}>
                             <Text style={[styles.statusText, { color: getStatusTextColor(task.adhoc_status) }]}>
                                 {getStatusText(task.adhoc_status)}
                             </Text>
@@ -388,12 +391,6 @@ const AdhocDashboard = ({ navigation }) => {
                     </View>
 
                     <View style={styles.taskActions}>
-                        <TouchableOpacity
-                            style={styles.moreButton}
-                            onPress={() => setSelectedTask(isSelected ? null : task.id)}
-                        >
-                            <Feather name="more-horizontal" size={24} color="#000" />
-                        </TouchableOpacity>
                         <TouchableOpacity style={styles.detailButton} onPress={() => fetchTaskDetail(task.id)}>
                             <Text
                                 style={[
@@ -403,6 +400,12 @@ const AdhocDashboard = ({ navigation }) => {
                             >
                                 Detail
                             </Text>
+                        </TouchableOpacity>
+                        <TouchableOpacity
+                            style={styles.moreButton}
+                            onPress={() => setSelectedTask(isSelected ? null : task.id)}
+                        >
+                            <Feather name="more-horizontal" size={20} color="#666" />
                         </TouchableOpacity>
                     </View>
                 </View>
@@ -699,22 +702,31 @@ const AdhocDashboard = ({ navigation }) => {
                                               {item.adhoc_status === 'cancelled'
                                                   ? `Dibatalkan pada: ${formatDateConcise(item.updated_at)}`
                                                   : item.adhoc_status === 'rejected'
-                                                  ? `Ditolak pada: ${formatDateConcise(item.updated_at)}`
-                                                  : `Selesai Pada: ${formatDateConcise(item.adhoc_completed_date)}`}
+                                                    ? `Ditolak pada: ${formatDateConcise(item.updated_at)}`
+                                                    : `Selesai Pada: ${formatDateConcise(item.adhoc_completed_date)}`}
                                           </Text>
                                           <View
                                               style={{
                                                   backgroundColor: getStatusColor(item.adhoc_status),
-                                                  padding: 5,
-                                                  borderRadius: 5,
-                                                  marginTop: 5,
-                                                  alignItems: 'center',
+                                                  paddingHorizontal: 12,
+                                                  paddingVertical: 6,
+                                                  borderRadius: 16,
+                                                  marginTop: 8,
+                                                  alignSelf: 'flex-start',
+                                                  shadowColor: '#000',
+                                                  shadowOffset: { width: 0, height: 1 },
+                                                  shadowOpacity: 0.1,
+                                                  shadowRadius: 2,
+                                                  elevation: 2,
                                               }}
                                           >
                                               <Text
                                                   style={{
                                                       color: getStatusTextColor(item.adhoc_status),
-                                                      fontWeight: 'bold',
+                                                      fontWeight: '600',
+                                                      fontSize: 12,
+                                                      textTransform: 'uppercase',
+                                                      letterSpacing: 0.5,
                                                   }}
                                               >
                                                   {getStatusText(item.adhoc_status)}
@@ -742,22 +754,31 @@ const AdhocDashboard = ({ navigation }) => {
                                               {item.adhoc_status === 'cancelled'
                                                   ? `Dibatalkan pada: ${formatDateConcise(item.updated_at)}`
                                                   : item.adhoc_status === 'rejected'
-                                                  ? `Ditolak pada: ${formatDateConcise(item.updated_at)}`
-                                                  : `Last updated: ${formatDateConcise(item.adhoc_completed_date)}`}
+                                                    ? `Ditolak pada: ${formatDateConcise(item.updated_at)}`
+                                                    : `Last updated: ${formatDateConcise(item.adhoc_completed_date)}`}
                                           </Text>
                                           <View
                                               style={{
                                                   backgroundColor: getStatusColor(item.adhoc_status),
-                                                  padding: 5,
-                                                  borderRadius: 5,
-                                                  marginTop: 5,
-                                                  alignItems: 'center',
+                                                  paddingHorizontal: 12,
+                                                  paddingVertical: 6,
+                                                  borderRadius: 16,
+                                                  marginTop: 8,
+                                                  alignSelf: 'flex-start',
+                                                  shadowColor: '#000',
+                                                  shadowOffset: { width: 0, height: 1 },
+                                                  shadowOpacity: 0.1,
+                                                  shadowRadius: 2,
+                                                  elevation: 2,
                                               }}
                                           >
                                               <Text
                                                   style={{
                                                       color: getStatusTextColor(item.adhoc_status),
-                                                      fontWeight: 'bold',
+                                                      fontWeight: '600',
+                                                      fontSize: 12,
+                                                      textTransform: 'uppercase',
+                                                      letterSpacing: 0.5,
                                                   }}
                                               >
                                                   {getStatusText(item.adhoc_status)}
@@ -832,7 +853,11 @@ const AdhocDashboard = ({ navigation }) => {
         if (tasks.length === 0) {
             return (
                 <View style={styles.centerContent}>
-                    <Text style={styles.noTasksText}>No tasks available</Text>
+                    <View style={styles.emptyStateIcon}>
+                        <Feather name="clipboard" size={64} color="#CBD5E1" />
+                    </View>
+                    <Text style={styles.noTasksText}>Tidak ada tugas tersedia</Text>
+                    <Text style={styles.emptyStateSubtext}>Tugas akan muncul di sini ketika tersedia</Text>
                 </View>
             );
         }
@@ -870,7 +895,7 @@ const AdhocDashboard = ({ navigation }) => {
                         style={styles.addButton}
                         onPress={() => navigation.navigate('AddAdhocTask')} // Navigasi ke layar AddAdhoc
                     >
-                        <Feather name="plus" size={24} color="#4A90E2" />
+                        <Feather name="plus" size={24} color="#FFFFFF" />
                     </TouchableOpacity>
                 )}
             </View>
@@ -940,110 +965,142 @@ const AdhocDashboard = ({ navigation }) => {
 };
 
 const styles = StyleSheet.create({
-    // Define all the styles here, like before...
     container: {
         flex: 1,
-        backgroundColor: '#F0F0F0',
+        backgroundColor: '#F8FAFC',
     },
     header: {
         paddingTop: 20,
-        paddingBottom: 15,
+        paddingBottom: 20,
         paddingHorizontal: 20,
+        borderBottomLeftRadius: 25,
+        borderBottomRightRadius: 25,
     },
     headerContent: {
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'space-between',
-        marginBottom: 15,
+        marginBottom: 20,
     },
     backButton: {
-        padding: 5,
+        padding: 8,
+        backgroundColor: 'rgba(255, 255, 255, 0.2)',
+        borderRadius: 12,
     },
     headerTitle: {
         color: '#FFF',
-        fontSize: 20,
-        fontWeight: 'bold',
+        fontSize: 22,
+        fontWeight: '700',
+        textAlign: 'center',
     },
     placeholder: {
-        width: 24,
+        width: 40,
     },
     tabContainer: {
         flexDirection: 'row',
-        backgroundColor: 'rgba(255, 255, 255, 0.2)',
-        borderRadius: 25,
-        padding: 3,
-        marginTop: 10,
+        backgroundColor: 'rgba(255, 255, 255, 0.15)',
+        borderRadius: 16,
+        padding: 4,
+        marginHorizontal: 8,
     },
     tab: {
         flex: 1,
-        paddingVertical: 8,
+        paddingVertical: 12,
+        paddingHorizontal: 8,
         alignItems: 'center',
         justifyContent: 'center',
-        borderRadius: 25,
+        borderRadius: 12,
+        minHeight: 40,
     },
     activeTab: {
         backgroundColor: '#FFF',
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.1,
+        shadowRadius: 4,
+        elevation: 3,
     },
     inactiveTab: {
         backgroundColor: 'transparent',
     },
     tabText: {
         textAlign: 'center',
+        fontSize: 13,
+        fontWeight: '600',
     },
     activeTabText: {
         color: '#4A90E2',
-        fontWeight: 'bold',
     },
     inactiveTabText: {
-        color: '#FFF',
-        fontWeight: 'normal',
+        color: 'rgba(255, 255, 255, 0.9)',
+    },
+    content: {
+        flex: 1,
+        position: 'relative',
     },
     taskList: {
         flex: 1,
     },
     taskListContent: {
-        paddingHorizontal: 20,
+        paddingHorizontal: 16,
         paddingTop: 20,
-        paddingBottom: 80,
+        paddingBottom: 100,
     },
     taskItem: {
-        backgroundColor: '#FFF',
-        borderRadius: 10,
-        marginBottom: 10,
-        elevation: 2,
+        backgroundColor: '#FFFFFF',
+        borderRadius: 16,
+        marginBottom: 16,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.08,
+        shadowRadius: 8,
+        elevation: 4,
+        borderWidth: 1,
+        borderColor: '#F1F5F9',
         overflow: 'hidden',
     },
     selectedTaskItem: {
         marginBottom: 20,
     },
     taskContent: {
+        padding: 20,
+    },
+    taskHeader: {
+        marginBottom: 16,
+    },
+    taskTitle: {
+        fontSize: 17,
+        fontWeight: '600',
+        color: '#1E293B',
+        lineHeight: 24,
+    },
+    taskMiddleSection: {
+        marginBottom: 16,
+        alignItems: 'flex-start',
+    },
+    taskActions: {
         flexDirection: 'row',
         justifyContent: 'space-between',
         alignItems: 'center',
-        padding: 15,
-    },
-    taskTitle: {
-        fontSize: 16,
-        fontWeight: 'bold',
-        color: '#333',
-        flex: 1,
-    },
-    taskActions: {
-        alignItems: 'flex-end',
     },
     moreButton: {
-        padding: 5,
-        marginBottom: 5,
+        padding: 8,
+        borderRadius: 8,
+        backgroundColor: '#F8FAFC',
     },
     detailButton: {
-        backgroundColor: '#E0E0E0',
-        paddingHorizontal: 10,
-        paddingVertical: 5,
-        borderRadius: 5,
+        backgroundColor: '#4A90E2',
+        paddingHorizontal: 16,
+        paddingVertical: 8,
+        borderRadius: 8,
+        flex: 1,
+        marginRight: 12,
+        alignItems: 'center',
     },
     detailButtonText: {
-        color: '#000',
-        fontSize: 12,
+        color: '#FFFFFF',
+        fontSize: 14,
+        fontWeight: '600',
     },
     dropdownMenu: {
         backgroundColor: '#F8F8F8',
@@ -1063,21 +1120,61 @@ const styles = StyleSheet.create({
         fontSize: 12,
         textAlign: 'center',
     },
+    // Floating Action Button
     addButton: {
         position: 'absolute',
         right: 20,
-        bottom: 20,
-        backgroundColor: '#FFFFFFFF',
-        width: 56,
-        height: 56,
-        borderRadius: 28,
+        bottom: 30,
+        backgroundColor: '#4A90E2',
+        width: 64,
+        height: 64,
+        borderRadius: 32,
         justifyContent: 'center',
         alignItems: 'center',
-        elevation: 5,
+        shadowColor: '#4A90E2',
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.3,
+        shadowRadius: 8,
+        elevation: 8,
     },
-    content: {
+
+    // Empty States
+    centerContent: {
         flex: 1,
-        position: 'relative',
+        justifyContent: 'center',
+        alignItems: 'center',
+        paddingHorizontal: 40,
+        paddingVertical: 60,
+    },
+    emptyStateIcon: {
+        width: 120,
+        height: 120,
+        borderRadius: 60,
+        backgroundColor: '#F1F5F9',
+        justifyContent: 'center',
+        alignItems: 'center',
+        marginBottom: 24,
+    },
+    errorText: {
+        fontSize: 16,
+        color: '#EF4444',
+        textAlign: 'center',
+        fontWeight: '500',
+        marginTop: 16,
+    },
+    noTasksText: {
+        fontSize: 18,
+        color: '#374151',
+        textAlign: 'center',
+        fontWeight: '600',
+        marginBottom: 8,
+    },
+    emptyStateSubtext: {
+        fontSize: 14,
+        color: '#6B7280',
+        textAlign: 'center',
+        fontWeight: '400',
+        lineHeight: 20,
     },
     detailContent: {
         paddingHorizontal: 10,
@@ -1103,49 +1200,69 @@ const styles = StyleSheet.create({
         fontFamily: 'Poppins-Medium',
         textAlign: 'left',
     },
-    statusBadge: {
-        paddingHorizontal: 12,
-        paddingVertical: 6,
-        borderRadius: 20,
-        marginLeft: 10,
-    },
-    statusText: {
-        fontSize: calculateFontSize(12),
-        fontFamily: 'Poppins-Medium',
-    },
-
+    // Task Card Styles
     myTaskItem: {
-        backgroundColor: '#FFF',
-        borderRadius: 12,
-        marginBottom: 12,
-        padding: 16,
-        elevation: 2,
+        backgroundColor: '#FFFFFF',
+        borderRadius: 16,
+        marginBottom: 16,
+        padding: 20,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.08,
+        shadowRadius: 8,
+        elevation: 4,
+        borderWidth: 1,
+        borderColor: '#F1F5F9',
     },
     myTaskHeader: {
         flexDirection: 'row',
         justifyContent: 'space-between',
-        alignItems: 'center',
-        marginBottom: 12,
+        alignItems: 'flex-start',
+        marginBottom: 16,
     },
     myTaskTitle: {
-        fontSize: calculateFontSize(16),
-        color: '#333',
+        fontSize: calculateFontSize(17),
+        color: '#1E293B',
         flex: 1,
-        marginRight: 8,
+        marginRight: 12,
+        fontWeight: '600',
+        lineHeight: 24,
     },
     myTaskInfo: {
         marginTop: 8,
+        gap: 8,
     },
     infoItem: {
         flexDirection: 'row',
         alignItems: 'center',
-        marginBottom: 4,
+        backgroundColor: '#F8FAFC',
+        paddingHorizontal: 12,
+        paddingVertical: 8,
+        borderRadius: 10,
     },
     infoText: {
-        marginLeft: 8,
-        fontSize: 12,
-        color: '#666',
+        marginLeft: 10,
+        fontSize: 13,
+        color: '#475569',
         flex: 1,
+        fontWeight: '500',
+    },
+    statusBadge: {
+        paddingHorizontal: 14,
+        paddingVertical: 8,
+        borderRadius: 20,
+        marginLeft: 8,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 1 },
+        shadowOpacity: 0.1,
+        shadowRadius: 2,
+        elevation: 2,
+    },
+    statusText: {
+        fontSize: calculateFontSize(12),
+        fontWeight: '600',
+        textTransform: 'uppercase',
+        letterSpacing: 0.5,
     },
     approvalItem: {
         backgroundColor: '#FFF',
@@ -1272,20 +1389,27 @@ const styles = StyleSheet.create({
         fontSize: calculateFontSize(14),
         fontFamily: 'Poppins-Medium',
     },
+    // History Section Styles
     historySection: {
         marginBottom: 20,
-        backgroundColor: '#FFF',
-        borderRadius: 12,
-        elevation: 2,
+        backgroundColor: '#FFFFFF',
+        borderRadius: 16,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.08,
+        shadowRadius: 8,
+        elevation: 4,
         marginHorizontal: 2,
+        overflow: 'hidden',
     },
     historySectionHeader: {
         flexDirection: 'row',
         justifyContent: 'space-between',
         alignItems: 'center',
-        padding: 16,
+        padding: 20,
+        backgroundColor: '#F8FAFC',
         borderBottomWidth: 1,
-        borderBottomColor: '#F0F0F0',
+        borderBottomColor: '#E2E8F0',
     },
     historySectionTitleContainer: {
         flexDirection: 'row',
@@ -1293,73 +1417,79 @@ const styles = StyleSheet.create({
     },
     historySectionTitle: {
         fontSize: calculateFontSize(16),
-        color: '#333',
-        fontFamily: 'Poppins-SemiBold',
+        color: '#1E293B',
+        fontWeight: '600',
     },
     historySectionBadge: {
-        backgroundColor: '#E3F2FD',
+        backgroundColor: '#EBF4FF',
         borderRadius: 12,
-        paddingHorizontal: 8,
-        paddingVertical: 2,
-        marginLeft: 8,
+        paddingHorizontal: 10,
+        paddingVertical: 4,
+        marginLeft: 10,
     },
     historySectionBadgeText: {
-        color: '#4A90E2',
+        color: '#2563EB',
         fontSize: calculateFontSize(12),
-        fontFamily: 'Poppins-Medium',
+        fontWeight: '600',
     },
     expandButton: {
         flexDirection: 'row',
         alignItems: 'center',
-        gap: 4,
+        gap: 6,
+        paddingHorizontal: 12,
+        paddingVertical: 6,
+        borderRadius: 8,
+        backgroundColor: '#EBF4FF',
     },
     expandButtonText: {
-        color: '#4A90E2',
-        fontSize: calculateFontSize(12),
-        fontFamily: 'Poppins-Medium',
+        color: '#2563EB',
+        fontSize: calculateFontSize(13),
+        fontWeight: '600',
     },
     historyPreviewContainer: {
-        padding: 12,
+        padding: 16,
     },
     historyPreviewItem: {
-        marginBottom: 8,
-        backgroundColor: '#F8F9FA',
-        borderRadius: 8,
+        marginBottom: 12,
+        backgroundColor: '#F8FAFC',
+        borderRadius: 12,
         overflow: 'hidden',
+        borderWidth: 1,
+        borderColor: '#E2E8F0',
     },
     historyPreviewContent: {
         flexDirection: 'row',
         alignItems: 'center',
-        padding: 12,
+        padding: 16,
     },
     historyIconContainer: {
-        width: 40,
-        height: 40,
-        borderRadius: 20,
-        backgroundColor: '#E3F2FD',
+        width: 44,
+        height: 44,
+        borderRadius: 22,
+        backgroundColor: '#EBF4FF',
         justifyContent: 'center',
         alignItems: 'center',
-        marginRight: 12,
+        marginRight: 16,
     },
     historyPreviewInfo: {
         flex: 1,
-        marginRight: 8,
+        marginRight: 12,
     },
     historyPreviewTitle: {
-        fontSize: calculateFontSize(14),
-        color: '#333',
-        fontFamily: 'Poppins-Medium',
-        marginBottom: 4,
+        fontSize: calculateFontSize(15),
+        color: '#1E293B',
+        fontWeight: '600',
+        marginBottom: 6,
     },
     historyPreviewDate: {
-        fontSize: calculateFontSize(12),
-        color: '#666',
-        fontFamily: 'Poppins-Regular',
+        fontSize: calculateFontSize(13),
+        color: '#64748B',
+        fontWeight: '500',
     },
     historySeparator: {
         height: 1,
-        backgroundColor: '#F0F0F0',
-        marginHorizontal: 16,
+        backgroundColor: '#E2E8F0',
+        marginHorizontal: 20,
     },
     detailList: {
         padding: 12,
@@ -1579,27 +1709,39 @@ const styles = StyleSheet.create({
         color: '#333',
         fontFamily: 'Poppins-Regular',
     },
+    // Approval Task Styles
     approvalTaskItem: {
         backgroundColor: '#FFFFFF',
-        borderRadius: 8,
-        padding: 16,
+        borderRadius: 16,
+        padding: 20,
         marginBottom: 16,
-        elevation: 2,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.08,
+        shadowRadius: 8,
+        elevation: 4,
+        borderWidth: 1,
+        borderColor: '#E1F5FE',
+        borderLeftWidth: 4,
+        borderLeftColor: '#2196F3',
     },
     approvalTaskHeader: {
         flexDirection: 'row',
         justifyContent: 'space-between',
-        alignItems: 'center',
-        marginBottom: 8,
+        alignItems: 'flex-start',
+        marginBottom: 16,
     },
     approvalTaskTitle: {
-        fontSize: 16,
-        fontWeight: 'bold',
+        fontSize: calculateFontSize(17),
+        fontWeight: '600',
         flex: 1,
-        marginRight: 8,
+        marginRight: 12,
+        color: '#1E293B',
+        lineHeight: 24,
     },
     approvalTaskInfo: {
         marginTop: 8,
+        gap: 8,
     },
     attachmentSection: {
         marginTop: 20,

@@ -1,5 +1,8 @@
 // Calculate remaining days from today to end date
-export const calculateRemainingDays = (endDate) => {
+export const calculateRemainingDays = (endDate, status) => {
+    if (status === 'Completed') {
+        return 0;
+    }
     const today = new Date();
     today.setHours(0, 0, 0, 0);
     const end = new Date(endDate);
@@ -17,9 +20,9 @@ export const getStatusBadgeColor = (status, endDate) => {
     } else if (status === 'onHold') {
         return { color: '#F69292', textColor: '#811616', label: 'Ditunda' };
     } else if (status === 'rejected') {
-        return { color: '#050404FF', textColor: '#811616', label: 'Ditolak' };
+        return { color: '#F69292', textColor: '#811616', label: 'Ditolak' };
     } else if (status === 'onReview') {
-        return { color: '#ffd000', textColor: '#333333', label: 'Dalam Peninjauan' };
+        return { color: '#f6e092', textColor: '#ee9000', label: 'Dalam Peninjauan' };
     }
 
     const remainingDays = calculateRemainingDays(endDate, status);
@@ -35,19 +38,19 @@ export const getStatusBadgeColor = (status, endDate) => {
     // Existing status handling logic
     switch (status) {
         case 'workingOnIt':
-            return { color: '#CCC8C8', textColor: '#333333', label: 'Dalam Pengerjaan' };
+            return { color: '#aeaeae', textColor: '#000000', label: 'Dalam Pengerjaan' };
         case 'onReview':
-            return { color: '#ffd000', textColor: '#333333', label: 'Dalam Peninjauan' };
+            return { color: '#f6e092', textColor: '#ee9000', label: 'Dalam Peninjauan' };
         case 'rejected':
-            return { color: '#050404FF', textColor: '#811616', label: 'Ditolak' };
+            return { color: '#F69292', textColor: '#811616', label: 'Ditolak' };
         case 'onHold':
             return { color: '#F69292', textColor: '#811616', label: 'Ditunda' };
         case 'Completed':
-            return { color: '#C9F8C1', textColor: '#333333', label: 'Selesai' };
+            return { color: '#C9F8C1', textColor: '#0A642E', label: 'Selesai' };
         case 'onPending':
-            return { color: '#F0E08A', textColor: '#333333', label: 'Tersedia' };
+            return { color: '#F0E08A', textColor: '#656218', label: 'Tersedia' };
         default:
-            return { color: '#E0E0E0', textColor: '#333333', label: status };
+            return { color: '#E0E0E0', textColor: '#000000', label: status };
     }
 };
 
@@ -84,5 +87,21 @@ export const getGreeting = () => {
         return 'Selamat Sore';
     } else {
         return 'Selamat Malam';
+    }
+};
+
+// Get collection status badge color and label
+export const getCollectionStatusBadgeColor = (status) => {
+    switch (status) {
+        case 'finish':
+            return { color: '#A7C8E5', textColor: '#092D58', label: 'Tepat Waktu' };
+        case 'earlyFinish':
+            return { color: '#9ADFAD', textColor: '#0A642E', label: 'Selesai Lebih Awal' };
+        case 'finish in delay':
+            return { color: '#F0E089', textColor: '#80490A', label: 'Selesai Terlambat' };
+        case 'overdue':
+            return { color: '#F69292', textColor: '#811616', label: 'Terlambat' };
+        default:
+            return { color: '#E0E0E0', textColor: '#000000', label: status || 'Belum Dikumpulkan' };
     }
 };

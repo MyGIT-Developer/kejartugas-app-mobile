@@ -317,7 +317,7 @@ const Home = () => {
                                 {Object.keys(groupedTasks)
                                     .slice(0, 3)
                                     .map((projectName, index) => (
-                                        <SkeletonTaskCard />
+                                        <SkeletonTaskCard key={`skeleton-${index}`} />
                                     ))}
                             </>
                         ) : groupedTasks && Object.keys(groupedTasks).length > 0 ? (
