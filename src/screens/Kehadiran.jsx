@@ -12,6 +12,7 @@ import {
     Animated,
     Platform,
     Haptics,
+    Share,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import * as Location from 'expo-location';
@@ -24,6 +25,7 @@ import ReusableBottomPopUp from '../components/ReusableBottomPopUp';
 import { markAbsent, getAttendance, getAttendanceReport, checkOut, checkIn } from '../api/absent';
 import { getParameter } from '../api/parameter';
 import Shimmer from '../components/Shimmer';
+import { FONTS } from '../constants/fonts';
 
 const { height, width } = Dimensions.get('window');
 
@@ -575,6 +577,53 @@ const Kehadiran = () => {
             </View>
         );
     };
+
+    // Export attendance data function
+    const exportAttendanceData = async () => {
+        try {
+            if (attendanceData.length === 0) {
+                showAlert('Tidak ada data kehadiran untuk diekspor', 'error');
+                return;
+            }
+
+            const stats = getAttendanceStats();
+            let csvData = 'Data Kehadiran Ekspor\n\n';
+            csvData += `Total Kehadiran: ${stats.total}\n`;
+            csvData += `Tepat Waktu: ${stats.onTime}\n`;
+            csvData += `Terlambat: ${stats.late}\n`;
+            csvData += `Lebih Awal: ${stats.early}\n\n`;
+            csvData += 'Tanggal,Status,Jam Masuk,Jam Keluar,Durasi,Catatan,Lokasi Kerja\n';
+
+            attendanceData.forEach((record) => {
+                const date = new Date(record.date).toLocaleDateString('id-ID');
+                const checkIn = record.checkin
+                    ? new Date(record.checkin).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })
+                    : '-';
+                const checkOut = record.checkout
+                    ? new Date(record.checkout).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })
+                    : '-';
+                const duration =
+                    record.checkin && record.checkout
+                        ? calculateDuration(new Date(record.checkin), new Date(record.checkout))
+                        : '-';
+                const notes = record.note || 'Tidak ada catatan';
+                const workLocation = record.isWFH ? 'Work From Home' : 'Bekerja di Kantor';
+
+                csvData += `${date},${record.status},${checkIn},${checkOut},${duration},"${notes}",${workLocation}\n`;
+            });
+
+            csvData += `\nDiekspor pada: ${new Date().toLocaleString('id-ID')}\n`;
+
+            await Share.share({
+                message: csvData,
+                title: 'Data Kehadiran',
+            });
+        } catch (error) {
+            console.error('Error exporting data:', error);
+            showAlert('Gagal mengekspor data', 'error');
+        }
+    };
+
     const renderImage = (imageUri) => {
         return imageUri ? (
             <Image
@@ -901,8 +950,11 @@ const Kehadiran = () => {
                         >
                             <View style={styles.historyTitleContainer}>
                                 <View style={styles.historyTitleWrapper}>
-                                    <Ionicons name="time-outline" size={22} color="#4A90E2" />
-                                    <Text style={styles.historySectionTitle}>Riwayat Kehadiran</Text>
+                                    <View style={styles.historyTitleLeft}>
+                                        <Ionicons name="time-outline" size={22} color="#4A90E2" />
+                                        <Text style={styles.historySectionTitle}>Riwayat Kehadiran</Text>
+                                    </View>
+                                    {/* Tombol export dihapus */}
                                 </View>
                                 <Animated.View
                                     style={{
@@ -970,12 +1022,14 @@ const Kehadiran = () => {
                                         {
                                             scale: fadeAnim.interpolate({
                                                 inputRange: [0.7, 1],
-                                                outputRange: [0.95, 1],
+                                                outputRange: [0.97, 1], // Smoother scale
                                                 extrapolate: 'clamp',
                                             }),
                                         },
                                     ],
                                 }}
+                                accessible={true}
+                                accessibilityLabel="Riwayat Kehadiran"
                             >
                                 {isLoading ? (
                                     <Animated.View
@@ -1018,12 +1072,16 @@ const Kehadiran = () => {
                                                 ]}
                                             >
                                                 <TouchableOpacity
-                                                    onPress={handlePreviousPage}
+                                                    onPress={() => {
+                                                        handlePreviousPage();
+                                                        if (Platform.OS === 'ios') Haptics.selectionAsync();
+                                                    }}
                                                     disabled={currentPage === 0}
                                                     style={[
                                                         styles.paginationButton,
                                                         currentPage === 0 && styles.disabledPaginationButton,
                                                     ]}
+                                                    accessibilityLabel="Halaman sebelumnya"
                                                 >
                                                     <Ionicons
                                                         name="chevron-back"
@@ -1032,20 +1090,28 @@ const Kehadiran = () => {
                                                     />
                                                 </TouchableOpacity>
 
-                                                <View style={styles.pageIndicator}>
+                                                <View
+                                                    style={styles.pageIndicator}
+                                                    accessible={true}
+                                                    accessibilityLabel={`Halaman ${currentPage + 1} dari ${totalPages}`}
+                                                >
                                                     <Text style={styles.pageText}>
                                                         {currentPage + 1} / {totalPages}
                                                     </Text>
                                                 </View>
 
                                                 <TouchableOpacity
-                                                    onPress={handleNextPage}
+                                                    onPress={() => {
+                                                        handleNextPage();
+                                                        if (Platform.OS === 'ios') Haptics.selectionAsync();
+                                                    }}
                                                     disabled={currentPage === totalPages - 1}
                                                     style={[
                                                         styles.paginationButton,
                                                         currentPage === totalPages - 1 &&
                                                             styles.disabledPaginationButton,
                                                     ]}
+                                                    accessibilityLabel="Halaman berikutnya"
                                                 >
                                                     <Ionicons
                                                         name="chevron-forward"
@@ -1061,9 +1127,36 @@ const Kehadiran = () => {
                                         style={{
                                             opacity: fadeAnim,
                                             transform: [{ translateY: historySlideAnim }],
+                                            alignItems: 'center',
+                                            paddingVertical: 32,
                                         }}
                                     >
-                                        <EmptyState />
+                                        <Ionicons
+                                            name="cloud-offline"
+                                            size={48}
+                                            color="#D1D5DB"
+                                            style={{ marginBottom: 8 }}
+                                        />
+                                        <Text
+                                            style={{
+                                                color: '#9CA3AF',
+                                                fontSize: 16,
+                                                fontWeight: '600',
+                                                marginBottom: 4,
+                                            }}
+                                        >
+                                            Belum ada riwayat kehadiran
+                                        </Text>
+                                        <Text
+                                            style={{
+                                                color: '#B0B0B0',
+                                                fontSize: 13,
+                                                textAlign: 'center',
+                                                maxWidth: 220,
+                                            }}
+                                        >
+                                            Catatan kehadiran Anda akan muncul di sini setelah Anda melakukan clock in.
+                                        </Text>
                                     </Animated.View>
                                 )}
                             </Animated.View>
@@ -1108,18 +1201,18 @@ const styles = StyleSheet.create({
         paddingBottom: 20,
     },
     header: {
-        fontSize: 28,
-        fontWeight: '700',
+        fontSize: FONTS.size['4xl'],
+        fontFamily: FONTS.family.bold,
         color: 'white',
         textAlign: 'center',
         letterSpacing: -0.5,
         marginBottom: 4,
     },
     headerSubtitle: {
-        fontSize: 16,
+        fontSize: FONTS.size.lg,
+        fontFamily: FONTS.family.regular,
         color: 'rgba(255, 255, 255, 0.9)',
         textAlign: 'center',
-        fontWeight: '400',
     },
     statusIndicator: {
         flexDirection: 'row',
@@ -1139,9 +1232,9 @@ const styles = StyleSheet.create({
         borderRadius: 4,
     },
     statusIndicatorText: {
-        fontSize: 13,
+        fontSize: FONTS.size.sm,
+        fontFamily: FONTS.family.medium,
         color: 'white',
-        fontWeight: '500',
     },
     mainContainer: {
         flex: 1,
@@ -1166,8 +1259,8 @@ const styles = StyleSheet.create({
         marginBottom: 24,
     },
     timeText: {
-        fontSize: 42,
-        fontWeight: '700',
+        fontSize: FONTS.size['6xl'],
+        fontFamily: FONTS.family.bold,
         color: '#1F2937',
         textAlign: 'center',
         letterSpacing: -1,
@@ -1182,7 +1275,8 @@ const styles = StyleSheet.create({
         borderRadius: 12,
     },
     locationText: {
-        fontSize: 14,
+        fontSize: FONTS.size.base,
+        fontFamily: FONTS.family.regular,
         color: '#6B7280',
         marginLeft: 6,
         textAlign: 'center',
@@ -1272,12 +1366,17 @@ const styles = StyleSheet.create({
     historyTitleWrapper: {
         flexDirection: 'row',
         alignItems: 'center',
-        gap: 10,
+        justifyContent: 'space-between',
         flex: 1,
     },
+    historyTitleLeft: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 10,
+    },
     historySectionTitle: {
-        fontSize: 22,
-        fontWeight: '700',
+        fontSize: FONTS.size['2xl'],
+        fontFamily: FONTS.family.bold,
         color: '#1F2937',
         letterSpacing: -0.5,
     },
@@ -1303,11 +1402,12 @@ const styles = StyleSheet.create({
     },
     totalRecordsText: {
         color: 'white',
-        fontSize: 13,
-        fontWeight: '600',
+        fontSize: FONTS.size.sm,
+        fontFamily: FONTS.family.semiBold,
     },
     lastUpdateText: {
-        fontSize: 11,
+        fontSize: FONTS.size.xs,
+        fontFamily: FONTS.family.regular,
         color: '#9CA3AF',
         fontStyle: 'italic',
     },

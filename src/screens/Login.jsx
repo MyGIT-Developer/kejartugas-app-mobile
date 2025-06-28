@@ -10,6 +10,7 @@ import {
     TextInput,
     ImageBackground,
     Keyboard,
+    ActivityIndicator,
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useNavigation } from '@react-navigation/native';
@@ -27,6 +28,8 @@ const Login = () => {
     const [passwordVisible, setPasswordVisible] = useState(false);
     const [alert, setAlert] = useState({ show: false, message: '', type: 'success' });
     const [keyboardVisible, setKeyboardVisible] = useState(false);
+    const [isLoading, setIsLoading] = useState(false);
+    const [inputErrors, setInputErrors] = useState({ username: '', password: '' });
     const fontsLoaded = useFonts();
     const navigation = useNavigation();
 
@@ -34,36 +37,87 @@ const Login = () => {
         const keyboardDidShowListener = Keyboard.addListener('keyboardDidShow', () => setKeyboardVisible(true));
         const keyboardDidHideListener = Keyboard.addListener('keyboardDidHide', () => setKeyboardVisible(false));
 
+        // Clear sensitive data on unmount
         return () => {
             keyboardDidShowListener.remove();
             keyboardDidHideListener.remove();
+            setCredentials({ username: '', password: '' });
         };
     }, []);
 
-    const handleInputChange = useCallback((field, value) => {
-        setCredentials((prev) => ({ ...prev, [field]: value }));
+    // Input validation function
+    const validateInputs = useCallback(() => {
+        const { username, password } = credentials;
+        const errors = { username: '', password: '' };
+        let isValid = true;
+
+        if (!username.trim()) {
+            errors.username = 'Username tidak boleh kosong';
+            isValid = false;
+        } else if (username.length < 3) {
+            errors.username = 'Username minimal 3 karakter';
+            isValid = false;
+        }
+
+        if (!password) {
+            errors.password = 'Password tidak boleh kosong';
+            isValid = false;
+        } else if (password.length < 6) {
+            errors.password = 'Password minimal 6 karakter';
+            isValid = false;
+        }
+
+        setInputErrors(errors);
+        return isValid;
+    }, [credentials]);
+
+    // Enhanced error message handler
+    const getErrorMessage = useCallback((error) => {
+        if (error.response?.status === 401) {
+            return 'Username atau password salah';
+        }
+        if (error.response?.status === 500) {
+            return 'Server sedang bermasalah, coba lagi nanti';
+        }
+        if (error.response?.status === 429) {
+            return 'Terlalu banyak percobaan login, coba lagi nanti';
+        }
+        if (!error.response) {
+            return 'Tidak ada koneksi internet';
+        }
+        return error.message || 'Terjadi kesalahan tidak terduga';
     }, []);
+
+    const handleInputChange = useCallback(
+        (field, value) => {
+            setCredentials((prev) => ({ ...prev, [field]: value }));
+            // Clear error when user starts typing
+            if (inputErrors[field]) {
+                setInputErrors((prev) => ({ ...prev, [field]: '' }));
+            }
+        },
+        [inputErrors],
+    );
 
     const showAlert = useCallback((message, type = 'error') => {
         setAlert({ show: true, message, type });
     }, []);
 
     const handleLogin = useCallback(async () => {
-        const { username, password } = credentials;
-        if (!username || !password) {
-            showAlert(
-                !username && !password
-                    ? 'Username dan Password harus diisi'
-                    : !username
-                      ? 'Username harus diisi'
-                      : 'Password harus diisi',
-            );
+        // Prevent double submission
+        if (isLoading) return;
+
+        // Validate inputs first
+        if (!validateInputs()) {
             return;
         }
 
+        setIsLoading(true);
+        const { username, password } = credentials;
+
         try {
             // Login process
-            const data = await loginMobile(username, password);
+            const data = await loginMobile(username.trim(), password);
             await AsyncStorage.setItem('userData', JSON.stringify(data));
 
             if (data.token && data.access_permissions) {
@@ -78,38 +132,34 @@ const Login = () => {
                     AsyncStorage.setItem('userRole', role_id.toString()),
                     AsyncStorage.setItem('employeeId', id.toString()),
                     AsyncStorage.setItem('companyId', company_id.toString()),
-                    AsyncStorage.setItem('employee_name', username),
+                    AsyncStorage.setItem('employee_name', username.trim()),
                     AsyncStorage.setItem('access_permissions', JSON.stringify(data.access_permissions)),
                 ]);
 
                 try {
                     // Setup notifications
                     await setupNotifications();
-
                     console.log('Access Permissions:', data.access_permissions);
-                    showAlert('Login Berhasil! Anda akan diarahkan ke halaman utama.', 'success');
-
-                    setTimeout(() => {
-                        setAlert((prev) => ({ ...prev, show: false }));
-                        navigation.navigate('App', { screen: 'Home' });
-                    }, 1500);
                 } catch (notificationError) {
                     // Don't block login if notification setup fails
                     console.error('Error setting up notifications:', notificationError);
-                    // Still proceed with login
-                    showAlert('Login Berhasil! Anda akan diarahkan ke halaman utama.', 'success');
-                    setTimeout(() => {
-                        setAlert((prev) => ({ ...prev, show: false }));
-                        navigation.navigate('App', { screen: 'Home' });
-                    }, 1500);
                 }
+
+                showAlert('Login Berhasil! Anda akan diarahkan ke halaman utama.', 'success');
+
+                setTimeout(() => {
+                    setAlert((prev) => ({ ...prev, show: false }));
+                    navigation.navigate('App', { screen: 'Home' });
+                }, 1500);
             } else {
                 throw new Error('Login gagal: Data tidak lengkap');
             }
         } catch (err) {
-            showAlert(err.message);
+            showAlert(getErrorMessage(err));
+        } finally {
+            setIsLoading(false);
         }
-    }, [credentials, navigation, showAlert]);
+    }, [credentials, navigation, showAlert, isLoading, validateInputs, getErrorMessage]);
 
     const togglePasswordVisibility = useCallback(() => {
         setPasswordVisible((prev) => !prev);
@@ -121,8 +171,9 @@ const Login = () => {
 
     if (!fontsLoaded) {
         return (
-            <View style={styles.loadingContainer}>
-                <Text>Loading...</Text>
+            <View style={styles.centeredLoadingContainer}>
+                <ActivityIndicator size="large" color="#007AFF" />
+                <Text style={styles.loadingText}>Loading...</Text>
             </View>
         );
     }
@@ -137,12 +188,16 @@ const Login = () => {
                         value={credentials.username}
                         onChangeText={(value) => handleInputChange('username', value)}
                         placeholder="Masukkan Username"
+                        error={inputErrors.username}
+                        editable={!isLoading}
                     />
                     <PasswordField
                         value={credentials.password}
                         onChangeText={(value) => handleInputChange('password', value)}
                         passwordVisible={passwordVisible}
                         togglePasswordVisibility={togglePasswordVisibility}
+                        error={inputErrors.password}
+                        editable={!isLoading}
                     />
                     <TouchableOpacity
                         onPress={() => navigation.navigate('ForgotPassword')}
@@ -150,8 +205,19 @@ const Login = () => {
                     >
                         <Text style={styles.forgotPasswordText}>Lupa Password?</Text>
                     </TouchableOpacity>
-                    <TouchableOpacity onPress={handleLogin} style={styles.loginButton}>
-                        <Text style={styles.loginButtonText}>Login</Text>
+                    <TouchableOpacity
+                        onPress={handleLogin}
+                        style={[styles.loginButton, isLoading && styles.loginButtonDisabled]}
+                        disabled={isLoading}
+                    >
+                        {isLoading ? (
+                            <View style={styles.loadingContainer}>
+                                <ActivityIndicator size="small" color="#fff" />
+                                <Text style={[styles.loginButtonText, { marginLeft: 10 }]}>Logging in...</Text>
+                            </View>
+                        ) : (
+                            <Text style={styles.loginButtonText}>Login</Text>
+                        )}
                     </TouchableOpacity>
                     <TouchableOpacity onPress={() => navigation.navigate('BoardingScreen')}>
                         <Text style={styles.registerText}>
@@ -172,28 +238,41 @@ const Login = () => {
     );
 };
 
-const InputField = ({ label, value, onChangeText, placeholder }) => (
+const InputField = ({ label, value, onChangeText, placeholder, error, editable = true }) => (
     <View style={styles.inputContainer}>
         <Text style={styles.label}>{label}</Text>
-        <TextInput placeholder={placeholder} value={value} onChangeText={onChangeText} style={styles.input} />
+        <TextInput
+            placeholder={placeholder}
+            value={value}
+            onChangeText={onChangeText}
+            style={[styles.input, error && styles.inputError]}
+            editable={editable}
+            autoCapitalize="none"
+            autoCorrect={false}
+        />
+        {error ? <Text style={styles.errorText}>{error}</Text> : null}
     </View>
 );
 
-const PasswordField = ({ value, onChangeText, passwordVisible, togglePasswordVisibility }) => (
+const PasswordField = ({ value, onChangeText, passwordVisible, togglePasswordVisibility, error, editable = true }) => (
     <View style={styles.inputContainer}>
         <Text style={styles.label}>Password</Text>
-        <View style={styles.passwordContainer}>
+        <View style={[styles.passwordContainer, error && styles.inputError]}>
             <TextInput
                 placeholder="Masukkan Password"
                 value={value}
                 onChangeText={onChangeText}
                 secureTextEntry={!passwordVisible}
                 style={styles.passwordInput}
+                editable={editable}
+                autoCapitalize="none"
+                autoCorrect={false}
             />
             <TouchableOpacity onPress={togglePasswordVisibility} style={styles.showButton}>
                 <Text style={styles.showButtonText}>{passwordVisible ? 'Hide' : 'Show'}</Text>
             </TouchableOpacity>
         </View>
+        {error ? <Text style={styles.errorText}>{error}</Text> : null}
     </View>
 );
 
@@ -280,11 +359,39 @@ const styles = StyleSheet.create({
         padding: 15,
         width: '100%',
         alignItems: 'center',
+        minHeight: 50,
+    },
+    loginButtonDisabled: {
+        backgroundColor: '#ccc',
+    },
+    loadingContainer: {
+        flexDirection: 'row',
+        alignItems: 'center',
     },
     loginButtonText: {
         color: '#fff',
         fontSize: 18,
         fontWeight: 'bold',
+    },
+    inputError: {
+        borderColor: '#ff3333',
+        borderWidth: 1,
+    },
+    errorText: {
+        color: '#ff3333',
+        fontSize: 12,
+        marginTop: 5,
+    },
+    centeredLoadingContainer: {
+        flex: 1,
+        justifyContent: 'center',
+        alignItems: 'center',
+        backgroundColor: '#fff',
+    },
+    loadingText: {
+        marginTop: 10,
+        fontSize: 16,
+        color: '#007AFF',
     },
     registerText: {
         marginTop: 20,
