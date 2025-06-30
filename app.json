@@ -7,7 +7,7 @@
         "icon": "./assets/images/kt-512.png",
         "userInterfaceStyle": "light",
         "splash": {
-            "image": "./assets/images/kt_splash_screen.png",
+            "image": "./assets/images/kt-512.png",
             "resizeMode": "contain",
             "backgroundColor": "#ffffff"
         },
