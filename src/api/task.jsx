@@ -80,7 +80,7 @@ export const fetchTaskById = async (taskId) => {
 export const fetchChatByTaskId = async (taskId) => {
     try {
         const token = await AsyncStorage.getItem('token');
-        const response = await apiService.get(`/chat/${taskId}`, {
+        const response = await apiService.get(`/chat/task/${taskId}`, {
             headers: {
                 Authorization: `Bearer ${token}`,
             },
