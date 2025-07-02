@@ -14,6 +14,7 @@ import {
     Haptics,
     Share,
     InteractionManager,
+    StatusBar,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import * as Location from 'expo-location';
@@ -184,6 +185,8 @@ const Kehadiran = () => {
     const buttonPulseAnim = useRef(new Animated.Value(1)).current;
     const statsSlideAnim = useRef(new Animated.Value(-100)).current;
     const historySlideAnim = useRef(new Animated.Value(-100)).current;
+    const headerAnim = useRef(new Animated.Value(0)).current;
+    const headerScaleAnim = useRef(new Animated.Value(0.9)).current;
 
     // Refs for performance optimization
     const timeInterval = useRef(null);
@@ -417,6 +420,17 @@ const Kehadiran = () => {
             // Start entrance animations with optimized timing
             Animated.sequence([
                 Animated.parallel([
+                    Animated.timing(headerAnim, {
+                        toValue: 1,
+                        duration: ANIMATION_DURATION.LONG,
+                        useNativeDriver: true,
+                    }),
+                    Animated.spring(headerScaleAnim, {
+                        toValue: 1,
+                        tension: 80,
+                        friction: 8,
+                        useNativeDriver: true,
+                    }),
                     Animated.timing(fadeAnim, {
                         toValue: 1,
                         duration: ANIMATION_DURATION.LONG,
@@ -949,6 +963,8 @@ const Kehadiran = () => {
 
     return (
         <View style={styles.container}>
+            <StatusBar barStyle="light-content" backgroundColor="transparent" translucent={true} />
+
             <ScrollView
                 contentContainerStyle={styles.scrollViewContent}
                 refreshControl={
@@ -962,35 +978,208 @@ const Kehadiran = () => {
                 }
                 showsVerticalScrollIndicator={false}
             >
-                {/* Header Background */}
-                <View style={styles.backgroundBox}>
+                {/* Enhanced Header Background */}
+                <Animated.View
+                    style={[
+                        styles.backgroundBox,
+                        {
+                            opacity: headerAnim,
+                            transform: [
+                                {
+                                    scale: headerScaleAnim.interpolate({
+                                        inputRange: [0.9, 1],
+                                        outputRange: [0.95, 1],
+                                        extrapolate: 'clamp',
+                                    }),
+                                },
+                            ],
+                        },
+                    ]}
+                >
                     <LinearGradient
                         colors={['#4A90E2', '#357ABD', '#2E5984']}
                         style={styles.linearGradient}
                         start={{ x: 0, y: 0 }}
                         end={{ x: 1, y: 1 }}
                     />
-                </View>
 
-                {/* Header */}
-                <View style={styles.headerContainer}>
-                    <Text style={styles.header}>Kehadiran</Text>
+                    {/* Header decorative elements */}
+                    <View style={styles.headerDecorations}>
+                        <Animated.View
+                            style={[
+                                styles.decorativeCircle1,
+                                {
+                                    opacity: headerAnim.interpolate({
+                                        inputRange: [0, 1],
+                                        outputRange: [0, 0.6],
+                                    }),
+                                    transform: [
+                                        {
+                                            scale: headerAnim.interpolate({
+                                                inputRange: [0, 1],
+                                                outputRange: [0.5, 1],
+                                            }),
+                                        },
+                                    ],
+                                },
+                            ]}
+                        />
+                        <Animated.View
+                            style={[
+                                styles.decorativeCircle2,
+                                {
+                                    opacity: headerAnim.interpolate({
+                                        inputRange: [0, 1],
+                                        outputRange: [0, 0.4],
+                                    }),
+                                    transform: [
+                                        {
+                                            scale: headerAnim.interpolate({
+                                                inputRange: [0, 1],
+                                                outputRange: [0.3, 1],
+                                            }),
+                                        },
+                                    ],
+                                },
+                            ]}
+                        />
+                        <Animated.View
+                            style={[
+                                styles.decorativeCircle3,
+                                {
+                                    opacity: headerAnim.interpolate({
+                                        inputRange: [0, 1],
+                                        outputRange: [0, 0.5],
+                                    }),
+                                    transform: [
+                                        {
+                                            scale: headerAnim.interpolate({
+                                                inputRange: [0, 1],
+                                                outputRange: [0.7, 1],
+                                            }),
+                                        },
+                                    ],
+                                },
+                            ]}
+                        />
+                    </View>
+                </Animated.View>
 
-                    {/* Status Indicator - Replace subtitle */}
-                    {!isLoading && !(isCheckedIn == 1 && isCheckedOut == true) && (
-                        <View style={styles.statusIndicator}>
-                            <View
+                {/* Enhanced Header Content */}
+                <Animated.View
+                    style={[
+                        styles.headerContainer,
+                        {
+                            opacity: headerAnim,
+                            transform: [
+                                {
+                                    translateY: headerAnim.interpolate({
+                                        inputRange: [0, 1],
+                                        outputRange: [-30, 0],
+                                    }),
+                                },
+                                { scale: headerScaleAnim },
+                            ],
+                        },
+                    ]}
+                >
+                    <View style={styles.headerContent}>
+                        <View style={styles.headerTitleWrapper}>
+                            <Animated.View
                                 style={[
-                                    styles.statusDot,
-                                    { backgroundColor: isCheckedIn && !isCheckedOut ? '#10B981' : '#6B7280' },
+                                    styles.headerIconContainer,
+                                    {
+                                        opacity: headerAnim,
+                                        transform: [
+                                            {
+                                                scale: headerAnim.interpolate({
+                                                    inputRange: [0, 1],
+                                                    outputRange: [0.5, 1],
+                                                }),
+                                            },
+                                        ],
+                                    },
                                 ]}
-                            />
-                            <Text style={styles.statusIndicatorText}>
-                                {isCheckedIn && !isCheckedOut ? 'Sedang Bekerja' : 'Belum Clock In'}
-                            </Text>
+                            >
+                                <Ionicons name="time" size={24} color="white" />
+                            </Animated.View>
+
+                            <Animated.Text
+                                style={[
+                                    styles.header,
+                                    {
+                                        opacity: headerAnim,
+                                        transform: [
+                                            {
+                                                scale: headerAnim.interpolate({
+                                                    inputRange: [0, 1],
+                                                    outputRange: [0.8, 1],
+                                                }),
+                                            },
+                                        ],
+                                    },
+                                ]}
+                            >
+                                Kehadiran
+                            </Animated.Text>
                         </View>
-                    )}
-                </View>
+
+                        {/* Enhanced Status Indicator */}
+                        {!isLoading && !(isCheckedIn == 1 && isCheckedOut == true) && (
+                            <Animated.View
+                                style={[
+                                    styles.statusIndicator,
+                                    {
+                                        opacity: headerAnim,
+                                        transform: [
+                                            {
+                                                scale: headerAnim.interpolate({
+                                                    inputRange: [0, 1],
+                                                    outputRange: [0.9, 1],
+                                                }),
+                                            },
+                                            {
+                                                translateY: headerAnim.interpolate({
+                                                    inputRange: [0, 1],
+                                                    outputRange: [20, 0],
+                                                }),
+                                            },
+                                        ],
+                                    },
+                                ]}
+                            >
+                                <View style={styles.statusIndicatorContent}>
+                                    <Animated.View
+                                        style={[
+                                            styles.statusDot,
+                                            {
+                                                backgroundColor: isCheckedIn && !isCheckedOut ? '#10B981' : '#6B7280',
+                                                transform: [
+                                                    {
+                                                        scale: buttonPulseAnim.interpolate({
+                                                            inputRange: [1, 1.03],
+                                                            outputRange: [1, 1.2],
+                                                        }),
+                                                    },
+                                                ],
+                                            },
+                                        ]}
+                                    />
+                                    <Text style={styles.statusIndicatorText}>
+                                        {isCheckedIn && !isCheckedOut ? 'Sedang Bekerja' : 'Belum Clock In'}
+                                    </Text>
+                                    <View style={styles.statusIndicatorBadge}>
+                                        <Ionicons
+                                            name={isCheckedIn && !isCheckedOut ? 'checkmark' : 'time-outline'}
+                                            size={12}
+                                            color="white"
+                                        />
+                                    </View>
+                                </View>
+                            </Animated.View>
+                        )}
+                    </View>
+                </Animated.View>
 
                 <View style={styles.mainContainer}>
                     {/* Clock In/Out Card */}
@@ -1337,29 +1526,45 @@ const styles = StyleSheet.create({
         paddingBottom: 120,
     },
     backgroundBox: {
-        height: 140,
+        height: 160,
         width: '100%',
         position: 'absolute',
         top: 0,
         left: 0,
+        overflow: 'hidden',
     },
     linearGradient: {
         flex: 1,
-        borderBottomLeftRadius: 30,
-        borderBottomRightRadius: 30,
+        borderBottomLeftRadius: 35,
+        borderBottomRightRadius: 35,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 6 },
+        shadowOpacity: 0.15,
+        shadowRadius: 12,
+        elevation: 8,
     },
     headerContainer: {
         alignItems: 'center',
-        paddingTop: Platform.OS === 'ios' ? 60 : 40,
-        paddingBottom: 20,
+        paddingTop: Platform.OS === 'ios' ? 70 : 50,
+        paddingBottom: 30,
+        paddingHorizontal: 20,
+        position: 'relative',
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.1,
+        shadowRadius: 8,
+        elevation: 5,
     },
     header: {
-        fontSize: FONTS.size['4xl'],
+        fontSize: FONTS.size['5xl'],
         fontFamily: FONTS.family.bold,
         color: 'white',
         textAlign: 'center',
-        letterSpacing: -0.5,
-        marginBottom: 4,
+        letterSpacing: -0.8,
+        marginBottom: 0,
+        textShadowColor: 'rgba(0, 0, 0, 0.15)',
+        textShadowOffset: { width: 0, height: 1 },
+        textShadowRadius: 3,
     },
     headerSubtitle: {
         fontSize: FONTS.size.lg,
@@ -1371,7 +1576,7 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'center',
-        marginTop: 6,
+        marginTop: 1,
         paddingHorizontal: 12,
         paddingVertical: 6,
         backgroundColor: 'rgba(255, 255, 255, 0.2)',
@@ -1389,6 +1594,96 @@ const styles = StyleSheet.create({
         fontFamily: FONTS.family.medium,
         color: 'white',
     },
+
+    // Enhanced Header Styles
+    headerContent: {
+        alignItems: 'center',
+        justifyContent: 'center',
+        width: '100%',
+        paddingHorizontal: 20,
+    },
+    headerTitleWrapper: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+        gap: 12,
+        marginBottom: 8,
+    },
+    headerIconContainer: {
+        width: 40,
+        height: 40,
+        borderRadius: 20,
+        backgroundColor: 'rgba(255, 255, 255, 0.15)',
+        alignItems: 'center',
+        justifyContent: 'center',
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.1,
+        shadowRadius: 4,
+        elevation: 3,
+    },
+    statusIndicatorContent: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 8,
+    },
+    statusIndicatorBadge: {
+        width: 18,
+        height: 18,
+        borderRadius: 9,
+        backgroundColor: 'rgba(255, 255, 255, 0.2)',
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
+    headerDecorativeElements: {
+        position: 'absolute',
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0,
+        overflow: 'hidden',
+    },
+    decorativeCircle: {
+        position: 'absolute',
+        borderRadius: 50,
+        backgroundColor: 'rgba(255, 255, 255, 0.08)',
+    },
+    headerDecorations: {
+        position: 'absolute',
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0,
+        overflow: 'hidden',
+    },
+    decorativeCircle1: {
+        position: 'absolute',
+        width: 120,
+        height: 120,
+        borderRadius: 60,
+        backgroundColor: 'rgba(255, 255, 255, 0.08)',
+        top: -30,
+        right: -20,
+    },
+    decorativeCircle2: {
+        position: 'absolute',
+        width: 80,
+        height: 80,
+        borderRadius: 40,
+        backgroundColor: 'rgba(255, 255, 255, 0.06)',
+        top: 40,
+        left: -25,
+    },
+    decorativeCircle3: {
+        position: 'absolute',
+        width: 60,
+        height: 60,
+        borderRadius: 30,
+        backgroundColor: 'rgba(255, 255, 255, 0.1)',
+        top: 80,
+        right: 30,
+    },
+
     mainContainer: {
         flex: 1,
         paddingHorizontal: 20,
@@ -1405,7 +1700,7 @@ const styles = StyleSheet.create({
         shadowOpacity: 0.1,
         shadowRadius: 8,
         elevation: 8,
-        marginTop: -10,
+        marginTop: -3,
     },
     timeSection: {
         alignItems: 'center',
@@ -1467,8 +1762,8 @@ const styles = StyleSheet.create({
         marginBottom: 16,
     },
     statsTitle: {
-        fontSize: 18,
-        fontWeight: '700',
+        fontSize: FONTS.size.lg,
+        fontFamily: FONTS.family.bold,
         color: '#1F2937',
     },
     statsGrid: {
@@ -1485,14 +1780,14 @@ const styles = StyleSheet.create({
         gap: 8,
     },
     statNumber: {
-        fontSize: 24,
-        fontWeight: '700',
+        fontSize: FONTS.size['2xl'],
+        fontFamily: FONTS.family.bold,
         color: '#1F2937',
     },
     statLabel: {
-        fontSize: 12,
+        fontSize: FONTS.size.xs,
+        fontFamily: FONTS.family.medium,
         color: '#6B7280',
-        fontWeight: '500',
         textAlign: 'center',
     },
 
@@ -1588,8 +1883,8 @@ const styles = StyleSheet.create({
         gap: 12,
     },
     dateText: {
-        fontSize: 18,
-        fontWeight: '700',
+        fontSize: FONTS.size.lg,
+        fontFamily: FONTS.family.bold,
         color: '#1F2937',
         marginBottom: 4,
     },
@@ -1608,8 +1903,8 @@ const styles = StyleSheet.create({
         gap: 6,
     },
     statusText: {
-        fontSize: 13,
-        fontWeight: '600',
+        fontSize: FONTS.size.sm,
+        fontFamily: FONTS.family.semiBold,
     },
     wfhBadge: {
         flexDirection: 'row',
@@ -1620,8 +1915,8 @@ const styles = StyleSheet.create({
         gap: 4,
     },
     wfhText: {
-        fontSize: 11,
-        fontWeight: '500',
+        fontSize: FONTS.size.xs,
+        fontFamily: FONTS.family.medium,
     },
 
     cardContent: {
@@ -1657,14 +1952,14 @@ const styles = StyleSheet.create({
         justifyContent: 'center',
     },
     timeLabel: {
-        fontSize: 11,
+        fontSize: FONTS.size.xs,
+        fontFamily: FONTS.family.medium,
         color: '#6B7280',
-        fontWeight: '500',
         textAlign: 'center',
     },
     timeValue: {
-        fontSize: 14,
-        fontWeight: '700',
+        fontSize: FONTS.size.sm,
+        fontFamily: FONTS.family.bold,
         color: '#1F2937',
         textAlign: 'center',
     },
@@ -1682,12 +1977,13 @@ const styles = StyleSheet.create({
         marginBottom: 6,
     },
     notesLabel: {
-        fontSize: 13,
-        fontWeight: '600',
+        fontSize: FONTS.size.sm,
+        fontFamily: FONTS.family.semiBold,
         color: '#6B7280',
     },
     notesText: {
-        fontSize: 14,
+        fontSize: FONTS.size.sm,
+        fontFamily: FONTS.family.regular,
         color: '#374151',
         lineHeight: 20,
     },

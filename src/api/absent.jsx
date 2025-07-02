@@ -61,7 +61,7 @@ export const getAttendanceReport = async () => {
     }
 };
 
-export const checkIn = async (employeeId, companyId, note, attendanceImageBase64, location, isWFH) => {
+export const checkIn = async (employeeId, companyId, note, attendanceImageBase64, location, isWFH, clientId = null) => {
     try {
         const requestData = {
             company_id: parseInt(companyId),
@@ -70,6 +70,7 @@ export const checkIn = async (employeeId, companyId, note, attendanceImageBase64
             attendance_image: attendanceImageBase64, // Base64 encoded image
             location: location, // Assuming location is an object
             isWFH: isWFH,
+            client_id: clientId, // Add client_id to the request
         };
 
         // Send POST request using apiService (no need for FormData, just a JSON payload)
@@ -82,8 +83,8 @@ export const checkIn = async (employeeId, companyId, note, attendanceImageBase64
         return response.data;
     } catch (error) {
         // Error handling
-        console.error('Check-in failed:', error.response.data.message);
-        throw new Error(error.response.data.message || 'Checking in failed');
+        console.error('Check-in failed:', error.response?.data?.message || error.message);
+        throw new Error(error.response?.data?.message || 'Checking in failed');
     }
 };
 
@@ -110,7 +111,7 @@ export const checkOut = async (employeeId, companyId, location, location_name) =
                 headers: {
                     Authorization: `Bearer ${await AsyncStorage.getItem('token')}`,
                 },
-            }
+            },
         );
 
         if (!response || !response.data) {
@@ -122,4 +123,3 @@ export const checkOut = async (employeeId, companyId, location, location_name) =
         throw new Error(error.response?.data?.message || 'Checking out failed');
     }
 };
-
