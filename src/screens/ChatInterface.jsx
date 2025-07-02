@@ -25,8 +25,8 @@ import { FONTS } from '../constants/fonts';
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 
 // Constants for better maintainability
-const GEMINI_API_KEY = 'AIzaSyCbw7k1d60bhz7fHM9xgPZNql6LqQLxizM';
-const GEMINI_API_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key=${GEMINI_API_KEY}`;
+const GEMINI_API_KEY = 'AIzaSyD6yJ5P7HXcH-R9-YWzU6JHsolVLcEN8Ms';
+const GEMINI_MODELS = ['gemini-1.5-flash', 'gemini-1.5-pro', 'gemini-pro'];
 const MESSAGE_LIMIT = 500;
 const ANIMATION_DURATION = 300;
 
@@ -92,6 +92,7 @@ const ChatInterface = ({ route, navigation }) => {
     // Animation values
     const fadeAnim = useRef(new Animated.Value(0)).current;
     const slideAnim = useRef(new Animated.Value(50)).current;
+    const geminiModeAnim = useRef(new Animated.Value(0)).current;
 
     // Refs
     const flatListRef = useRef(null);
@@ -103,7 +104,7 @@ const ChatInterface = ({ route, navigation }) => {
     }, [isGeminiMode, taskDetails.title]);
 
     const headerSubtitle = useMemo(() => {
-        return isGeminiMode ? 'Ask me anything!' : taskDetails.subtitle || 'Diskusi Task';
+        return isGeminiMode ? '🤖 AI Assistant siap membantu!' : taskDetails.subtitle || 'Diskusi Task';
     }, [isGeminiMode, taskDetails.subtitle]);
 
     const canSendMessage = useMemo(() => {
@@ -208,40 +209,96 @@ const ChatInterface = ({ route, navigation }) => {
         navigation.goBack();
     }, [navigation]);
 
-    // Gemini AI integration with better error handling
+    // Gemini AI integration with better error handling and fallback
     const callGeminiAPI = useCallback(async (prompt) => {
-        try {
-            const response = await fetch(GEMINI_API_URL, {
+        const tryWithModel = async (modelName) => {
+            const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${GEMINI_API_KEY}`;
+
+            console.log(`Trying Gemini API with model: ${modelName}`);
+            console.log('API URL:', apiUrl);
+
+            const requestBody = {
+                contents: [
+                    {
+                        parts: [
+                            {
+                                text: prompt,
+                            },
+                        ],
+                    },
+                ],
+                generationConfig: {
+                    temperature: 0.7,
+                    topK: 40,
+                    topP: 0.95,
+                    maxOutputTokens: 1024,
+                },
+                safetySettings: [
+                    {
+                        category: 'HARM_CATEGORY_HARASSMENT',
+                        threshold: 'BLOCK_MEDIUM_AND_ABOVE',
+                    },
+                    {
+                        category: 'HARM_CATEGORY_HATE_SPEECH',
+                        threshold: 'BLOCK_MEDIUM_AND_ABOVE',
+                    },
+                    {
+                        category: 'HARM_CATEGORY_SEXUALLY_EXPLICIT',
+                        threshold: 'BLOCK_MEDIUM_AND_ABOVE',
+                    },
+                    {
+                        category: 'HARM_CATEGORY_DANGEROUS_CONTENT',
+                        threshold: 'BLOCK_MEDIUM_AND_ABOVE',
+                    },
+                ],
+            };
+
+            const response = await fetch(apiUrl, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
                 },
-                body: JSON.stringify({
-                    contents: [
-                        {
-                            parts: [
-                                {
-                                    text: prompt,
-                                },
-                            ],
-                        },
-                    ],
-                }),
+                body: JSON.stringify(requestBody),
             });
 
+            console.log(`${modelName} response status:`, response.status);
+
             if (!response.ok) {
-                throw new Error(`HTTP error! status: ${response.status}`);
+                const errorText = await response.text();
+                console.error(`${modelName} API Error Response:`, errorText);
+                throw new Error(`HTTP error! status: ${response.status}, message: ${errorText}`);
             }
 
             const data = await response.json();
-            return (
-                data.candidates?.[0]?.content?.parts?.[0]?.text ||
-                'Maaf, saya tidak dapat memproses permintaan Anda saat ini.'
-            );
-        } catch (error) {
-            console.error('Gemini API error:', error);
-            throw new Error('Gagal menghubungi Gemini AI. Silakan coba lagi.');
+            console.log(`${modelName} API Response:`, JSON.stringify(data, null, 2));
+
+            const generatedText = data.candidates?.[0]?.content?.parts?.[0]?.text;
+
+            if (!generatedText) {
+                console.error(`No text generated from ${modelName} API response:`, data);
+                throw new Error('No content generated');
+            }
+
+            return generatedText;
+        };
+
+        // Try each model in sequence
+        for (const model of GEMINI_MODELS) {
+            try {
+                const result = await tryWithModel(model);
+                console.log(`Successfully got response from ${model}`);
+                return result;
+            } catch (error) {
+                console.warn(`Failed to get response from ${model}:`, error.message);
+                // Continue to next model
+            }
         }
+
+        // If all models fail, throw a comprehensive error
+        console.error('All Gemini models failed');
+        throw new Error(
+            'Maaf, layanan Gemini AI sedang tidak tersedia. Silakan coba lagi nanti atau gunakan chat biasa.',
+        );
     }, []);
 
     // Enhanced send message handler
@@ -252,17 +309,19 @@ const ChatInterface = ({ route, navigation }) => {
 
         // Handle special commands
         if (trimmedInput === '/gemini' && !isGeminiMode) {
+            console.log('Activating Gemini mode...');
             setIsGeminiMode(true);
             setWaitingForYesNo(true);
             const geminiMessage = {
                 id: Date.now().toString(),
-                message: `Halo! Saya adalah Gemini AI. Apakah Anda ingin bertanya tentang "${taskDetails.title}"?`,
+                message: `🤖 **Halo! Saya Gemini AI Assistant**\n\nSaya siap membantu Anda dengan tugas **"${taskDetails.title}"**\n\n✨ **Saya bisa membantu:**\n• Memberikan panduan langkah demi langkah\n• Menjawab pertanyaan teknis\n• Memberikan tips dan best practices\n• Membantu troubleshooting masalah\n\n❓ **Apakah Anda ingin saya berikan panduan detail untuk menyelesaikan tugas ini?**\n\n💡 *Ketik "ya" untuk panduan detail, atau langsung tanyakan apa yang ingin Anda ketahui*`,
                 employee_name: 'Gemini AI',
                 employee_id: MESSAGE_TYPES.GEMINI,
                 time: new Date().toISOString(),
                 status: 'sent',
                 type: MESSAGE_TYPES.GEMINI,
             };
+            console.log('Adding Gemini message:', geminiMessage);
             setMessages((prev) => [...prev, geminiMessage]);
             setInputText('');
             return;
@@ -273,7 +332,8 @@ const ChatInterface = ({ route, navigation }) => {
             setWaitingForYesNo(false);
             const quitMessage = {
                 id: Date.now().toString(),
-                message: 'Terima kasih telah menggunakan Gemini AI. Kembali ke mode chat normal.',
+                message:
+                    '👋 **Terima kasih telah menggunakan Gemini AI!**\n\n✅ Sesi AI telah berakhir dan Anda kembali ke mode chat normal.\n\n💬 Silakan lanjutkan diskusi dengan tim atau aktifkan kembali Gemini AI kapan saja dengan tombol 💡 di header.',
                 employee_name: 'System',
                 employee_id: MESSAGE_TYPES.SYSTEM,
                 time: new Date().toISOString(),
@@ -308,54 +368,204 @@ const ChatInterface = ({ route, navigation }) => {
             }
         } catch (error) {
             console.error('Send message error:', error);
-            Alert.alert('Error', 'Gagal mengirim pesan. Silakan coba lagi.');
 
-            setMessages((prev) => prev.map((msg) => (msg.id === newMessage.id ? { ...msg, status: 'failed' } : msg)));
+            if (isGeminiMode) {
+                // For Gemini mode, show a user-friendly fallback message
+                Alert.alert(
+                    'Gemini AI Tidak Tersedia',
+                    'Maaf, layanan Gemini AI sedang tidak tersedia. Pesan fallback telah ditambahkan ke chat.',
+                    [{ text: 'OK' }],
+                );
+            } else {
+                // For regular mode, show the original error
+                Alert.alert('Error', 'Gagal mengirim pesan. Silakan coba lagi.');
+                setMessages((prev) =>
+                    prev.map((msg) => (msg.id === newMessage.id ? { ...msg, status: 'failed' } : msg)),
+                );
+            }
         } finally {
             setSending(false);
         }
     }, [canSendMessage, inputText, isGeminiMode, waitingForYesNo, taskDetails.title, employeeId]);
 
-    // Handle Gemini AI messages
+    // Handle Gemini AI messages with fallback
     const handleGeminiMessage = useCallback(
         async (input, userMessage) => {
-            if (waitingForYesNo) {
-                if (input.toLowerCase().includes('ya') || input.toLowerCase().includes('iya')) {
-                    setWaitingForYesNo(false);
-                    const prompt = `Tolong jelaskan langkah-langkah detail cara mengerjakan atau menyelesaikan "${taskDetails.title}". ${
-                        taskDetails.subtitle ? `Konteks tambahan: ${taskDetails.subtitle}` : ''
-                    }`;
+            console.log('Handling Gemini message:', input);
 
-                    const geminiResponse = await callGeminiAPI(prompt);
-                    const geminiMessage = {
+            if (waitingForYesNo) {
+                if (
+                    input.toLowerCase().includes('ya') ||
+                    input.toLowerCase().includes('iya') ||
+                    input.toLowerCase().includes('yes')
+                ) {
+                    setWaitingForYesNo(false);
+                    const prompt = `Kamu adalah asisten AI bernama Gemini yang KHUSUS membantu dengan tugas "${taskDetails.title}".
+
+${taskDetails.subtitle ? `Konteks tambahan: ${taskDetails.subtitle}` : ''}
+
+TUGAS: Berikan panduan detail langkah demi langkah KHUSUS untuk menyelesaikan tugas "${taskDetails.title}".
+
+ATURAN:
+- Fokus 100% pada tugas "${taskDetails.title}" saja
+- Berikan langkah praktis yang spesifik untuk tugas ini
+- Jangan berikan informasi umum atau tidak relevan
+- Maksimal 350 kata
+
+FORMAT RESPONS WAJIB:
+🎯 **Panduan Menyelesaikan "${taskDetails.title}"**
+
+📋 **Langkah-langkah Detail:**
+1. **[Langkah Spesifik 1]** - Penjelasan detail untuk tugas ini
+2. **[Langkah Spesifik 2]** - Penjelasan detail untuk tugas ini  
+3. **[Langkah Spesifik 3]** - Penjelasan detail untuk tugas ini
+4. **[dst...]** - Sesuai kebutuhan tugas
+
+💡 **Tips Khusus untuk Tugas Ini:**
+• Tip spesifik 1 untuk "${taskDetails.title}"
+• Tip spesifik 2 untuk "${taskDetails.title}"
+
+⚠️ **Hal Penting untuk Tugas Ini:**
+• Warning/catatan khusus yang relevan
+
+⏱️ **Estimasi Waktu:** [jika bisa diperkirakan]
+
+✅ **Hasil Akhir:** Apa yang akan dicapai setelah tugas selesai
+
+Pastikan semua poin di atas spesifik untuk tugas "${taskDetails.title}" dan bukan panduan umum.`;
+
+                    try {
+                        console.log('Trying to call Gemini API for yes/no response...');
+                        const geminiResponse = await callGeminiAPI(prompt);
+
+                        // Clean the response
+                        const cleanResponse = geminiResponse.replace(/\n\n+/g, '\n\n').trim();
+
+                        const geminiMessage = {
+                            id: Date.now().toString(),
+                            message: cleanResponse,
+                            employee_name: 'Gemini AI',
+                            employee_id: MESSAGE_TYPES.GEMINI,
+                            time: new Date().toISOString(),
+                            status: 'sent',
+                            type: MESSAGE_TYPES.GEMINI,
+                        };
+
+                        setMessages((prev) => [...prev, geminiMessage]);
+                    } catch (error) {
+                        console.log('Gemini API failed, showing fallback message...');
+                        // Enhanced fallback response if API fails
+                        const fallbackMessage = {
+                            id: Date.now().toString(),
+                            message: `🤖 **Panduan Menyelesaikan "${taskDetails.title}"**\n\nMaaf, koneksi ke AI sedang terganggu, namun saya dapat memberikan panduan umum:\n\n📋 **Langkah-langkah Umum:**\n1. **Analisis Tugas** - Pahami requirement dan tujuan\n2. **Perencanaan** - Buat timeline dan breakdown task\n3. **Persiapan** - Siapkan tools dan resource yang dibutuhkan\n4. **Eksekusi** - Mulai dengan prioritas tertinggi\n5. **Review & Testing** - Periksa hasil dan lakukan testing\n6. **Dokumentasi** - Catat proses dan hasil\n\n⚠️ **Tips Penting:**\n• Komunikasi rutin dengan tim\n• Backup data secara berkala\n• Minta feedback di tahap awal\n• Dokumentasikan kendala yang ditemui\n\n⏱️ **Estimasi:** Sesuaikan dengan kompleksitas task\n\n💬 Silakan diskusikan detail lebih lanjut dengan tim melalui chat biasa atau coba tanya saya lagi nanti.`,
+                            employee_name: 'Gemini AI (Offline)',
+                            employee_id: MESSAGE_TYPES.GEMINI,
+                            time: new Date().toISOString(),
+                            status: 'sent',
+                            type: MESSAGE_TYPES.GEMINI,
+                        };
+                        setMessages((prev) => [...prev, fallbackMessage]);
+                    }
+                    return;
+                } else if (input.toLowerCase().includes('tidak') || input.toLowerCase().includes('no')) {
+                    setWaitingForYesNo(false);
+                    const noMessage = {
                         id: Date.now().toString(),
-                        message: geminiResponse,
+                        message: `👌 **Tidak apa-apa!**\n\nSilakan tanyakan apa saja yang ingin Anda ketahui tentang **"${taskDetails.title}"** atau topik lainnya.\n\n💡 **Contoh pertanyaan:**\n• "Bagaimana cara memulai tugas ini?"\n• "Apa tools yang dibutuhkan?"\n• "Berapa estimasi waktu pengerjaannya?"\n• "Ada tips khusus untuk tugas ini?"\n\n🔄 Atau ketik "/quit" untuk kembali ke chat biasa.`,
                         employee_name: 'Gemini AI',
                         employee_id: MESSAGE_TYPES.GEMINI,
                         time: new Date().toISOString(),
                         status: 'sent',
                         type: MESSAGE_TYPES.GEMINI,
                     };
-
-                    setMessages((prev) => [...prev, geminiMessage]);
+                    setMessages((prev) => [...prev, noMessage]);
                     return;
                 }
                 setWaitingForYesNo(false);
             }
 
             // Regular Gemini conversation
-            const geminiResponse = await callGeminiAPI(input);
-            const geminiMessage = {
-                id: Date.now().toString(),
-                message: geminiResponse,
-                employee_name: 'Gemini AI',
-                employee_id: MESSAGE_TYPES.GEMINI,
-                time: new Date().toISOString(),
-                status: 'sent',
-                type: MESSAGE_TYPES.GEMINI,
-            };
+            try {
+                console.log('Trying to call Gemini API for regular conversation...');
 
-            setMessages((prev) => [...prev, geminiMessage]);
+                // Create a more contextual prompt for better AI responses
+                const contextualPrompt = `Kamu adalah asisten AI bernama Gemini yang KHUSUS membantu dalam tugas "${taskDetails.title}" ${taskDetails.subtitle ? `dengan konteks: ${taskDetails.subtitle}` : ''}.
+
+Pertanyaan user: "${input}"
+
+ATURAN PENTING:
+- HANYA jawab pertanyaan yang berkaitan dengan tugas "${taskDetails.title}"
+- Jika pertanyaan tidak berkaitan dengan tugas ini, tolak dengan sopan dan arahkan kembali ke topik tugas
+- Fokus pada aspek teknis, langkah-langkah, tools, atau solusi untuk tugas ini
+- Jangan jawab pertanyaan umum, pribadi, atau topik lain di luar tugas
+
+INSTRUKSI RESPONS (hanya untuk pertanyaan terkait tugas):
+1. Jawab dalam bahasa Indonesia yang natural dan profesional
+2. Berikan jawaban yang praktis dan dapat ditindaklanjuti untuk tugas ini
+3. Gunakan format yang mudah dibaca dengan bullet points atau numbering
+4. Maksimal 250 kata agar tidak terlalu panjang
+5. Sertakan emoji yang relevan untuk tugas/proyek
+6. Selalu kaitkan dengan konteks tugas "${taskDetails.title}"
+
+CONTOH PENOLAKAN (untuk pertanyaan tidak terkait):
+"🤖 Maaf, saya khusus membantu dengan tugas **"${taskDetails.title}"**. 
+
+Silakan tanyakan hal-hal seperti:
+• Bagaimana cara mengerjakan tugas ini?
+• Tools apa yang dibutuhkan?
+• Langkah-langkah detail pengerjaan
+• Tips dan best practices untuk tugas ini
+
+Atau ketik '/quit' untuk kembali ke chat biasa."
+
+FORMAT RESPONS YANG BAIK (untuk pertanyaan terkait tugas):
+"💡 **Jawaban untuk "${taskDetails.title}"**
+
+📝 **Langkah/Solusi:**
+• Langkah 1 spesifik untuk tugas ini
+• Langkah 2 spesifik untuk tugas ini
+
+💡 **Tips untuk tugas ini:** Saran praktis yang relevan"`;
+
+                const geminiResponse = await callGeminiAPI(contextualPrompt);
+
+                // Clean and format the response better
+                let formattedResponse = geminiResponse
+                    .replace(/\*\*(.*?)\*\*/g, '**$1**') // Keep bold formatting
+                    .replace(/\n\n+/g, '\n\n') // Clean multiple line breaks
+                    .replace(/^\s+|\s+$/g, '') // Trim whitespace
+                    .trim();
+
+                // Don't add extra emoji if response already has good formatting
+                if (!formattedResponse.match(/[🎯💡✅🔧⚡🚀📋💬👍📝]/)) {
+                    formattedResponse = `💡 ${formattedResponse}`;
+                }
+
+                const geminiMessage = {
+                    id: Date.now().toString(),
+                    message: formattedResponse,
+                    employee_name: 'Gemini AI',
+                    employee_id: MESSAGE_TYPES.GEMINI,
+                    time: new Date().toISOString(),
+                    status: 'sent',
+                    type: MESSAGE_TYPES.GEMINI,
+                };
+
+                setMessages((prev) => [...prev, geminiMessage]);
+            } catch (error) {
+                console.log('Gemini API failed for regular conversation, showing fallback...');
+                // Enhanced fallback response for general conversation
+                const fallbackMessage = {
+                    id: Date.now().toString(),
+                    message: `🤖 **Maaf, koneksi AI sedang terganggu**\n\nSaya sedang mengalami kendala teknis dan tidak dapat memproses pertanyaan Anda saat ini.\n\n❓ **Pertanyaan Anda:** "${input}"\n\n🔄 **Alternatif yang bisa dilakukan:**\n• Coba tanya saya lagi dalam beberapa menit\n• Diskusikan dengan tim melalui chat biasa\n• Keluar dari mode Gemini dengan tombol 💡 atau ketik '/quit'\n\n💡 **Tip:** Untuk hasil terbaik, tanyakan hal-hal spesifik terkait "${taskDetails.title}" kepada saya.`,
+                    employee_name: 'Gemini AI (Offline)',
+                    employee_id: MESSAGE_TYPES.GEMINI,
+                    time: new Date().toISOString(),
+                    status: 'sent',
+                    type: MESSAGE_TYPES.GEMINI,
+                };
+                setMessages((prev) => [...prev, fallbackMessage]);
+            }
         },
         [waitingForYesNo, taskDetails.title, taskDetails.subtitle, callGeminiAPI],
     );
@@ -424,9 +634,11 @@ const ChatInterface = ({ route, navigation }) => {
     // Optimized message type detection
     const getMessageType = useCallback(
         (item) => {
+            console.log('Checking message type for:', item.employee_id, 'Gemini type:', MESSAGE_TYPES.GEMINI);
             if (item.employee_id === MESSAGE_TYPES.GEMINI) return MESSAGE_TYPES.GEMINI;
             if (item.employee_id === MESSAGE_TYPES.SYSTEM) return MESSAGE_TYPES.SYSTEM;
-            if (item.employee_id === MESSAGE_TYPES.USER || item.employee_id === employeeId) return MESSAGE_TYPES.USER;
+            if (item.employee_id === MESSAGE_TYPES.USER) return MESSAGE_TYPES.USER;
+            if (item.employee_id === employeeId) return MESSAGE_TYPES.USER;
             return MESSAGE_TYPES.EMPLOYEE;
         },
         [employeeId],
@@ -473,8 +685,10 @@ const ChatInterface = ({ route, navigation }) => {
                                     {
                                         color: isGemini ? '#4285F4' : isSystem ? '#F59E0B' : '#6B7280',
                                     },
+                                    isGemini && styles.geminiSenderName,
                                 ]}
                             >
+                                {isGemini ? '🤖 ' : ''}
                                 {item.employee_name}
                             </Text>
                         )}
@@ -524,6 +738,54 @@ const ChatInterface = ({ route, navigation }) => {
     // Optimized key extractor
     const keyExtractor = useCallback((item) => item.id, []);
 
+    // Toggle Gemini mode function
+    const toggleGeminiMode = useCallback(() => {
+        if (isGeminiMode) {
+            // Exit Gemini mode
+            Animated.timing(geminiModeAnim, {
+                toValue: 0,
+                duration: ANIMATION_DURATION,
+                useNativeDriver: false,
+            }).start();
+
+            setIsGeminiMode(false);
+            setWaitingForYesNo(false);
+            const quitMessage = {
+                id: Date.now().toString(),
+                message:
+                    '👋 **Terima kasih telah menggunakan Gemini AI!**\n\n✅ Sesi AI telah berakhir dan Anda kembali ke mode chat normal.\n\n💬 Silakan lanjutkan diskusi dengan tim atau aktifkan kembali Gemini AI kapan saja dengan tombol 💡 di header.',
+                employee_name: 'System',
+                employee_id: MESSAGE_TYPES.SYSTEM,
+                time: new Date().toISOString(),
+                status: 'sent',
+                type: MESSAGE_TYPES.SYSTEM,
+            };
+            setMessages((prev) => [...prev, quitMessage]);
+        } else {
+            // Enter Gemini mode
+            Animated.timing(geminiModeAnim, {
+                toValue: 1,
+                duration: ANIMATION_DURATION,
+                useNativeDriver: false,
+            }).start();
+
+            console.log('Activating Gemini mode via lamp button...');
+            setIsGeminiMode(true);
+            setWaitingForYesNo(true);
+            const geminiMessage = {
+                id: Date.now().toString(),
+                message: `🤖 **Halo! Saya Gemini AI Assistant**\n\nSaya siap membantu Anda dengan tugas **"${taskDetails.title}"**\n\n✨ **Saya bisa membantu:**\n• Memberikan panduan langkah demi langkah\n• Menjawab pertanyaan teknis\n• Memberikan tips dan best practices\n• Membantu troubleshooting masalah\n\n❓ **Apakah Anda ingin saya berikan panduan detail untuk menyelesaikan tugas ini?**\n\n💡 *Ketik "ya" untuk panduan detail, atau langsung tanyakan apa yang ingin Anda ketahui*`,
+                employee_name: 'Gemini AI',
+                employee_id: MESSAGE_TYPES.GEMINI,
+                time: new Date().toISOString(),
+                status: 'sent',
+                type: MESSAGE_TYPES.GEMINI,
+            };
+            console.log('Adding Gemini message via lamp button:', geminiMessage);
+            setMessages((prev) => [...prev, geminiMessage]);
+        }
+    }, [isGeminiMode, taskDetails.title, geminiModeAnim]);
+
     // Enhanced header component
     const renderHeader = useMemo(() => {
         return (
@@ -540,24 +802,60 @@ const ChatInterface = ({ route, navigation }) => {
                     <Text style={styles.headerTitle}>{headerTitle}</Text>
                     <Text style={styles.headerSubtitle}>{headerSubtitle}</Text>
                 </View>
+                <TouchableOpacity
+                    onPress={toggleGeminiMode}
+                    style={[styles.geminiButton, isGeminiMode && styles.geminiButtonActive]}
+                >
+                    <Ionicons
+                        name={isGeminiMode ? 'bulb' : 'bulb-outline'}
+                        size={24}
+                        color={isGeminiMode ? '#FFF' : 'rgba(255, 255, 255, 0.8)'}
+                    />
+                </TouchableOpacity>
             </LinearGradient>
         );
-    }, [isGeminiMode, headerTitle, headerSubtitle, handleBackPress]);
+    }, [isGeminiMode, headerTitle, headerSubtitle, handleBackPress, toggleGeminiMode]);
 
     return (
-        <SafeAreaView style={styles.container}>
+        <SafeAreaView style={[styles.container, isGeminiMode && styles.geminiContainer]}>
             <StatusBar
-                barStyle={isGeminiMode ? 'dark-content' : 'light-content'}
-                backgroundColor={isGeminiMode ? '#F8F9FA' : '#4A90E2'}
+                barStyle="light-content"
+                backgroundColor={isGeminiMode ? '#4285F4' : '#4A90E2'}
                 translucent={false}
             />
 
             {/* Enhanced Header */}
-            <View style={styles.header}>{renderHeader}</View>
+            <View style={[styles.header, isGeminiMode && styles.geminiHeader]}>{renderHeader}</View>
+
+            {/* Gemini Mode Indicator */}
+            {isGeminiMode && (
+                <Animated.View
+                    style={[
+                        styles.geminiModeIndicator,
+                        {
+                            opacity: geminiModeAnim,
+                            transform: [
+                                {
+                                    translateY: geminiModeAnim.interpolate({
+                                        inputRange: [0, 1],
+                                        outputRange: [-40, 0],
+                                    }),
+                                },
+                            ],
+                        },
+                    ]}
+                >
+                    <Ionicons name="bulb" size={16} color="#4285F4" />
+                    <Text style={styles.geminiModeText}>Mode Gemini AI Aktif</Text>
+                    <TouchableOpacity onPress={toggleGeminiMode} style={styles.geminiModeCloseButton}>
+                        <Ionicons name="close-circle" size={18} color="#6B7280" />
+                    </TouchableOpacity>
+                </Animated.View>
+            )}
 
             {/* Messages List */}
             <KeyboardAvoidingView
-                style={styles.messagesContainer}
+                style={[styles.messagesContainer, isGeminiMode && styles.geminiMessagesContainer]}
                 behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
                 keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 0}
             >
@@ -594,6 +892,7 @@ const ChatInterface = ({ route, navigation }) => {
                 <Animated.View
                     style={[
                         styles.inputContainer,
+                        isGeminiMode && styles.geminiInputContainer,
                         {
                             opacity: fadeAnim,
                             transform: [{ translateY: slideAnim }],
@@ -609,7 +908,9 @@ const ChatInterface = ({ route, navigation }) => {
                                 inputText.length > MESSAGE_LIMIT * 0.9 && { borderColor: '#F59E0B' },
                             ]}
                             placeholder={
-                                isGeminiMode ? "Tanya Gemini AI... (ketik '/quit' untuk keluar)" : 'Ketik pesan Anda...'
+                                isGeminiMode
+                                    ? "🤖 Tanya Gemini AI tentang task ini... (ketik '/quit' untuk keluar)"
+                                    : 'Ketik pesan Anda...'
                             }
                             placeholderTextColor="#9CA3AF"
                             value={inputText}
@@ -663,6 +964,9 @@ const styles = StyleSheet.create({
         flex: 1,
         backgroundColor: '#F8F9FA',
     },
+    geminiContainer: {
+        backgroundColor: '#F0F4FF',
+    },
     errorContainer: {
         flex: 1,
         backgroundColor: '#F8F9FA',
@@ -709,6 +1013,11 @@ const styles = StyleSheet.create({
         shadowOpacity: 0.1,
         shadowRadius: 4,
     },
+    geminiHeader: {
+        backgroundColor: '#4285F4',
+        elevation: 6,
+        shadowOpacity: 0.15,
+    },
     headerContent: {
         flexDirection: 'row',
         alignItems: 'center',
@@ -736,8 +1045,52 @@ const styles = StyleSheet.create({
         fontFamily: FONTS.regular,
         color: 'rgba(255, 255, 255, 0.8)',
     },
+    geminiButton: {
+        marginLeft: 16,
+        padding: 8,
+        borderRadius: 20,
+        backgroundColor: 'rgba(255, 255, 255, 0.1)',
+        justifyContent: 'center',
+        alignItems: 'center',
+    },
+    geminiButtonActive: {
+        backgroundColor: 'rgba(255, 255, 255, 0.2)',
+        borderWidth: 1,
+        borderColor: 'rgba(255, 255, 255, 0.3)',
+    },
+    geminiModeIndicator: {
+        backgroundColor: '#E8F0FE',
+        borderBottomWidth: 2,
+        borderBottomColor: '#4285F4',
+        paddingHorizontal: 16,
+        paddingVertical: 10,
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        shadowColor: '#4285F4',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.1,
+        shadowRadius: 4,
+        elevation: 3,
+    },
+    geminiModeText: {
+        fontSize: 13,
+        fontFamily: FONTS.semiBold,
+        color: '#4285F4',
+        flex: 1,
+        textAlign: 'center',
+        marginLeft: 20,
+    },
+    geminiModeCloseButton: {
+        padding: 6,
+        borderRadius: 12,
+        backgroundColor: 'rgba(107, 114, 128, 0.1)',
+    },
     messagesContainer: {
         flex: 1,
+    },
+    geminiMessagesContainer: {
+        backgroundColor: '#F0F4FF',
     },
     messageContainerStyle: {
         paddingHorizontal: 16,
@@ -767,6 +1120,10 @@ const styles = StyleSheet.create({
         fontFamily: FONTS.medium,
         marginBottom: 4,
         marginLeft: 4,
+    },
+    geminiSenderName: {
+        color: '#4285F4',
+        fontFamily: FONTS.semiBold,
     },
     bubbleAndTimeContainer: {
         alignItems: 'flex-end',
@@ -801,16 +1158,26 @@ const styles = StyleSheet.create({
         borderColor: '#E5E7EB',
     },
     geminiBubble: {
-        backgroundColor: '#F3F4F6',
-        borderWidth: 1,
+        backgroundColor: '#E8F0FE',
+        borderWidth: 2,
         borderColor: '#4285F4',
         alignSelf: 'flex-start',
+        shadowColor: '#4285F4',
+        shadowOffset: { width: 0, height: 3 },
+        shadowOpacity: 0.15,
+        shadowRadius: 6,
+        elevation: 4,
     },
     systemBubble: {
         backgroundColor: '#FEF3C7',
         borderWidth: 1,
         borderColor: '#F59E0B',
         alignSelf: 'center',
+        shadowColor: '#F59E0B',
+        shadowOffset: { width: 0, height: 1 },
+        shadowOpacity: 0.1,
+        shadowRadius: 2,
+        elevation: 1,
     },
     messageText: {
         fontSize: 16,
@@ -825,6 +1192,9 @@ const styles = StyleSheet.create({
     },
     geminiText: {
         color: '#1F2937',
+        fontFamily: FONTS.regular,
+        lineHeight: 24,
+        fontSize: 15,
     },
     systemText: {
         color: '#92400E',
@@ -854,6 +1224,14 @@ const styles = StyleSheet.create({
         shadowOpacity: 0.1,
         shadowRadius: 4,
     },
+    geminiInputContainer: {
+        backgroundColor: '#E8F0FE',
+        borderTopColor: '#4285F4',
+        borderTopWidth: 3,
+        elevation: 12,
+        shadowColor: '#4285F4',
+        shadowOpacity: 0.2,
+    },
     inputWrapper: {
         flexDirection: 'row',
         alignItems: 'flex-end',
@@ -875,7 +1253,13 @@ const styles = StyleSheet.create({
     },
     geminiInput: {
         borderColor: '#4285F4',
-        backgroundColor: '#F8F9FF',
+        backgroundColor: '#FFFFFF',
+        borderWidth: 2,
+        shadowColor: '#4285F4',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.1,
+        shadowRadius: 4,
+        elevation: 3,
     },
     sendButton: {
         backgroundColor: '#4A90E2',
@@ -892,6 +1276,10 @@ const styles = StyleSheet.create({
     },
     geminiSendButton: {
         backgroundColor: '#4285F4',
+        elevation: 6,
+        shadowColor: '#4285F4',
+        shadowOpacity: 0.35,
+        transform: [{ scale: 1.05 }],
     },
     characterCount: {
         fontSize: 12,
