@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo, memo, useRef } from 'react';
 import {
     View,
     Text,
@@ -13,6 +13,7 @@ import {
     Platform,
     Haptics,
     Share,
+    InteractionManager,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import * as Location from 'expo-location';
@@ -29,7 +30,71 @@ import { FONTS } from '../constants/fonts';
 
 const { height, width } = Dimensions.get('window');
 
-const AccessDenied = () => {
+// Constants for better maintainability
+const ITEMS_PER_PAGE = 10;
+const SHIMMER_CARDS_COUNT = 3;
+const START_DATE = new Date('2024-09-01');
+const DEFAULT_LATE_TIME = '09:00';
+const DEFAULT_RADIUS = 100;
+const ANIMATION_DURATION = {
+    SHORT: 200,
+    MEDIUM: 300,
+    LONG: 600,
+};
+
+// Status configuration for better maintainability
+const STATUS_CONFIG = {
+    'On Time': {
+        icon: 'checkmark-circle',
+        color: '#10B981',
+        backgroundColor: '#ECFDF5',
+    },
+    Early: {
+        icon: 'time',
+        color: '#3B82F6',
+        backgroundColor: '#F0F9FF',
+    },
+    Late: {
+        icon: 'warning',
+        color: '#EF4444',
+        backgroundColor: '#FEF2F2',
+    },
+    Holiday: {
+        icon: 'calendar',
+        color: '#6B7280',
+        backgroundColor: '#F9FAFB',
+    },
+    'Not Absent': {
+        icon: 'close-circle',
+        color: '#9CA3AF',
+        backgroundColor: '#F3F4F6',
+    },
+};
+
+// Utility functions for better maintainability
+const calculateDaysDiff = () => Math.floor((new Date() - START_DATE) / (1000 * 60 * 60 * 24));
+
+const formatDuration = (checkinTime, checkoutTime) => {
+    if (!checkinTime || !checkoutTime) return '-';
+
+    const timeDifference = checkoutTime - checkinTime;
+    if (isNaN(timeDifference) || timeDifference < 0) return '-';
+
+    const hours = Math.floor(timeDifference / (1000 * 60 * 60));
+    const minutes = Math.floor((timeDifference % (1000 * 60 * 60)) / (1000 * 60));
+
+    return `${hours}h ${minutes}m`;
+};
+
+const getStatusConfig = (status) => STATUS_CONFIG[status] || STATUS_CONFIG['Not Absent'];
+
+const formatLocationName = (reverseGeocodeResult) => {
+    if (!reverseGeocodeResult) return 'Tidak dapat mengambil nama lokasi';
+    return `${reverseGeocodeResult.street}, ${reverseGeocodeResult.city}, ${reverseGeocodeResult.region}, ${reverseGeocodeResult.country}`;
+};
+
+// Memoized AccessDenied Component for better performance
+const AccessDenied = memo(() => {
     return (
         <View style={styles.accessDeniedContainer}>
             <View style={styles.iconContainer}>
@@ -38,9 +103,11 @@ const AccessDenied = () => {
             <Text style={styles.message}>Anda tidak mempunyai akses.</Text>
         </View>
     );
-};
+});
+AccessDenied.displayName = 'AccessDenied';
 
-const EmptyState = () => (
+// Memoized EmptyState Component with enhanced styling
+const EmptyState = memo(() => (
     <View style={styles.emptyStateContainer}>
         <View style={styles.emptyIconContainer}>
             <Ionicons name="calendar-outline" size={48} color="#9CA3AF" />
@@ -48,13 +115,15 @@ const EmptyState = () => (
         <Text style={styles.emptyStateTitle}>Belum Ada Data Kehadiran</Text>
         <Text style={styles.emptyStateSubtitle}>Mulai clock in untuk mencatat kehadiran pertama Anda</Text>
     </View>
-);
+));
+EmptyState.displayName = 'EmptyState';
 
-const ShimmerTaskCard = () => (
+// Memoized ShimmerTaskCard Component with optimized rendering
+const ShimmerTaskCard = memo(() => (
     <View style={[styles.containerPerDate, { marginBottom: 16 }]}>
         <View style={styles.cardHeader}>
             <View style={styles.dateSection}>
-                <Shimmer width={180} height={20} style={{ marginBottom: 8, borderRadius: 4 }} />
+                <Shimmer width={180} height={20} style={styles.shimmerTitle} />
                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
                     <Shimmer width={100} height={28} style={{ borderRadius: 14 }} />
                     <Shimmer width={80} height={28} style={{ borderRadius: 14 }} />
@@ -65,16 +134,16 @@ const ShimmerTaskCard = () => (
         <View style={styles.cardContent}>
             <View style={styles.leftContent}>
                 <View style={styles.timeDetailsGrid}>
-                    {[1, 2, 3].map((_, index) => (
-                        <View key={index} style={styles.timeColumn}>
-                            <Shimmer width={60} height={12} style={{ marginBottom: 4, borderRadius: 2 }} />
+                    {Array.from({ length: 3 }, (_, index) => (
+                        <View key={`shimmer-time-${index}`} style={styles.timeColumn}>
+                            <Shimmer width={60} height={12} style={styles.shimmerSubtitle} />
                             <Shimmer width={50} height={16} style={{ borderRadius: 2 }} />
                         </View>
                     ))}
                 </View>
 
                 <View style={styles.notesSection}>
-                    <Shimmer width={60} height={12} style={{ marginBottom: 6, borderRadius: 2 }} />
+                    <Shimmer width={60} height={12} style={styles.shimmerSubtitle} />
                     <Shimmer width={width * 0.4} height={40} style={{ borderRadius: 4 }} />
                 </View>
             </View>
@@ -84,9 +153,11 @@ const ShimmerTaskCard = () => (
             </View>
         </View>
     </View>
-);
+));
+ShimmerTaskCard.displayName = 'ShimmerTaskCard';
 
 const Kehadiran = () => {
+    // State management
     const [currentTime, setCurrentTime] = useState('');
     const [locationName, setLocationName] = useState('Mencari lokasi...');
     const [errorMsg, setErrorMsg] = useState(null);
@@ -103,113 +174,193 @@ const Kehadiran = () => {
     const [currentPage, setCurrentPage] = useState(0);
     const [hasAccess, setHasAccess] = useState(null);
     const [isLoading, setIsLoading] = useState(true);
-    const [fadeAnim] = useState(new Animated.Value(0));
-    const [slideAnim] = useState(new Animated.Value(50));
-    const [scaleAnim] = useState(new Animated.Value(0.8));
-    const [buttonPulseAnim] = useState(new Animated.Value(1));
-    const [statsSlideAnim] = useState(new Animated.Value(-100));
     const [showStats, setShowStats] = useState(false);
     const [showHistory, setShowHistory] = useState(false);
-    const [historySlideAnim] = useState(new Animated.Value(-100));
+
+    // Animation refs for better performance
+    const fadeAnim = useRef(new Animated.Value(0)).current;
+    const slideAnim = useRef(new Animated.Value(50)).current;
+    const scaleAnim = useRef(new Animated.Value(0.8)).current;
+    const buttonPulseAnim = useRef(new Animated.Value(1)).current;
+    const statsSlideAnim = useRef(new Animated.Value(-100)).current;
+    const historySlideAnim = useRef(new Animated.Value(-100)).current;
+
+    // Refs for performance optimization
+    const timeInterval = useRef(null);
+    const mountedRef = useRef(true);
+
     const navigation = useNavigation();
 
-    const itemsPerPage = 7;
-    const startDate = new Date('2024-09-01');
-    const today = new Date();
-    const daysDiff = Math.floor((today - startDate) / (1000 * 60 * 60 * 24));
+    // Memoized calculations for better performance
+    const daysDiff = useMemo(() => calculateDaysDiff(), []);
 
+    const totalPages = useMemo(() => Math.ceil((daysDiff + 1) / ITEMS_PER_PAGE), [daysDiff]);
+
+    // Memoized attendance statistics
+    const attendanceStats = useMemo(() => {
+        const stats = {
+            total: attendanceData.length,
+            onTime: 0,
+            late: 0,
+            early: 0,
+            absent: 0,
+        };
+
+        attendanceData.forEach((record) => {
+            switch (record.status) {
+                case 'On Time':
+                    stats.onTime++;
+                    break;
+                case 'Late':
+                    stats.late++;
+                    break;
+                case 'Early':
+                    stats.early++;
+                    break;
+                default:
+                    stats.absent++;
+            }
+        });
+
+        return stats;
+    }, [attendanceData]);
+
+    // Memoized start date for pagination
+    const startDate = useMemo(() => new Date(START_DATE), []);
+
+    // Cleanup effect for mounted state
+    useEffect(() => {
+        mountedRef.current = true;
+        return () => {
+            mountedRef.current = false;
+            if (timeInterval.current) {
+                clearInterval(timeInterval.current);
+            }
+        };
+    }, []);
+
+    // Enhanced fetchData with better error handling and performance
     const fetchData = useCallback(async () => {
-        if (!employeeId || !companyId) return;
+        if (!employeeId || !companyId || !mountedRef.current) return;
+
         setIsLoading(true);
 
         try {
+            // Request location permission
             const { status } = await Location.requestForegroundPermissionsAsync();
             if (status !== 'granted') {
-                setErrorMsg('Izin lokasi ditolak. Harap aktifkan akses lokasi di pengaturan.');
-                showAlert('Izin lokasi ditolak. Harap aktifkan akses lokasi di pengaturan.', 'error');
-                setIsLoading(false);
+                const errorMessage = 'Izin lokasi ditolak. Harap aktifkan akses lokasi di pengaturan.';
+                setErrorMsg(errorMessage);
+                showAlert(errorMessage, 'error');
                 return;
             }
 
+            // Parallel API calls for better performance
             const [attendanceResponse, parameterResponse, locationResponse] = await Promise.all([
                 getAttendance(employeeId).catch((error) => {
-                    // Check if it's the "No attendance records" case
                     if (error.message === 'No attendance records found') {
-                        return {
-                            attendance: [],
-                            isCheckedInToday: 0, // Default to not checked in
-                        };
+                        return { attendance: [], isCheckedInToday: 0 };
                     }
-                    throw error; // Re-throw if it's a different error
+                    throw error;
                 }),
                 getParameter(companyId).catch((error) => {
-                    console.error('Parameter fetch error:', error);
-                    // Return default values if parameter fetch fails
+                    console.warn('Parameter fetch failed, using defaults:', error.message);
                     return {
                         data: {
-                            jam_telat: '09:00', // Default late time
-                            radius: 100, // Default radius in meters
+                            jam_telat: DEFAULT_LATE_TIME,
+                            radius: DEFAULT_RADIUS,
                         },
                     };
                 }),
-                Location.getCurrentPositionAsync({}),
+                Location.getCurrentPositionAsync({
+                    accuracy: Location.Accuracy.Balanced,
+                    maximumAge: 10000,
+                }),
             ]);
 
-            // Safely access parameter response data with defaults
-            const jamTelat = parameterResponse?.data?.jam_telat || '09:00';
-            const radius = parameterResponse?.data?.radius || 100;
+            // Early return if component unmounted
+            if (!mountedRef.current) return;
 
+            // Process data with safe defaults
+            const jamTelat = parameterResponse?.data?.jam_telat || DEFAULT_LATE_TIME;
+            const radius = parameterResponse?.data?.radius || DEFAULT_RADIUS;
+
+            // Calculate today's attendance status
             const today = new Date().toISOString().split('T')[0];
-            const todayAttendance = attendanceResponse.attendance.find((record) => {
+            const todayAttendance = attendanceResponse.attendance?.find((record) => {
                 const recordDate = new Date(record.checkin).toISOString().split('T')[0];
                 return recordDate === today;
             });
 
-            const checkedOutStatus = todayAttendance && todayAttendance.checkout ? true : false;
-            setAttendanceData(attendanceResponse.attendance || []);
-            setIsCheckedIn(attendanceResponse.isCheckedInToday);
-            setIsCheckedOut(checkedOutStatus);
-            setJamTelat(jamTelat);
-            setRadius(radius);
+            const checkedOutStatus = Boolean(todayAttendance?.checkout);
 
+            // Update state in batch for better performance
             const { latitude, longitude } = locationResponse.coords;
-            setLocation(`${latitude.toFixed(6)}, ${longitude.toFixed(6)}`);
+            const coordinates = `${latitude.toFixed(6)}, ${longitude.toFixed(6)}`;
 
-            const [reverseGeocodeResult] = await Location.reverseGeocodeAsync({ latitude, longitude });
-            setLocationName(
-                reverseGeocodeResult
-                    ? `${reverseGeocodeResult.street}, ${reverseGeocodeResult.city}, ${reverseGeocodeResult.region}, ${reverseGeocodeResult.country}`
-                    : 'Tidak dapat mengambil nama lokasi',
-            );
+            // Get location name
+            let locationName = 'Tidak dapat mengambil nama lokasi';
+            try {
+                const [reverseGeocodeResult] = await Location.reverseGeocodeAsync({
+                    latitude,
+                    longitude,
+                });
+                locationName = formatLocationName(reverseGeocodeResult);
+            } catch (geocodeError) {
+                console.warn('Geocoding failed:', geocodeError.message);
+            }
+
+            // Batch state updates
+            if (mountedRef.current) {
+                setAttendanceData(attendanceResponse.attendance || []);
+                setIsCheckedIn(attendanceResponse.isCheckedInToday);
+                setIsCheckedOut(checkedOutStatus);
+                setJamTelat(jamTelat);
+                setRadius(radius);
+                setLocation(coordinates);
+                setLocationName(locationName);
+                setErrorMsg(null);
+            }
         } catch (error) {
-            // Only show error alert for actual errors, not for "No attendance records"
-            if (!error.message?.includes('No attendance records found')) {
+            if (mountedRef.current && !error.message?.includes('No attendance records found')) {
                 console.error('Error fetching data:', error);
-                showAlert('Gagal memuat data. Silakan coba lagi.', 'error');
+                const errorMessage = error.message?.includes('Location request failed')
+                    ? 'Gagal mendapatkan lokasi. Periksa pengaturan GPS Anda.'
+                    : 'Gagal memuat data. Silakan coba lagi.';
+                showAlert(errorMessage, 'error');
+                setErrorMsg(errorMessage);
             }
         } finally {
-            setIsLoading(false);
+            if (mountedRef.current) {
+                setIsLoading(false);
+            }
         }
     }, [employeeId, companyId]);
 
+    // Enhanced refresh function with better UX
     const onRefresh = useCallback(async () => {
-        // Add haptic feedback for better UX
+        if (!mountedRef.current) return;
+
+        // Haptic feedback for better UX
         if (Platform.OS === 'ios') {
             Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
         }
 
-        setIsLoading(true);
         setRefreshing(true);
+
         try {
             await fetchData();
-            // Small delay to show the refresh animation
-            await new Promise((resolve) => setTimeout(resolve, 500));
+            // Brief delay for smooth UX
+            await new Promise((resolve) => setTimeout(resolve, 300));
         } catch (error) {
             console.error('Error during refresh:', error);
-            showAlert('Gagal memuat data. Silakan coba lagi.', 'error');
+            if (mountedRef.current) {
+                showAlert('Gagal memuat data. Silakan coba lagi.', 'error');
+            }
         } finally {
-            setRefreshing(false);
-            setIsLoading(false);
+            if (mountedRef.current) {
+                setRefreshing(false);
+            }
         }
     }, [fetchData]);
 
@@ -255,65 +406,91 @@ const Kehadiran = () => {
         }, [hasAccess, employeeId, companyId, fetchData]),
     );
 
+    // Enhanced animation and time management
     useEffect(() => {
-        setIsLoading(true);
+        if (!mountedRef.current) return;
 
-        // Start entrance animations with stagger effect
-        Animated.sequence([
-            Animated.parallel([
-                Animated.timing(fadeAnim, {
-                    toValue: 1,
-                    duration: 600,
-                    useNativeDriver: true,
-                }),
-                Animated.spring(slideAnim, {
-                    toValue: 0,
-                    tension: 80,
-                    friction: 8,
-                    useNativeDriver: true,
-                }),
-                Animated.spring(scaleAnim, {
-                    toValue: 1,
-                    tension: 100,
-                    friction: 8,
-                    useNativeDriver: true,
-                }),
-            ]),
-            // Button pulse animation after entrance
-            Animated.loop(
-                Animated.sequence([
-                    Animated.timing(buttonPulseAnim, {
-                        toValue: 1.05,
-                        duration: 1500,
+        // Defer animations to improve initial load performance
+        InteractionManager.runAfterInteractions(() => {
+            if (!mountedRef.current) return;
+
+            // Start entrance animations with optimized timing
+            Animated.sequence([
+                Animated.parallel([
+                    Animated.timing(fadeAnim, {
+                        toValue: 1,
+                        duration: ANIMATION_DURATION.LONG,
                         useNativeDriver: true,
                     }),
-                    Animated.timing(buttonPulseAnim, {
+                    Animated.spring(slideAnim, {
+                        toValue: 0,
+                        tension: 80,
+                        friction: 8,
+                        useNativeDriver: true,
+                    }),
+                    Animated.spring(scaleAnim, {
                         toValue: 1,
-                        duration: 1500,
+                        tension: 100,
+                        friction: 8,
                         useNativeDriver: true,
                     }),
                 ]),
-            ),
-        ]).start();
+                // Subtle button pulse animation
+                Animated.loop(
+                    Animated.sequence([
+                        Animated.timing(buttonPulseAnim, {
+                            toValue: 1.03,
+                            duration: 2000,
+                            useNativeDriver: true,
+                        }),
+                        Animated.timing(buttonPulseAnim, {
+                            toValue: 1,
+                            duration: 2000,
+                            useNativeDriver: true,
+                        }),
+                    ]),
+                ),
+            ]).start();
+        });
 
-        const now = new Date();
-        const time = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true });
-        setCurrentTime(time);
+        // Initialize time with better formatting
+        const updateTime = () => {
+            const now = new Date();
+            const time = now.toLocaleTimeString('id-ID', {
+                hour: '2-digit',
+                minute: '2-digit',
+                hour12: false,
+            });
+            if (mountedRef.current) {
+                setCurrentTime(time);
+            }
+        };
+
+        updateTime();
         setIsLoading(false);
 
-        const interval = setInterval(() => {
-            const now = new Date();
-            const time = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true });
-            setCurrentTime(time);
-        }, 1000);
+        // Optimized interval with cleanup
+        timeInterval.current = setInterval(updateTime, 1000);
 
-        return () => clearInterval(interval);
+        return () => {
+            if (timeInterval.current) {
+                clearInterval(timeInterval.current);
+                timeInterval.current = null;
+            }
+        };
     }, []);
 
-    const showAlert = (message, type) => {
+    // Enhanced alert function with better UX
+    const showAlert = useCallback((message, type = 'info') => {
+        if (!mountedRef.current) return;
+
         setAlert({ show: true, type, message });
-        setTimeout(() => setAlert((prev) => ({ ...prev, show: false })), 3000);
-    };
+        setTimeout(() => {
+            if (mountedRef.current) {
+                setAlert((prev) => ({ ...prev, show: false }));
+            }
+        }, 3000);
+    }, []);
 
     const handleClockIn = useCallback(() => {
         if (!location || !locationName) {
@@ -434,104 +611,47 @@ const Kehadiran = () => {
         }
     };
 
-    const getBackgroundColor = (absenStatus) => {
-        const colors = {
-            'On Time': '#ECFDF5',
-            Early: '#F0F9FF',
-            Late: '#FEF2F2',
-            Holiday: '#F9FAFB',
-            'Not Absent': '#F3F4F6',
-        };
-        return colors[absenStatus] || '#F3F4F6';
-    };
+    // Optimized utility functions using configurations
+    const getBackgroundColor = useCallback((status) => {
+        return getStatusConfig(status).backgroundColor;
+    }, []);
 
-    const calculateDuration = (checkinTime, checkoutTime) => {
-        if (!checkinTime || !checkoutTime) return '-';
+    const getStatusIcon = useCallback((status) => {
+        return getStatusConfig(status).icon;
+    }, []);
 
-        const timeDifference = checkoutTime - checkinTime;
-        if (isNaN(timeDifference) || timeDifference < 0) return '-';
+    const getStatusIconColor = useCallback((status) => {
+        return getStatusConfig(status).color;
+    }, []);
 
-        const hours = Math.floor(timeDifference / (1000 * 60 * 60));
-        const minutes = Math.floor((timeDifference % (1000 * 60 * 60)) / (1000 * 60));
+    // Memoized attendance stats calculation (now uses attendanceStats from useMemo)
+    const getAttendanceStats = useCallback(() => attendanceStats, [attendanceStats]);
 
-        return `${hours}h ${minutes}m`;
-    };
-
-    const getStatusIcon = (status) => {
-        const icons = {
-            'On Time': 'checkmark-circle',
-            Early: 'time',
-            Late: 'warning',
-            Holiday: 'calendar',
-            'Not Absent': 'close-circle',
-        };
-        return icons[status] || 'help-circle';
-    };
-
-    const getStatusIconColor = (status) => {
-        const colors = {
-            'On Time': '#10B981',
-            Early: '#3B82F6',
-            Late: '#EF4444',
-            Holiday: '#6B7280',
-            'Not Absent': '#9CA3AF',
-        };
-        return colors[status] || '#6B7280';
-    };
-
-    // Calculate attendance statistics
-    const getAttendanceStats = () => {
-        const stats = {
-            total: attendanceData.length,
-            onTime: 0,
-            late: 0,
-            early: 0,
-            absent: 0,
-        };
-
-        attendanceData.forEach((record) => {
-            switch (record.status) {
-                case 'On Time':
-                    stats.onTime++;
-                    break;
-                case 'Late':
-                    stats.late++;
-                    break;
-                case 'Early':
-                    stats.early++;
-                    break;
-                default:
-                    stats.absent++;
-            }
-        });
-
-        return stats;
-    };
-
-    const AttendanceStats = () => {
-        const stats = getAttendanceStats();
+    // Memoized AttendanceStats component for better performance
+    const AttendanceStats = memo(() => {
+        const stats = attendanceStats;
 
         if (stats.total === 0) return null;
 
+        const handleStatsToggle = useCallback(() => {
+            if (Platform.OS === 'ios') {
+                Haptics.selectionAsync();
+            }
+
+            const newShowStats = !showStats;
+            setShowStats(newShowStats);
+
+            // Enhanced animation with better timing
+            Animated.timing(statsSlideAnim, {
+                toValue: newShowStats ? 0 : -100,
+                duration: ANIMATION_DURATION.MEDIUM,
+                useNativeDriver: true,
+            }).start();
+        }, [showStats]);
+
         return (
             <View style={styles.statsContainer}>
-                <TouchableOpacity
-                    style={styles.statsHeader}
-                    onPress={() => {
-                        if (Platform.OS === 'ios') {
-                            Haptics.selectionAsync();
-                        }
-                        setShowStats(!showStats);
-
-                        // Animate the stats section
-                        Animated.timing(statsSlideAnim, {
-                            toValue: showStats ? -100 : 0,
-                            duration: 300,
-                            useNativeDriver: true,
-                        }).start();
-                    }}
-                    activeOpacity={0.7}
-                >
+                <TouchableOpacity style={styles.statsHeader} onPress={handleStatsToggle} activeOpacity={0.7}>
                     <Text style={styles.statsTitle}>Ringkasan Kehadiran</Text>
                     <Animated.View
                         style={{
@@ -576,7 +696,8 @@ const Kehadiran = () => {
                 )}
             </View>
         );
-    };
+    });
+    AttendanceStats.displayName = 'AttendanceStats';
 
     // Export attendance data function
     const exportAttendanceData = async () => {
@@ -624,175 +745,207 @@ const Kehadiran = () => {
         }
     };
 
-    const renderImage = (imageUri) => {
+    // Memoized image renderer for better performance
+    const renderImage = useCallback((imageUri) => {
         return imageUri ? (
             <Image
                 source={{ uri: imageUri }}
                 style={styles.attendanceImage}
-                onError={(e) => console.error('Image load error:', e.nativeEvent.error)}
+                onError={(e) => console.warn('Image load error:', e.nativeEvent.error)}
+                resizeMode="cover"
+                loadingIndicatorSource={require('../../assets/images/profile-default.png')}
             />
         ) : (
             <View style={styles.noAttendanceImage}>
-                <Text>No Image Available</Text>
+                <Ionicons name="image-outline" size={24} color="#9CA3AF" />
+                <Text style={styles.noImageText}>Tidak ada foto</Text>
             </View>
         );
-    };
+    }, []);
 
-    const renderDateView = (date, index) => {
-        const currentDate = new Date(startDate);
-        currentDate.setDate(startDate.getDate() + index);
+    // Optimized renderDateView with better performance and memoization
+    const renderDateView = useCallback(
+        (date, index) => {
+            const currentDate = new Date(startDate);
+            currentDate.setDate(startDate.getDate() + index);
 
-        const formattedDateForUpper = currentDate.toLocaleDateString('en-US', {
-            weekday: 'short',
-            month: 'short',
-            day: 'numeric',
-            year: 'numeric',
-        });
+            const formattedDateForUpper = currentDate.toLocaleDateString('id-ID', {
+                weekday: 'short',
+                month: 'short',
+                day: 'numeric',
+                year: 'numeric',
+            });
 
-        const formattedDate = currentDate.toISOString().split('T')[0];
+            const formattedDate = currentDate.toISOString().split('T')[0];
 
-        const attendanceForDate = attendanceData.find((attendance) => {
-            const checkinDate = new Date(attendance.checkin).toISOString().split('T')[0];
-            return checkinDate === formattedDate;
-        });
+            const attendanceForDate = attendanceData.find((attendance) => {
+                const checkinDate = new Date(attendance.checkin).toISOString().split('T')[0];
+                return checkinDate === formattedDate;
+            });
 
-        const status = attendanceForDate ? attendanceForDate.status : 'Not Absent';
-        const checkIn = attendanceForDate?.checkin
-            ? new Date(attendanceForDate.checkin).toLocaleTimeString('id-ID', {
-                  hour: '2-digit',
-                  minute: '2-digit',
-                  hour12: false,
-              })
-            : '-';
+            const status = attendanceForDate?.status || 'Not Absent';
+            const checkIn = attendanceForDate?.checkin
+                ? new Date(attendanceForDate.checkin).toLocaleTimeString('id-ID', {
+                      hour: '2-digit',
+                      minute: '2-digit',
+                      hour12: false,
+                  })
+                : '-';
 
-        const checkOut = attendanceForDate?.checkout
-            ? new Date(attendanceForDate.checkout).toLocaleTimeString('id-ID', {
-                  hour: '2-digit',
-                  minute: '2-digit',
-                  hour12: false,
-              })
-            : '-';
+            const checkOut = attendanceForDate?.checkout
+                ? new Date(attendanceForDate.checkout).toLocaleTimeString('id-ID', {
+                      hour: '2-digit',
+                      minute: '2-digit',
+                      hour12: false,
+                  })
+                : '-';
 
-        const duration = attendanceForDate
-            ? calculateDuration(new Date(attendanceForDate.checkin), new Date(attendanceForDate.checkout))
-            : '-';
-        const notes = attendanceForDate ? attendanceForDate.note : 'Tidak ada catatan';
-        const attendanceImage = attendanceForDate?.attendance_image
-            ? `https://app.kejartugas.com/${attendanceForDate.attendance_image}`
-            : null;
-        const wfh = attendanceForDate
-            ? attendanceForDate.isWFH
-                ? 'Work From Home'
-                : 'Bekerja di Kantor'
-            : 'Tidak ada data';
+            const duration = attendanceForDate
+                ? formatDuration(new Date(attendanceForDate.checkin), new Date(attendanceForDate.checkout))
+                : '-';
 
-        return (
-            <Animated.View
-                key={index}
-                style={[
-                    styles.containerPerDate,
-                    {
-                        opacity: fadeAnim,
-                        transform: [
-                            {
-                                translateY: slideAnim.interpolate({
-                                    inputRange: [0, 50],
-                                    outputRange: [0, 50 + index * 5],
-                                }),
-                            },
-                        ],
-                    },
-                ]}
-            >
-                {/* Card Header */}
-                <View style={styles.cardHeader}>
-                    <View style={styles.dateSection}>
-                        <Text style={styles.dateText}>{formattedDateForUpper}</Text>
-                        <View style={styles.statusRow}>
-                            <View style={[styles.statusBadge, { backgroundColor: getBackgroundColor(status) }]}>
-                                <Ionicons name={getStatusIcon(status)} size={14} color={getStatusIconColor(status)} />
-                                <Text style={[styles.statusText, { color: getStatusIconColor(status) }]}>{status}</Text>
-                            </View>
-                            {wfh !== 'Tidak ada data' && (
-                                <View
-                                    style={[
-                                        styles.wfhBadge,
-                                        {
-                                            backgroundColor: attendanceForDate?.isWFH ? '#FEF3C7' : '#DBEAFE',
-                                        },
-                                    ]}
-                                >
+            const notes = attendanceForDate?.note || 'Tidak ada catatan';
+            const attendanceImage = attendanceForDate?.attendance_image
+                ? `https://app.kejartugas.com/${attendanceForDate.attendance_image}`
+                : null;
+
+            const wfh = attendanceForDate
+                ? attendanceForDate.isWFH
+                    ? 'Work From Home'
+                    : 'Bekerja di Kantor'
+                : 'Tidak ada data';
+
+            return (
+                <Animated.View
+                    key={`date-${index}-${formattedDate}`}
+                    style={[
+                        styles.containerPerDate,
+                        {
+                            opacity: fadeAnim,
+                            transform: [
+                                {
+                                    translateY: slideAnim.interpolate({
+                                        inputRange: [0, 50],
+                                        outputRange: [0, 50 + index * 5],
+                                    }),
+                                },
+                            ],
+                        },
+                    ]}
+                >
+                    {/* Card Header */}
+                    <View style={styles.cardHeader}>
+                        <View style={styles.dateSection}>
+                            <Text style={styles.dateText}>{formattedDateForUpper}</Text>
+                            <View style={styles.statusRow}>
+                                <View style={[styles.statusBadge, { backgroundColor: getBackgroundColor(status) }]}>
                                     <Ionicons
-                                        name={attendanceForDate?.isWFH ? 'home' : 'business'}
-                                        size={12}
-                                        color={attendanceForDate?.isWFH ? '#D97706' : '#2563EB'}
+                                        name={getStatusIcon(status)}
+                                        size={14}
+                                        color={getStatusIconColor(status)}
                                     />
-                                    <Text
+                                    <Text style={[styles.statusText, { color: getStatusIconColor(status) }]}>
+                                        {status}
+                                    </Text>
+                                </View>
+                                {wfh !== 'Tidak ada data' && (
+                                    <View
                                         style={[
-                                            styles.wfhText,
+                                            styles.wfhBadge,
                                             {
-                                                color: attendanceForDate?.isWFH ? '#D97706' : '#2563EB',
+                                                backgroundColor: attendanceForDate?.isWFH ? '#FEF3C7' : '#DBEAFE',
                                             },
                                         ]}
                                     >
-                                        {wfh}
-                                    </Text>
-                                </View>
-                            )}
-                        </View>
-                    </View>
-                </View>
-
-                {/* Card Content */}
-                <View style={styles.cardContent}>
-                    <View style={styles.leftContent}>
-                        {/* Time Details Grid */}
-                        <View style={styles.timeDetailsGrid}>
-                            <View style={styles.timeCard}>
-                                <View style={styles.timeIconContainer}>
-                                    <Ionicons name="log-in" size={16} color="#10B981" />
-                                </View>
-                                <Text style={styles.timeLabel}>Masuk</Text>
-                                <Text style={styles.timeValue}>{checkIn}</Text>
+                                        <Ionicons
+                                            name={attendanceForDate?.isWFH ? 'home' : 'business'}
+                                            size={12}
+                                            color={attendanceForDate?.isWFH ? '#D97706' : '#2563EB'}
+                                        />
+                                        <Text
+                                            style={[
+                                                styles.wfhText,
+                                                {
+                                                    color: attendanceForDate?.isWFH ? '#D97706' : '#2563EB',
+                                                },
+                                            ]}
+                                        >
+                                            {wfh}
+                                        </Text>
+                                    </View>
+                                )}
                             </View>
-
-                            <View style={styles.timeCard}>
-                                <View style={styles.timeIconContainer}>
-                                    <Ionicons name="log-out" size={16} color="#EF4444" />
-                                </View>
-                                <Text style={styles.timeLabel}>Keluar</Text>
-                                <Text style={styles.timeValue}>{checkOut}</Text>
-                            </View>
-
-                            <View style={styles.timeCard}>
-                                <View style={styles.timeIconContainer}>
-                                    <Ionicons name="timer" size={16} color="#6366F1" />
-                                </View>
-                                <Text style={styles.timeLabel}>Durasi</Text>
-                                <Text style={styles.timeValue}>{duration}</Text>
-                            </View>
-                        </View>
-
-                        {/* Notes Section */}
-                        <View style={styles.notesSection}>
-                            <View style={styles.notesHeader}>
-                                <Ionicons name="document-text" size={16} color="#6B7280" />
-                                <Text style={styles.notesLabel}>Catatan:</Text>
-                            </View>
-                            <Text style={styles.notesText}>{notes}</Text>
                         </View>
                     </View>
 
-                    {/* Attendance Image */}
-                    <View style={styles.imageContainer}>{renderImage(attendanceImage)}</View>
-                </View>
-            </Animated.View>
-        );
-    };
+                    {/* Card Content */}
+                    <View style={styles.cardContent}>
+                        <View style={styles.leftContent}>
+                            {/* Time Details Grid */}
+                            <View style={styles.timeDetailsGrid}>
+                                <View style={styles.timeCard}>
+                                    <View style={styles.timeIconContainer}>
+                                        <Ionicons name="log-in" size={16} color="#10B981" />
+                                    </View>
+                                    <Text style={styles.timeLabel}>Masuk</Text>
+                                    <Text style={styles.timeValue}>{checkIn}</Text>
+                                </View>
 
-    const dateViews = Array.from({ length: daysDiff + 1 }, (_, index) => renderDateView(startDate, index)).reverse();
-    const paginatedDateViews = dateViews.slice(currentPage * itemsPerPage, (currentPage + 1) * itemsPerPage);
-    const totalPages = Math.ceil(dateViews.length / itemsPerPage);
+                                <View style={styles.timeCard}>
+                                    <View style={styles.timeIconContainer}>
+                                        <Ionicons name="log-out" size={16} color="#EF4444" />
+                                    </View>
+                                    <Text style={styles.timeLabel}>Keluar</Text>
+                                    <Text style={styles.timeValue}>{checkOut}</Text>
+                                </View>
+
+                                <View style={styles.timeCard}>
+                                    <View style={styles.timeIconContainer}>
+                                        <Ionicons name="timer" size={16} color="#6366F1" />
+                                    </View>
+                                    <Text style={styles.timeLabel}>Durasi</Text>
+                                    <Text style={styles.timeValue}>{duration}</Text>
+                                </View>
+                            </View>
+
+                            {/* Notes Section */}
+                            <View style={styles.notesSection}>
+                                <View style={styles.notesHeader}>
+                                    <Ionicons name="document-text" size={16} color="#6B7280" />
+                                    <Text style={styles.notesLabel}>Catatan:</Text>
+                                </View>
+                                <Text style={styles.notesText} numberOfLines={3} ellipsizeMode="tail">
+                                    {notes}
+                                </Text>
+                            </View>
+                        </View>
+
+                        {/* Attendance Image */}
+                        <View style={styles.imageContainer}>{renderImage(attendanceImage)}</View>
+                    </View>
+                </Animated.View>
+            );
+        },
+        [
+            attendanceData,
+            startDate,
+            fadeAnim,
+            slideAnim,
+            getBackgroundColor,
+            getStatusIcon,
+            getStatusIconColor,
+            renderImage,
+        ],
+    );
+
+    // Memoized date views for pagination with better performance
+    const dateViews = useMemo(() => {
+        return Array.from({ length: daysDiff + 1 }, (_, index) => renderDateView(null, index)).reverse();
+    }, [daysDiff, renderDateView]);
+
+    const paginatedDateViews = useMemo(() => {
+        return dateViews.slice(currentPage * ITEMS_PER_PAGE, (currentPage + 1) * ITEMS_PER_PAGE);
+    }, [dateViews, currentPage]);
 
     return (
         <View style={styles.container}>
@@ -1562,6 +1715,12 @@ const styles = StyleSheet.create({
         justifyContent: 'center',
         alignItems: 'center',
         backgroundColor: '#F9FAFB',
+        gap: 8,
+    },
+    noImageText: {
+        fontSize: 12,
+        color: '#9CA3AF',
+        fontFamily: FONTS.family.medium,
     },
 
     // Pagination
