@@ -241,6 +241,34 @@ const AdhocDashboard = ({ navigation }) => {
         }
     };
 
+    // Function to handle chat press for adhoc tasks
+    const handleAdhocChatPress = async () => {
+        try {
+            if (!selectedTaskDetail) {
+                Alert.alert('Error', 'Detail tugas tidak tersedia');
+                return;
+            }
+
+            // Navigate to ChatInterface with adhoc parameters
+            navigation.navigate('ChatInterface', {
+                adhocId: selectedTaskDetail.id,
+                taskDetails: {
+                    id: selectedTaskDetail.id,
+                    title: selectedTaskDetail.adhoc_name,
+                    subtitle: selectedTaskDetail.adhoc_desc || 'Adhoc Task',
+                    status: selectedTaskDetail.adhoc_status,
+                    assignedBy: selectedTaskDetail.task_approvals?.[0]?.employee?.employee_name || 'Unknown',
+                    description: selectedTaskDetail.adhoc_desc,
+                },
+                isAdhoc: true, // Flag to indicate this is an adhoc task
+            });
+            setIsDetailModalVisible(false);
+        } catch (error) {
+            console.error('Error navigating to adhoc chat:', error.message);
+            Alert.alert('Error', 'Gagal membuka chat');
+        }
+    };
+
     const fetchHistoryTasks = async () => {
         setLoading(true);
         setError(null);
@@ -550,6 +578,12 @@ const AdhocDashboard = ({ navigation }) => {
                         />
                     </View>
                 )}
+
+                {/* Chat button - Always visible for all participants */}
+                <TouchableOpacity style={styles.chatButton} onPress={handleAdhocChatPress}>
+                    <Feather name="message-circle" size={20} color="#4A90E2" />
+                    <Text style={styles.chatButtonText}>Chat Tugas</Text>
+                </TouchableOpacity>
 
                 {showApprovalButtons ? (
                     <View style={styles.approvalButtonsContainer}>
@@ -1667,243 +1701,25 @@ const styles = StyleSheet.create({
         fontSize: calculateFontSize(16),
         fontFamily: 'Poppins-SemiBold',
     },
-    centerContent: {
-        flex: 1,
-        justifyContent: 'center',
-        alignItems: 'center',
-        paddingHorizontal: 20,
-    },
-    errorText: {
-        fontSize: 16,
-        color: '#FF6B6B',
-        textAlign: 'center',
-        fontFamily: 'Poppins-Medium',
-    },
-    noTasksText: {
-        fontSize: 16,
-        color: '#666',
-        textAlign: 'center',
-        fontFamily: 'Poppins-Medium',
-    },
-    assigneeItem: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        marginBottom: 16,
-    },
-    assigneeAvatar: {
-        width: 40,
-        height: 40,
-        borderRadius: 20,
-        backgroundColor: '#E0E0E0',
-        justifyContent: 'center',
-        alignItems: 'center',
-        marginRight: 12,
-    },
-    assigneeInitial: {
-        fontSize: 18,
-        color: '#333',
-        fontFamily: 'Poppins-Bold',
-    },
-    assigneeName: {
-        fontSize: 16,
-        color: '#333',
-        fontFamily: 'Poppins-Regular',
-    },
-    // Approval Task Styles
-    approvalTaskItem: {
-        backgroundColor: '#FFFFFF',
-        borderRadius: 16,
-        padding: 20,
-        marginBottom: 16,
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.08,
-        shadowRadius: 8,
-        elevation: 4,
-        borderWidth: 1,
-        borderColor: '#E1F5FE',
-        borderLeftWidth: 4,
-        borderLeftColor: '#2196F3',
-    },
-    approvalTaskHeader: {
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        alignItems: 'flex-start',
-        marginBottom: 16,
-    },
-    approvalTaskTitle: {
-        fontSize: calculateFontSize(17),
-        fontWeight: '600',
-        flex: 1,
-        marginRight: 12,
-        color: '#1E293B',
-        lineHeight: 24,
-    },
-    approvalTaskInfo: {
-        marginTop: 8,
-        gap: 8,
-    },
-    attachmentSection: {
-        marginTop: 20,
-    },
-    attachmentImage: {
-        width: '100%',
-        height: 200,
-        borderRadius: 8,
-    },
-    approvalButtonsContainer: {
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        marginTop: 20,
-    },
-    rejectButton: {
-        backgroundColor: '#D32F2F', // Darker red for reject
-        padding: 12,
-        borderRadius: 8,
-        flex: 1,
-        marginRight: 8,
-        alignItems: 'center',
-    },
-    approveButton: {
-        backgroundColor: '#00C853', // Bright green for approve
-        padding: 12,
-        borderRadius: 8,
-        flex: 1,
-        marginLeft: 8,
-        alignItems: 'center',
-    },
-    rejectButtonText: {
-        color: '#FFFFFF',
-        fontWeight: 'bold',
-        fontSize: calculateFontSize(16), // Slightly larger text for better readability
-    },
-    approveButtonText: {
-        color: '#FFFFFF',
-        fontWeight: 'bold',
-        fontSize: calculateFontSize(16), // Slightly larger text for better readability
-    },
-    statusBox: {
-        padding: 8,
+    chatButton: {
+        backgroundColor: '#FFF',
         borderRadius: 12,
-        marginTop: 4,
+        padding: 16,
         alignItems: 'center',
-        justifyContent: 'center',
-    },
-    statusText: {
-        fontSize: calculateFontSize(12),
-        fontFamily: 'Poppins-Medium',
-    },
-    approvalLevelContainer: {
         marginTop: 16,
-        padding: 12,
-        backgroundColor: '#E3F2FD',
-        borderRadius: 8,
-        marginBottom: 20, // Adding margin bottom for spacing
-    },
-    approvalLevelText: {
-        fontSize: calculateFontSize(14),
-        color: '#2196F3',
-        fontFamily: 'Poppins-SemiBold',
-    },
-    modalContainer: {
-        flex: 1,
-        justifyContent: 'center',
-        alignItems: 'center',
-        backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    },
-    modalContent: {
-        backgroundColor: '#fff',
-        padding: 20,
-        borderRadius: 10,
-        width: '80%',
-    },
-    modalTitle: {
-        fontSize: 18,
-        fontWeight: 'bold',
-        marginBottom: 10,
-    },
-    modalInput: {
+        marginBottom: 8,
         borderWidth: 1,
-        borderColor: '#ddd',
-        borderRadius: 5,
-        padding: 10,
-        marginBottom: 15,
-    },
-    sendButton: {
-        backgroundColor: '#4A90E2',
-        padding: 10,
-        borderRadius: 5,
-        alignItems: 'center',
-        marginBottom: 10,
-    },
-    sendButtonText: {
-        color: '#fff',
-        fontWeight: 'bold',
-    },
-    cancelButton: {
-        backgroundColor: '#ccc',
-        padding: 10,
-        borderRadius: 5,
-        alignItems: 'center',
-    },
-    cancelButtonText: {
-        color: '#000',
-    },
-    closeModalButton: {
-        backgroundColor: '#F44336',
-        padding: 10,
-        borderRadius: 5,
-        alignItems: 'center',
-    },
-    closeModalText: {
-        color: '#fff',
-        fontWeight: 'bold',
-    },
-    headerContent: {
+        borderColor: '#4A90E2',
         flexDirection: 'row',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        marginBottom: 15,
+        justifyContent: 'center',
     },
-    backButton: {
-        padding: 5,
-    },
-    headerTitle: {
-        color: '#FFF',
-        fontSize: 20,
-        fontWeight: 'bold',
-    },
-    approvalButtonsContainer: {
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        marginTop: 20,
-    },
-    rejectButton: {
-        backgroundColor: '#D32F2F', // Darker red for reject
-        padding: 12,
-        borderRadius: 8,
-        flex: 1,
-        marginRight: 8,
-        alignItems: 'center',
-    },
-    approveButton: {
-        backgroundColor: '#00C853', // Bright green for approve
-        padding: 12,
-        borderRadius: 8,
-        flex: 1,
+    chatButtonText: {
+        color: '#4A90E2',
+        fontSize: calculateFontSize(16),
+        fontFamily: 'Poppins-SemiBold',
         marginLeft: 8,
-        alignItems: 'center',
     },
-    rejectButtonText: {
-        color: '#FFFFFF',
-        fontWeight: 'bold',
-        fontSize: 16, // Slightly larger text for better readability
-    },
-    approveButtonText: {
-        color: '#FFFFFF',
-        fontWeight: 'bold',
-        fontSize: 16, // Slightly larger text for better readability
-    },
+    // ...existing code...
 });
 
 export default AdhocDashboard;

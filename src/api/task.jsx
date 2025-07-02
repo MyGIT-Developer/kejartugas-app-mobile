@@ -117,6 +117,47 @@ export const sendChatMessage = async (employeeId, taskId, message, companyId) =>
     }
 };
 
+// New functions for adhoc chat
+export const fetchChatByAdhocId = async (adhocId) => {
+    try {
+        const token = await AsyncStorage.getItem('token');
+        const response = await apiService.get(`/chat/adhoc/${adhocId}`, {
+            headers: {
+                Authorization: `Bearer ${token}`,
+            },
+        });
+        return response.data; // Return the data field directly
+    } catch (error) {
+        throw new Error(error.response?.data?.message || 'Fetching adhoc chat messages failed');
+    }
+};
+
+export const sendAdhocChatMessage = async (employeeId, adhocId, message, companyId) => {
+    try {
+        const token = await AsyncStorage.getItem('token');
+        const payload = {
+            employee_id: employeeId,
+            adhoc_id: adhocId,
+            message: message,
+            company_id: companyId,
+        };
+
+        console.log('Sending adhoc chat message with payload:', payload);
+
+        const response = await apiService.post(`/chat`, payload, {
+            headers: {
+                Authorization: `Bearer ${token}`,
+                'Content-Type': 'application/json',
+            },
+        });
+
+        return response.data; // Return the data field directly
+    } catch (error) {
+        console.error('Error in sendAdhocChatMessage:', error);
+        throw new Error(error.response?.data?.message || 'Sending adhoc chat message failed');
+    }
+};
+
 export const deleteTask = async (taskId) => {
     try {
         const token = await AsyncStorage.getItem('token');

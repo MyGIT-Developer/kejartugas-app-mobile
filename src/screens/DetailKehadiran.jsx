@@ -316,7 +316,7 @@ const DetailKehadiran = () => {
             const manipulatedImage = await ImageManipulator.manipulateAsync(
                 uri,
                 [{ resize: { width: 1000 } }], // Resize to max width of 1000px
-                { compress: 0.8, format: ImageManipulator.SaveFormat.JPEG, base64: true },
+                { compress: 0.8, format: 'jpeg', base64: true },
             );
             return manipulatedImage.base64;
         } catch (error) {

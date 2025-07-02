@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useCallback, useMemo } from 'react';
 import {
     View,
     Text,
@@ -10,26 +10,75 @@ import {
     RefreshControl,
     Alert,
     Dimensions,
+    StatusBar,
+    Platform,
+    KeyboardAvoidingView,
+    Animated,
 } from 'react-native';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import { LinearGradient } from 'expo-linear-gradient';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { fetchChatByTaskId, sendChatMessage } from '../api/task';
+import { fetchChatByTaskId, sendChatMessage, fetchChatByAdhocId, sendAdhocChatMessage } from '../api/task';
 import Shimmer from '../components/Shimmer';
+import { FONTS } from '../constants/fonts';
 
-const { width: SCREEN_WIDTH } = Dimensions.get('window');
+const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
+
+// Constants for better maintainability
+const GEMINI_API_KEY = 'AIzaSyCbw7k1d60bhz7fHM9xgPZNql6LqQLxizM';
+const GEMINI_API_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key=${GEMINI_API_KEY}`;
+const MESSAGE_LIMIT = 500;
+const ANIMATION_DURATION = 300;
+
+// Optimized date formatting
+const formatMessageDate = (date) => {
+    const messageDate = new Date(date);
+    const today = new Date();
+    const yesterday = new Date(today);
+    yesterday.setDate(yesterday.getDate() - 1);
+
+    if (messageDate.toDateString() === today.toDateString()) {
+        return 'Hari Ini';
+    } else if (messageDate.toDateString() === yesterday.toDateString()) {
+        return 'Kemarin';
+    } else {
+        return messageDate.toLocaleDateString('id-ID', {
+            day: 'numeric',
+            month: 'long',
+            year: 'numeric',
+        });
+    }
+};
+
+// Message types for better type safety
+const MESSAGE_TYPES = {
+    USER: 'user',
+    GEMINI: 'gemini',
+    SYSTEM: 'system',
+    EMPLOYEE: 'employee',
+};
 
 const ChatInterface = ({ route, navigation }) => {
-    const { taskId, taskDetails, taskSubtitle } = route.params || {};
+    const { taskId, adhocId, taskDetails, taskSubtitle, isAdhoc = false } = route.params || {};
 
+    // Early return with better error UI
     if (!taskDetails) {
         return (
             <SafeAreaView style={styles.errorContainer}>
-                <Text style={styles.errorText}>Error: Task details are not available.</Text>
+                <StatusBar barStyle="dark-content" backgroundColor="#F8F9FA" />
+                <View style={styles.errorContent}>
+                    <Ionicons name="alert-circle-outline" size={48} color="#EF4444" />
+                    <Text style={styles.errorTitle}>Oops! Terjadi Kesalahan</Text>
+                    <Text style={styles.errorText}>Detail task tidak tersedia. Silakan coba kembali.</Text>
+                    <TouchableOpacity style={styles.errorButton} onPress={() => navigation.goBack()}>
+                        <Text style={styles.errorButtonText}>Kembali</Text>
+                    </TouchableOpacity>
+                </View>
             </SafeAreaView>
         );
     }
 
+    // State management with better organization
     const [messages, setMessages] = useState([]);
     const [inputText, setInputText] = useState('');
     const [sending, setSending] = useState(false);
@@ -40,28 +89,74 @@ const ChatInterface = ({ route, navigation }) => {
     const [isGeminiMode, setIsGeminiMode] = useState(false);
     const [waitingForYesNo, setWaitingForYesNo] = useState(false);
 
-    const flatListRef = useRef(null);
+    // Animation values
+    const fadeAnim = useRef(new Animated.Value(0)).current;
+    const slideAnim = useRef(new Animated.Value(50)).current;
 
+    // Refs
+    const flatListRef = useRef(null);
+    const inputRef = useRef(null);
+
+    // Memoized values for better performance
+    const headerTitle = useMemo(() => {
+        return isGeminiMode ? 'Gemini AI Chat' : taskDetails.title || 'Task Chat';
+    }, [isGeminiMode, taskDetails.title]);
+
+    const headerSubtitle = useMemo(() => {
+        return isGeminiMode ? 'Ask me anything!' : taskDetails.subtitle || 'Diskusi Task';
+    }, [isGeminiMode, taskDetails.subtitle]);
+
+    const canSendMessage = useMemo(() => {
+        return inputText.trim().length > 0 && !sending && employeeId && companyId;
+    }, [inputText, sending, employeeId, companyId]);
+
+    // Initialize component with better error handling and animation
     useEffect(() => {
-        const getEmployeeAndCompanyId = async () => {
+        const initializeChat = async () => {
             try {
-                const id = await AsyncStorage.getItem('employeeId');
-                const compId = await AsyncStorage.getItem('companyId');
+                // Start entrance animations
+                Animated.parallel([
+                    Animated.timing(fadeAnim, {
+                        toValue: 1,
+                        duration: ANIMATION_DURATION,
+                        useNativeDriver: true,
+                    }),
+                    Animated.spring(slideAnim, {
+                        toValue: 0,
+                        tension: 80,
+                        friction: 8,
+                        useNativeDriver: true,
+                    }),
+                ]).start();
+
+                // Load user data
+                const [id, compId] = await Promise.all([
+                    AsyncStorage.getItem('employeeId'),
+                    AsyncStorage.getItem('companyId'),
+                ]);
+
                 setEmployeeId(id);
                 setCompanyId(compId);
+
+                // Load chat messages
+                await loadChatMessages();
             } catch (error) {
-                Alert.alert('Error', 'Failed to load user data. Please try again.');
+                console.error('Failed to initialize chat:', error);
+                Alert.alert('Error', 'Gagal memuat data chat. Silakan coba lagi.');
             }
         };
-        getEmployeeAndCompanyId();
-        loadChatMessages();
-    }, [taskId]);
 
-    const loadChatMessages = async () => {
+        initializeChat();
+    }, [taskId, adhocId]);
+
+    // Optimized message loading with better error handling
+    const loadChatMessages = useCallback(async () => {
         setIsLoading(true);
         try {
-            const response = await fetchChatByTaskId(taskId);
-            if (response.status === 'success') {
+            // Use different API based on whether it's adhoc or regular task
+            const response = isAdhoc ? await fetchChatByAdhocId(adhocId) : await fetchChatByTaskId(taskId);
+
+            if (response.status === 'success' && response.data) {
                 const fetchedMessages = response.data.map((msg) => ({
                     id: msg.id.toString(),
                     message: msg.message,
@@ -69,653 +164,771 @@ const ChatInterface = ({ route, navigation }) => {
                     employee_id: msg.employee_id.toString(),
                     time: msg.created_at_wib,
                     status: 'sent',
+                    type: MESSAGE_TYPES.EMPLOYEE,
                 }));
+
+                // Sort messages by time
                 fetchedMessages.sort((a, b) => new Date(a.time) - new Date(b.time));
                 setMessages(fetchedMessages);
-                scrollToBottom();
+
+                // Scroll to bottom after a brief delay for better UX
+                setTimeout(scrollToBottom, 100);
             }
         } catch (error) {
-            Alert.alert('Error', 'Failed to load chat messages. Please try again.');
+            console.error('Failed to load messages:', error);
+            Alert.alert('Error', 'Gagal memuat pesan chat. Silakan coba lagi.');
         } finally {
             setIsLoading(false);
         }
-    };
+    }, [taskId, adhocId, isAdhoc]);
 
-    const onRefresh = async () => {
+    // Optimized refresh function
+    const onRefresh = useCallback(async () => {
         setRefreshing(true);
         await loadChatMessages();
         setRefreshing(false);
-    };
+    }, [loadChatMessages]);
 
-    const scrollToBottom = () => {
+    // Improved scroll to bottom function
+    const scrollToBottom = useCallback(() => {
         if (flatListRef.current && messages.length > 0) {
-            flatListRef.current.scrollToEnd({ animated: false });
+            flatListRef.current.scrollToEnd({ animated: true });
         }
-    };
+    }, [messages.length]);
 
+    // Auto-scroll when messages update
     useEffect(() => {
-        scrollToBottom();
-    }, [messages]);
-
-    const handleBackPress = () => {
-        navigation.goBack();
-    };
-
-    const handleSend = async () => {
-        if (!inputText.trim() || !employeeId || !companyId) {
-            Alert.alert('Error', 'Missing required information. Please try again.');
-            return;
+        if (messages.length > 0) {
+            setTimeout(scrollToBottom, 100);
         }
+    }, [messages, scrollToBottom]);
 
-        if (inputText.toLowerCase() === '/gemini' && !isGeminiMode) {
+    // Enhanced back button handler
+    const handleBackPress = useCallback(() => {
+        navigation.goBack();
+    }, [navigation]);
+
+    // Gemini AI integration with better error handling
+    const callGeminiAPI = useCallback(async (prompt) => {
+        try {
+            const response = await fetch(GEMINI_API_URL, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    contents: [
+                        {
+                            parts: [
+                                {
+                                    text: prompt,
+                                },
+                            ],
+                        },
+                    ],
+                }),
+            });
+
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+
+            const data = await response.json();
+            return (
+                data.candidates?.[0]?.content?.parts?.[0]?.text ||
+                'Maaf, saya tidak dapat memproses permintaan Anda saat ini.'
+            );
+        } catch (error) {
+            console.error('Gemini API error:', error);
+            throw new Error('Gagal menghubungi Gemini AI. Silakan coba lagi.');
+        }
+    }, []);
+
+    // Enhanced send message handler
+    const handleSend = useCallback(async () => {
+        if (!canSendMessage) return;
+
+        const trimmedInput = inputText.trim();
+
+        // Handle special commands
+        if (trimmedInput === '/gemini' && !isGeminiMode) {
             setIsGeminiMode(true);
             setWaitingForYesNo(true);
             const geminiMessage = {
                 id: Date.now().toString(),
-                message: `Halo! Saya adalah Gemini AI. Apakah Anda ingin bertanya tentang ${taskDetails.title}?`,
+                message: `Halo! Saya adalah Gemini AI. Apakah Anda ingin bertanya tentang "${taskDetails.title}"?`,
                 employee_name: 'Gemini AI',
-                employee_id: 'gemini',
+                employee_id: MESSAGE_TYPES.GEMINI,
                 time: new Date().toISOString(),
                 status: 'sent',
+                type: MESSAGE_TYPES.GEMINI,
             };
-            setMessages((prevMessages) => [...prevMessages, geminiMessage]);
+            setMessages((prev) => [...prev, geminiMessage]);
             setInputText('');
             return;
         }
 
-        if (inputText.toLowerCase() === '/quit' && isGeminiMode) {
+        if (trimmedInput === '/quit' && isGeminiMode) {
             setIsGeminiMode(false);
             setWaitingForYesNo(false);
             const quitMessage = {
                 id: Date.now().toString(),
                 message: 'Terima kasih telah menggunakan Gemini AI. Kembali ke mode chat normal.',
                 employee_name: 'System',
-                employee_id: 'system',
+                employee_id: MESSAGE_TYPES.SYSTEM,
                 time: new Date().toISOString(),
                 status: 'sent',
+                type: MESSAGE_TYPES.SYSTEM,
             };
-            setMessages((prevMessages) => [...prevMessages, quitMessage]);
+            setMessages((prev) => [...prev, quitMessage]);
             setInputText('');
             return;
         }
 
-        if (isGeminiMode && waitingForYesNo) {
-            if (inputText.toLowerCase().includes('ya') || inputText.toLowerCase().includes('iya')) {
-                setWaitingForYesNo(false);
-                const prompt = `Tolong jelaskan langkah-langkah detail cara mengerjakan atau menyelesaikan "${
-                    taskDetails.title
-                }". ${taskDetails.subtitle ? `Konteks tambahan: ${taskDetails.subtitle}` : ''}`;
-
-                const userMessage = {
-                    id: Date.now().toString(),
-                    message: inputText,
-                    employee_name: 'You',
-                    employee_id: 'user',
-                    time: new Date().toISOString(),
-                    status: 'sent',
-                };
-                setMessages((prev) => [...prev, userMessage]);
-                setInputText('');
-
-                try {
-                    const response = await fetch(
-                        'https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key=AIzaSyCbw7k1d60bhz7fHM9xgPZNql6LqQLxizM',
-                        {
-                            method: 'POST',
-                            headers: {
-                                'Content-Type': 'application/json',
-                            },
-                            body: JSON.stringify({
-                                contents: [
-                                    {
-                                        parts: [
-                                            {
-                                                text: prompt,
-                                            },
-                                        ],
-                                    },
-                                ],
-                            }),
-                        },
-                    );
-
-                    const data = await response.json();
-                    const geminiResponse = data.candidates[0].content.parts[0].text;
-
-                    const geminiMessage = {
-                        id: Date.now().toString(),
-                        message: geminiResponse,
-                        employee_name: 'Gemini AI',
-                        employee_id: 'gemini',
-                        time: new Date().toISOString(),
-                        status: 'sent',
-                    };
-
-                    setMessages((prev) => [...prev, geminiMessage]);
-                } catch (error) {
-                    Alert.alert('Error', 'Failed to get response from Gemini AI');
-                }
-                return;
-            }
-            setWaitingForYesNo(false);
-        }
-
+        // Create new message
         const newMessage = {
             id: Date.now().toString(),
-            message: inputText,
+            message: trimmedInput,
             employee_name: isGeminiMode ? 'You' : 'You',
-            employee_id: isGeminiMode ? 'user' : employeeId,
+            employee_id: isGeminiMode ? MESSAGE_TYPES.USER : employeeId,
             time: new Date().toISOString(),
             status: 'sending',
+            type: isGeminiMode ? MESSAGE_TYPES.USER : MESSAGE_TYPES.EMPLOYEE,
         };
 
-        setMessages((prevMessages) => [...prevMessages, newMessage]);
+        setMessages((prev) => [...prev, newMessage]);
         setInputText('');
         setSending(true);
 
         try {
             if (isGeminiMode) {
-                const response = await fetch(
-                    'https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key=AIzaSyCbw7k1d60bhz7fHM9xgPZNql6LqQLxizM',
-                    {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json',
-                        },
-                        body: JSON.stringify({
-                            contents: [
-                                {
-                                    parts: [
-                                        {
-                                            text: inputText,
-                                        },
-                                    ],
-                                },
-                            ],
-                        }),
-                    },
-                );
-
-                const data = await response.json();
-                const geminiResponse = data.candidates[0].content.parts[0].text;
-
-                const geminiMessage = {
-                    id: Date.now().toString(),
-                    message: geminiResponse,
-                    employee_name: 'Gemini AI',
-                    employee_id: 'gemini',
-                    time: new Date().toISOString(),
-                    status: 'sent',
-                };
-
-                setMessages((prevMessages) => [...prevMessages, geminiMessage]);
+                await handleGeminiMessage(trimmedInput, newMessage);
             } else {
-                const response = await sendChatMessage(employeeId, taskId, inputText.trim(), companyId);
-
-                if (response && response.id) {
-                    setMessages((prevMessages) =>
-                        prevMessages.map((msg) =>
-                            msg.id === newMessage.id ? { ...msg, status: 'sent', id: response.id.toString() } : msg,
-                        ),
-                    );
-                } else {
-                    setMessages((prevMessages) =>
-                        prevMessages.map((msg) => (msg.id === newMessage.id ? { ...msg, status: 'sent' } : msg)),
-                    );
-                }
+                await handleRegularMessage(trimmedInput, newMessage);
             }
         } catch (error) {
-            Alert.alert('Error', 'Failed to send message. Please try again.');
+            console.error('Send message error:', error);
+            Alert.alert('Error', 'Gagal mengirim pesan. Silakan coba lagi.');
 
-            setMessages((prevMessages) =>
-                prevMessages.map((msg) => (msg.id === newMessage.id ? { ...msg, status: 'failed' } : msg)),
-            );
+            setMessages((prev) => prev.map((msg) => (msg.id === newMessage.id ? { ...msg, status: 'failed' } : msg)));
         } finally {
             setSending(false);
         }
-    };
+    }, [canSendMessage, inputText, isGeminiMode, waitingForYesNo, taskDetails.title, employeeId]);
 
-    const renderShimmer = () => (
-        <View style={styles.shimmerContainer}>
-            {[...Array(5)].map((_, index) => (
-                <View key={index} style={styles.shimmerMessageContainer}>
-                    <Shimmer width={40} height={40} style={styles.shimmerAvatar} />
-                    <View style={styles.shimmerTextContainer}>
-                        <Shimmer width={SCREEN_WIDTH * 0.6} height={20} style={styles.shimmerText} />
-                        <Shimmer
-                            width={SCREEN_WIDTH * 0.4}
-                            height={15}
-                            style={[styles.shimmerText, { marginTop: 5 }]}
-                        />
-                    </View>
-                </View>
-            ))}
-        </View>
+    // Handle Gemini AI messages
+    const handleGeminiMessage = useCallback(
+        async (input, userMessage) => {
+            if (waitingForYesNo) {
+                if (input.toLowerCase().includes('ya') || input.toLowerCase().includes('iya')) {
+                    setWaitingForYesNo(false);
+                    const prompt = `Tolong jelaskan langkah-langkah detail cara mengerjakan atau menyelesaikan "${taskDetails.title}". ${
+                        taskDetails.subtitle ? `Konteks tambahan: ${taskDetails.subtitle}` : ''
+                    }`;
+
+                    const geminiResponse = await callGeminiAPI(prompt);
+                    const geminiMessage = {
+                        id: Date.now().toString(),
+                        message: geminiResponse,
+                        employee_name: 'Gemini AI',
+                        employee_id: MESSAGE_TYPES.GEMINI,
+                        time: new Date().toISOString(),
+                        status: 'sent',
+                        type: MESSAGE_TYPES.GEMINI,
+                    };
+
+                    setMessages((prev) => [...prev, geminiMessage]);
+                    return;
+                }
+                setWaitingForYesNo(false);
+            }
+
+            // Regular Gemini conversation
+            const geminiResponse = await callGeminiAPI(input);
+            const geminiMessage = {
+                id: Date.now().toString(),
+                message: geminiResponse,
+                employee_name: 'Gemini AI',
+                employee_id: MESSAGE_TYPES.GEMINI,
+                time: new Date().toISOString(),
+                status: 'sent',
+                type: MESSAGE_TYPES.GEMINI,
+            };
+
+            setMessages((prev) => [...prev, geminiMessage]);
+        },
+        [waitingForYesNo, taskDetails.title, taskDetails.subtitle, callGeminiAPI],
     );
 
-    const renderDateHeader = (date) => {
-        const messageDate = new Date(date);
-        const today = new Date();
-        const yesterday = new Date(today);
-        yesterday.setDate(yesterday.getDate() - 1);
+    // Handle regular chat messages
+    const handleRegularMessage = useCallback(
+        async (input, userMessage) => {
+            // Use different API based on whether it's adhoc or regular task
+            const response = isAdhoc
+                ? await sendAdhocChatMessage(employeeId, adhocId, input, companyId)
+                : await sendChatMessage(employeeId, taskId, input, companyId);
 
-        if (messageDate.toDateString() === today.toDateString()) {
-            return 'Hari Ini';
-        } else if (messageDate.toDateString() === yesterday.toDateString()) {
-            return 'Kemarin';
-        } else {
-            return messageDate.toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' });
-        }
-    };
+            if (response?.id) {
+                setMessages((prev) =>
+                    prev.map((msg) =>
+                        msg.id === userMessage.id ? { ...msg, status: 'sent', id: response.id.toString() } : msg,
+                    ),
+                );
+            } else {
+                setMessages((prev) =>
+                    prev.map((msg) => (msg.id === userMessage.id ? { ...msg, status: 'sent' } : msg)),
+                );
+            }
+        },
+        [employeeId, taskId, adhocId, companyId, isAdhoc],
+    );
 
-    const renderMessage = ({ item, index }) => {
-        const messageTime = new Date(item.time);
-        const timeInGMT7 = messageTime.toLocaleTimeString('id-ID', {
-            hour: '2-digit',
-            minute: '2-digit',
-        });
-
-        const isCurrentUser = item.employee_id === employeeId || item.employee_id === 'user';
-        const isGemini = item.employee_id === 'gemini';
-        const isSystem = item.employee_id === 'system';
-        const showDateHeader =
-            index === 0 || new Date(item.time).toDateString() !== new Date(messages[index - 1].time).toDateString();
-
-        return (
-            <>
-                {showDateHeader && <Text style={styles.dateLabel}>{renderDateHeader(item.time)}</Text>}
-                <View
-                    style={[
-                        styles.messageContainer,
-                        isCurrentUser ? styles.currentUserContainer : styles.otherUserContainer,
-                        isGemini && styles.geminiContainer,
-                        isSystem && styles.systemContainer,
-                    ]}
-                >
-                    <Text
-                        style={[
-                            styles.messageSender,
-                            isCurrentUser ? styles.currentUserSender : styles.otherUserSender,
-                            isGemini && styles.geminiSender,
-                            isSystem && styles.systemSender,
-                        ]}
-                    >
-                        {isCurrentUser ? 'You' : item.employee_name}
-                    </Text>
-                    <View style={styles.bubbleAndTimeContainer}>
-                        {isCurrentUser && (
-                            <View style={styles.timeAndIconContainer}>
-                                <Text style={[styles.messageTime, styles.currentUserTime]}>{timeInGMT7}</Text>
-                                {item.status === 'sending' && (
-                                    <Ionicons name="time-outline" size={12} color="#777" style={styles.sendingIcon} />
-                                )}
-                                {item.status === 'failed' && (
-                                    <Ionicons
-                                        name="alert-circle-outline"
-                                        size={12}
-                                        color="red"
-                                        style={styles.sendingIcon}
-                                    />
-                                )}
-                            </View>
-                        )}
+    // Enhanced shimmer component with better design
+    const renderShimmer = useCallback(
+        () => (
+            <Animated.View
+                style={[
+                    styles.shimmerContainer,
+                    {
+                        opacity: fadeAnim,
+                        transform: [{ translateY: slideAnim }],
+                    },
+                ]}
+            >
+                {Array.from({ length: 6 }, (_, index) => (
+                    <View key={index} style={styles.shimmerMessageContainer}>
                         <View
                             style={[
-                                styles.messageBubble,
-                                isCurrentUser ? styles.currentUserBubble : styles.otherUserBubble,
-                                isGemini && styles.geminiBubble,
-                                isSystem && styles.systemBubble,
+                                styles.shimmerMessageBubble,
+                                index % 2 === 0 ? styles.shimmerOtherUser : styles.shimmerCurrentUser,
                             ]}
                         >
+                            <Shimmer
+                                width={SCREEN_WIDTH * (0.3 + Math.random() * 0.4)}
+                                height={16}
+                                style={styles.shimmerLine}
+                            />
+                            <Shimmer
+                                width={SCREEN_WIDTH * (0.2 + Math.random() * 0.3)}
+                                height={14}
+                                style={[styles.shimmerLine, { marginTop: 6 }]}
+                            />
+                        </View>
+                    </View>
+                ))}
+            </Animated.View>
+        ),
+        [fadeAnim, slideAnim],
+    );
+
+    // Optimized message type detection
+    const getMessageType = useCallback(
+        (item) => {
+            if (item.employee_id === MESSAGE_TYPES.GEMINI) return MESSAGE_TYPES.GEMINI;
+            if (item.employee_id === MESSAGE_TYPES.SYSTEM) return MESSAGE_TYPES.SYSTEM;
+            if (item.employee_id === MESSAGE_TYPES.USER || item.employee_id === employeeId) return MESSAGE_TYPES.USER;
+            return MESSAGE_TYPES.EMPLOYEE;
+        },
+        [employeeId],
+    );
+
+    // Memoized message renderer for better performance
+    const renderMessage = useCallback(
+        ({ item, index }) => {
+            const messageTime = new Date(item.time);
+            const timeInGMT7 = messageTime.toLocaleTimeString('id-ID', {
+                hour: '2-digit',
+                minute: '2-digit',
+            });
+
+            const messageType = getMessageType(item);
+            const isCurrentUser = messageType === MESSAGE_TYPES.USER;
+            const isGemini = messageType === MESSAGE_TYPES.GEMINI;
+            const isSystem = messageType === MESSAGE_TYPES.SYSTEM;
+
+            const showDateHeader =
+                index === 0 || new Date(item.time).toDateString() !== new Date(messages[index - 1].time).toDateString();
+
+            return (
+                <>
+                    {showDateHeader && (
+                        <View style={styles.dateHeader}>
+                            <Text style={styles.dateText}>{formatMessageDate(item.time)}</Text>
+                        </View>
+                    )}
+
+                    <Animated.View
+                        style={[
+                            styles.messageContainer,
+                            {
+                                opacity: fadeAnim,
+                                transform: [{ translateY: slideAnim }],
+                            },
+                        ]}
+                    >
+                        {!isCurrentUser && (
                             <Text
                                 style={[
-                                    styles.messageText,
-                                    isCurrentUser ? styles.currentUserText : styles.otherUserText,
-                                    isGemini && styles.geminiText,
-                                    isSystem && styles.systemText,
+                                    styles.senderName,
+                                    {
+                                        color: isGemini ? '#4285F4' : isSystem ? '#F59E0B' : '#6B7280',
+                                    },
                                 ]}
                             >
-                                {item.message}
+                                {item.employee_name}
                             </Text>
+                        )}
+
+                        <View style={styles.bubbleAndTimeContainer}>
+                            {isCurrentUser && (
+                                <View style={styles.timeAndIconContainer}>
+                                    <Text style={styles.currentUserTime}>{timeInGMT7}</Text>
+                                    {item.status === 'sending' && (
+                                        <Ionicons name="time-outline" size={12} color="#94A3B8" />
+                                    )}
+                                    {item.status === 'failed' && (
+                                        <Ionicons name="alert-circle-outline" size={12} color="#EF4444" />
+                                    )}
+                                </View>
+                            )}
+
+                            <View
+                                style={[
+                                    styles.messageBubble,
+                                    isCurrentUser ? styles.currentUserBubble : styles.otherUserBubble,
+                                    isGemini && styles.geminiBubble,
+                                    isSystem && styles.systemBubble,
+                                ]}
+                            >
+                                <Text
+                                    style={[
+                                        styles.messageText,
+                                        isCurrentUser ? styles.currentUserText : styles.otherUserText,
+                                        isGemini && styles.geminiText,
+                                        isSystem && styles.systemText,
+                                    ]}
+                                >
+                                    {item.message}
+                                </Text>
+                            </View>
+
+                            {!isCurrentUser && <Text style={styles.otherUserTime}>{timeInGMT7}</Text>}
                         </View>
-                        {!isCurrentUser && <Text style={[styles.messageTime, styles.otherUserTime]}>{timeInGMT7}</Text>}
-                    </View>
+                    </Animated.View>
+                </>
+            );
+        },
+        [messages, getMessageType, fadeAnim, slideAnim],
+    );
+
+    // Optimized key extractor
+    const keyExtractor = useCallback((item) => item.id, []);
+
+    // Enhanced header component
+    const renderHeader = useMemo(() => {
+        return (
+            <LinearGradient
+                colors={isGeminiMode ? ['#4285F4', '#34A853'] : ['#4A90E2', '#5FA0DC']}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 0 }}
+                style={styles.headerContent}
+            >
+                <TouchableOpacity onPress={handleBackPress} style={styles.backButton}>
+                    <Ionicons name="arrow-back" size={24} color="#FFFFFF" />
+                </TouchableOpacity>
+                <View style={styles.headerTextContainer}>
+                    <Text style={styles.headerTitle}>{headerTitle}</Text>
+                    <Text style={styles.headerSubtitle}>{headerSubtitle}</Text>
                 </View>
-            </>
+            </LinearGradient>
         );
-    };
+    }, [isGeminiMode, headerTitle, headerSubtitle, handleBackPress]);
 
     return (
         <SafeAreaView style={styles.container}>
-            <View style={styles.header}>
-                {isGeminiMode ? (
-                    <View style={styles.geminiHeader}>
-                        <TouchableOpacity style={styles.backButton} onPress={handleBackPress}>
-                            <Ionicons name="arrow-back" color="#5F6368" size={24} />
-                        </TouchableOpacity>
-                        <View style={styles.headerTextContainer}>
-                            <Text style={styles.geminiHeaderTitle} numberOfLines={1} ellipsizeMode="tail">
-                                Gemini AI Chat
-                            </Text>
-                            <Text style={styles.geminiHeaderSubtitle} numberOfLines={1} ellipsizeMode="tail">
-                                Ask me anything!
-                            </Text>
-                        </View>
-                        <View style={styles.geminiLogo}>
-                            <View style={styles.geminiLogoCircle} />
-                            <View style={[styles.geminiLogoCircle, { backgroundColor: '#EA4335' }]} />
-                            <View style={[styles.geminiLogoCircle, { backgroundColor: '#FBBC05' }]} />
-                            <View style={[styles.geminiLogoCircle, { backgroundColor: '#34A853' }]} />
-                        </View>
-                    </View>
+            <StatusBar
+                barStyle={isGeminiMode ? 'dark-content' : 'light-content'}
+                backgroundColor={isGeminiMode ? '#F8F9FA' : '#4A90E2'}
+                translucent={false}
+            />
+
+            {/* Enhanced Header */}
+            <View style={styles.header}>{renderHeader}</View>
+
+            {/* Messages List */}
+            <KeyboardAvoidingView
+                style={styles.messagesContainer}
+                behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+                keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 0}
+            >
+                {isLoading ? (
+                    renderShimmer()
                 ) : (
-                    <LinearGradient
-                        colors={['#0E509E', '#5FA0DC', '#9FD2FF']}
-                        style={styles.headerGradient}
-                        start={{ x: 0, y: 0 }}
-                        end={{ x: 1, y: 1 }}
-                    >
-                        <View style={styles.headerContent}>
-                            <TouchableOpacity style={styles.backButton} onPress={handleBackPress}>
-                                <Ionicons name="arrow-back" color="#fff" size={24} />
-                            </TouchableOpacity>
-                            <View style={styles.headerTextContainer}>
-                                <Text style={styles.headerTitle} numberOfLines={1} ellipsizeMode="tail">
-                                    {taskDetails.title || 'Task Title'}
-                                </Text>
-                                <Text style={styles.headerSubtitle} numberOfLines={1} ellipsizeMode="tail">
-                                    {taskDetails.subtitle || 'Task Subtitle'}
-                                </Text>
-                            </View>
-                        </View>
-                    </LinearGradient>
+                    <FlatList
+                        ref={flatListRef}
+                        data={messages}
+                        renderItem={renderMessage}
+                        keyExtractor={keyExtractor}
+                        contentContainerStyle={styles.messageContainerStyle}
+                        refreshControl={
+                            <RefreshControl
+                                refreshing={refreshing}
+                                onRefresh={onRefresh}
+                                colors={[isGeminiMode ? '#4285F4' : '#4A90E2']}
+                                tintColor={isGeminiMode ? '#4285F4' : '#4A90E2'}
+                            />
+                        }
+                        onContentSizeChange={scrollToBottom}
+                        onLayout={scrollToBottom}
+                        showsVerticalScrollIndicator={false}
+                        removeClippedSubviews={true}
+                        maxToRenderPerBatch={8}
+                        updateCellsBatchingPeriod={100}
+                        initialNumToRender={15}
+                        windowSize={8}
+                        getItemLayout={null} // Remove for better performance with dynamic heights
+                    />
                 )}
-            </View>
 
-            {isLoading ? (
-                renderShimmer()
-            ) : (
-                <FlatList
-                    ref={flatListRef}
-                    data={messages}
-                    renderItem={renderMessage}
-                    keyExtractor={(item) => item.id}
-                    contentContainerStyle={styles.messageContainerStyle}
-                    refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
-                    onContentSizeChange={scrollToBottom}
-                    onLayout={scrollToBottom}
-                />
-            )}
-
-            <View style={styles.inputContainer}>
-                <TextInput
-                    style={styles.input}
-                    placeholder={isGeminiMode ? "Ask Gemini AI... (or type 'quit' to exit)" : 'Ketik pesan...'}
-                    placeholderTextColor="#999"
-                    value={inputText}
-                    onChangeText={setInputText}
-                    multiline
-                />
-                <TouchableOpacity
-                    style={[styles.sendButton, isGeminiMode && styles.geminiSendButton]}
-                    onPress={handleSend}
-                    disabled={sending}
+                {/* Enhanced Input Container */}
+                <Animated.View
+                    style={[
+                        styles.inputContainer,
+                        {
+                            opacity: fadeAnim,
+                            transform: [{ translateY: slideAnim }],
+                        },
+                    ]}
                 >
-                    <Ionicons name="paper-plane" color="#fff" size={24} />
-                </TouchableOpacity>
-            </View>
+                    <View style={styles.inputWrapper}>
+                        <TextInput
+                            ref={inputRef}
+                            style={[
+                                styles.input,
+                                isGeminiMode && styles.geminiInput,
+                                inputText.length > MESSAGE_LIMIT * 0.9 && { borderColor: '#F59E0B' },
+                            ]}
+                            placeholder={
+                                isGeminiMode ? "Tanya Gemini AI... (ketik '/quit' untuk keluar)" : 'Ketik pesan Anda...'
+                            }
+                            placeholderTextColor="#9CA3AF"
+                            value={inputText}
+                            onChangeText={setInputText}
+                            multiline={true}
+                            maxLength={MESSAGE_LIMIT}
+                            scrollEnabled={true}
+                            textAlignVertical="top"
+                            returnKeyType="send"
+                            onSubmitEditing={handleSend}
+                            blurOnSubmit={false}
+                        />
+
+                        <TouchableOpacity
+                            style={[
+                                styles.sendButton,
+                                { opacity: canSendMessage ? 1 : 0.5 },
+                                isGeminiMode && styles.geminiSendButton,
+                            ]}
+                            onPress={handleSend}
+                            disabled={!canSendMessage}
+                        >
+                            <Ionicons
+                                name={sending ? 'hourglass-outline' : 'send'}
+                                size={20}
+                                color={isGeminiMode ? '#4285F4' : '#FFFFFF'}
+                            />
+                        </TouchableOpacity>
+                    </View>
+
+                    {/* Character count indicator */}
+                    {inputText.length > MESSAGE_LIMIT * 0.8 && (
+                        <Text
+                            style={[
+                                styles.characterCount,
+                                inputText.length > MESSAGE_LIMIT * 0.9 && { color: '#F59E0B' },
+                                inputText.length >= MESSAGE_LIMIT && { color: '#EF4444' },
+                            ]}
+                        >
+                            {inputText.length}/{MESSAGE_LIMIT}
+                        </Text>
+                    )}
+                </Animated.View>
+            </KeyboardAvoidingView>
         </SafeAreaView>
     );
 };
+
 const styles = StyleSheet.create({
     container: {
         flex: 1,
-        backgroundColor: '#f0f0f0',
+        backgroundColor: '#F8F9FA',
     },
-    backgroundBox: {
-        height: 130,
-    },
-    linearGradient: {
+    errorContainer: {
         flex: 1,
-        borderBottomLeftRadius: 50,
-        borderBottomRightRadius: 50,
-        paddingTop: 40,
-        paddingHorizontal: 20,
-        elevation: 5,
+        backgroundColor: '#F8F9FA',
+    },
+    errorContent: {
+        flex: 1,
+        justifyContent: 'center',
+        alignItems: 'center',
+        paddingHorizontal: 32,
+    },
+    errorTitle: {
+        fontSize: 20,
+        fontFamily: FONTS.semiBold,
+        color: '#1F2937',
+        marginTop: 16,
+        marginBottom: 8,
+        textAlign: 'center',
+    },
+    errorText: {
+        fontSize: 16,
+        fontFamily: FONTS.regular,
+        color: '#6B7280',
+        textAlign: 'center',
+        lineHeight: 24,
+        marginBottom: 32,
+    },
+    errorButton: {
+        backgroundColor: '#4A90E2',
+        paddingHorizontal: 24,
+        paddingVertical: 12,
+        borderRadius: 8,
+    },
+    errorButtonText: {
+        fontSize: 16,
+        fontFamily: FONTS.medium,
+        color: '#FFFFFF',
     },
     header: {
-        height: 100, // Reduced height
-        borderBottomLeftRadius: 20,
-        borderBottomRightRadius: 20,
-        overflow: 'hidden',
-    },
-    headerGradient: {
-        flex: 1,
+        backgroundColor: '#4A90E2',
+        paddingTop: Platform.OS === 'ios' ? 0 : 8,
+        elevation: 4,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.1,
+        shadowRadius: 4,
     },
     headerContent: {
         flexDirection: 'row',
         alignItems: 'center',
-        paddingTop: 40,
-        paddingHorizontal: 15,
+        paddingHorizontal: 16,
+        paddingVertical: 12,
+        minHeight: 60,
     },
     backButton: {
+        marginRight: 16,
         padding: 8,
-        marginRight: 10,
+        borderRadius: 20,
+        backgroundColor: 'rgba(255, 255, 255, 0.1)',
     },
     headerTextContainer: {
         flex: 1,
-        justifyContent: 'center',
     },
     headerTitle: {
         fontSize: 18,
-        fontWeight: 'bold',
-        color: '#fff',
+        fontFamily: FONTS.semiBold,
+        color: '#FFFFFF',
         marginBottom: 2,
     },
     headerSubtitle: {
-        fontSize: 12,
-        color: '#f0f0f0',
+        fontSize: 14,
+        fontFamily: FONTS.regular,
+        color: 'rgba(255, 255, 255, 0.8)',
     },
-    subHeader: {
-        color: '#dfefff',
-        fontSize: 12,
-        marginTop: 0,
+    messagesContainer: {
+        flex: 1,
     },
     messageContainerStyle: {
+        paddingHorizontal: 16,
+        paddingVertical: 12,
         flexGrow: 1,
-        paddingHorizontal: 15,
-        paddingTop: 10,
-    },
-    dateLabel: {
-        alignSelf: 'center',
-        backgroundColor: '#e0e0e0',
-        borderRadius: 20,
-        paddingHorizontal: 10,
-        paddingVertical: 5,
-        color: '#6b6b6b',
-        fontSize: 12,
-        marginVertical: 10,
     },
     messageContainer: {
-        marginBottom: 15,
-        maxWidth: '80%',
+        marginBottom: 16,
     },
-    currentUserContainer: {
-        alignSelf: 'flex-end',
-        marginRight: 10,
-    },
-
-    otherUserContainer: {
-        alignSelf: 'flex-start',
-    },
-    geminiContainer: {
-        alignSelf: 'flex-start',
-    },
-    systemContainer: {
+    dateHeader: {
         alignSelf: 'center',
-        maxWidth: '90%',
+        backgroundColor: 'rgba(0, 0, 0, 0.05)',
+        paddingHorizontal: 12,
+        paddingVertical: 6,
+        borderRadius: 12,
+        marginBottom: 16,
+        marginTop: 8,
     },
-    messageSender: {
+    dateText: {
         fontSize: 12,
-        marginBottom: 2,
+        fontFamily: FONTS.medium,
+        color: '#6B7280',
+        textAlign: 'center',
     },
-    currentUserSender: {
-        color: '#777',
-        textAlign: 'right',
-        marginRight: 10, // Added right margin to align with the bubble
-    },
-
-    otherUserSender: {
-        color: '#555',
-    },
-    geminiHeader: {
-        flex: 1,
-        flexDirection: 'row',
-        alignItems: 'center',
-        paddingTop: 40,
-        paddingHorizontal: 15,
-        backgroundColor: '#F1F3F4',
-    },
-    geminiHeaderTitle: {
-        fontSize: 18,
-        fontWeight: 'bold',
-        color: '#202124',
-        marginBottom: 2,
-    },
-    geminiHeaderSubtitle: {
-        fontSize: 12,
-        color: '#5F6368',
-    },
-    geminiLogo: {
-        flexDirection: 'row',
-        marginLeft: 10,
-    },
-    geminiLogoCircle: {
-        width: 8,
-        height: 8,
-        borderRadius: 4,
-        backgroundColor: '#4285F4',
-        marginHorizontal: 2,
-    },
-    geminiSender: {
-        color: '#4285F4',
-        fontWeight: 'bold',
-    },
-    systemSender: {
-        color: '#888',
-        fontStyle: 'italic',
+    senderName: {
+        fontSize: 13,
+        fontFamily: FONTS.medium,
+        marginBottom: 4,
+        marginLeft: 4,
     },
     bubbleAndTimeContainer: {
-        flexDirection: 'row',
         alignItems: 'flex-end',
     },
+    timeAndIconContainer: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        marginBottom: 4,
+        gap: 4,
+    },
     messageBubble: {
-        padding: 10,
-        borderRadius: 15,
+        paddingHorizontal: 16,
+        paddingVertical: 12,
+        borderRadius: 18,
+        maxWidth: '80%',
+        elevation: 1,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 1 },
+        shadowOpacity: 0.1,
+        shadowRadius: 2,
     },
     currentUserBubble: {
-        backgroundColor: '#27A0CF',
+        backgroundColor: '#4A90E2',
+        alignSelf: 'flex-end',
+        borderBottomRightRadius: 6,
     },
     otherUserBubble: {
-        backgroundColor: '#D9D9D9',
+        backgroundColor: '#FFFFFF',
+        alignSelf: 'flex-start',
+        borderBottomLeftRadius: 6,
+        borderWidth: 1,
+        borderColor: '#E5E7EB',
     },
     geminiBubble: {
-        backgroundColor: '#E8F0FE',
+        backgroundColor: '#F3F4F6',
         borderWidth: 1,
         borderColor: '#4285F4',
+        alignSelf: 'flex-start',
     },
     systemBubble: {
-        backgroundColor: '#F0F0F0',
+        backgroundColor: '#FEF3C7',
         borderWidth: 1,
-        borderColor: '#CCCCCC',
+        borderColor: '#F59E0B',
+        alignSelf: 'center',
     },
     messageText: {
         fontSize: 16,
+        fontFamily: FONTS.regular,
+        lineHeight: 22,
     },
     currentUserText: {
         color: '#FFFFFF',
     },
     otherUserText: {
-        color: '#000000',
+        color: '#1F2937',
     },
     geminiText: {
-        color: '#000000',
+        color: '#1F2937',
     },
     systemText: {
-        color: '#555555',
-        fontStyle: 'italic',
-    },
-    messageTime: {
-        fontSize: 12,
-        marginTop: 2,
+        color: '#92400E',
     },
     currentUserTime: {
-        color: '#777',
-        marginRight: 5,
+        fontSize: 11,
+        fontFamily: FONTS.regular,
+        color: '#94A3B8',
+        textAlign: 'right',
     },
     otherUserTime: {
-        color: '#777',
-        marginLeft: 5,
-    },
-    timeAndIconContainer: {
-        flexDirection: 'row',
-        alignItems: 'center',
-    },
-    sendingIcon: {
-        marginLeft: 5,
+        fontSize: 11,
+        fontFamily: FONTS.regular,
+        color: '#9CA3AF',
+        marginTop: 4,
+        marginLeft: 4,
     },
     inputContainer: {
+        backgroundColor: '#FFFFFF',
+        paddingHorizontal: 16,
+        paddingVertical: 12,
+        borderTopWidth: 1,
+        borderTopColor: '#E5E7EB',
+        elevation: 8,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: -2 },
+        shadowOpacity: 0.1,
+        shadowRadius: 4,
+    },
+    inputWrapper: {
         flexDirection: 'row',
-        alignItems: 'center',
-        padding: 10,
-        backgroundColor: '#fff',
+        alignItems: 'flex-end',
+        gap: 12,
     },
     input: {
         flex: 1,
-        paddingHorizontal: 15,
-        paddingVertical: 10,
-        borderRadius: 25,
-        backgroundColor: '#f0f0f0',
+        borderWidth: 1,
+        borderColor: '#D1D5DB',
+        borderRadius: 20,
+        paddingHorizontal: 16,
+        paddingVertical: 12,
         fontSize: 16,
-        color: '#333',
+        fontFamily: FONTS.regular,
+        color: '#1F2937',
+        backgroundColor: '#F9FAFB',
+        maxHeight: 120,
+        minHeight: 44,
+    },
+    geminiInput: {
+        borderColor: '#4285F4',
+        backgroundColor: '#F8F9FF',
     },
     sendButton: {
-        marginLeft: 10,
-        backgroundColor: '#0E509E',
-        padding: 10,
-        borderRadius: 50,
+        backgroundColor: '#4A90E2',
+        width: 44,
+        height: 44,
+        borderRadius: 22,
+        justifyContent: 'center',
+        alignItems: 'center',
+        elevation: 2,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 1 },
+        shadowOpacity: 0.2,
+        shadowRadius: 2,
     },
     geminiSendButton: {
         backgroundColor: '#4285F4',
     },
-    errorContainer: {
-        flex: 1,
-        justifyContent: 'center',
-        alignItems: 'center',
-    },
-    errorText: {
-        color: 'red',
-        fontSize: 16,
-        fontWeight: 'bold',
+    characterCount: {
+        fontSize: 12,
+        fontFamily: FONTS.regular,
+        color: '#9CA3AF',
+        textAlign: 'right',
+        marginTop: 4,
     },
     shimmerContainer: {
         flex: 1,
-        paddingHorizontal: 15,
-        paddingTop: 10,
+        paddingHorizontal: 16,
+        paddingVertical: 12,
     },
     shimmerMessageContainer: {
-        flexDirection: 'row',
-        marginBottom: 20,
+        marginBottom: 16,
     },
-    shimmerAvatar: {
-        borderRadius: 20,
-        marginRight: 10,
+    shimmerMessageBubble: {
+        borderRadius: 18,
+        padding: 16,
+        backgroundColor: '#F3F4F6',
+        borderWidth: 1,
+        borderColor: '#E5E7EB',
     },
-    shimmerTextContainer: {
-        flex: 1,
+    shimmerOtherUser: {
+        alignSelf: 'flex-start',
+        borderBottomLeftRadius: 6,
+        maxWidth: '75%',
     },
-    shimmerText: {
-        borderRadius: 5,
+    shimmerCurrentUser: {
+        alignSelf: 'flex-end',
+        backgroundColor: 'rgba(74, 144, 226, 0.1)',
+        borderColor: 'rgba(74, 144, 226, 0.2)',
+        borderBottomRightRadius: 6,
+        maxWidth: '70%',
+    },
+    shimmerLine: {
+        borderRadius: 6,
     },
 });
 
