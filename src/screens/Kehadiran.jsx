@@ -155,6 +155,7 @@ const ShimmerTaskCard = memo(() => (
         </View>
     </View>
 ));
+
 ShimmerTaskCard.displayName = 'ShimmerTaskCard';
 
 const Kehadiran = () => {
@@ -198,6 +199,11 @@ const Kehadiran = () => {
     const daysDiff = useMemo(() => calculateDaysDiff(), []);
 
     const totalPages = useMemo(() => Math.ceil((daysDiff + 1) / ITEMS_PER_PAGE), [daysDiff]);
+
+    // State for attendance times
+    const [checkInTime, setCheckInTime] = useState(null);
+    const [checkOutTime, setCheckOutTime] = useState(null);
+    const [totalHours, setTotalHours] = useState(null);
 
     // Memoized attendance statistics
     const attendanceStats = useMemo(() => {
@@ -297,6 +303,42 @@ const Kehadiran = () => {
 
             const checkedOutStatus = Boolean(todayAttendance?.checkout);
 
+            // Extract today's check-in and check-out times
+            let todayCheckInTime = null;
+            let todayCheckOutTime = null;
+            let todayTotalHours = null;
+
+            if (todayAttendance) {
+                // Format check-in time
+                if (todayAttendance.checkin) {
+                    const checkInDate = new Date(todayAttendance.checkin);
+                    todayCheckInTime = checkInDate.toLocaleTimeString('id-ID', {
+                        hour: '2-digit',
+                        minute: '2-digit',
+                    });
+                }
+
+                // Format check-out time
+                if (todayAttendance.checkout) {
+                    const checkOutDate = new Date(todayAttendance.checkout);
+                    todayCheckOutTime = checkOutDate.toLocaleTimeString('id-ID', {
+                        hour: '2-digit',
+                        minute: '2-digit',
+                    });
+
+                    // Calculate total hours worked
+                    if (todayAttendance.checkin) {
+                        const checkInDate = new Date(todayAttendance.checkin);
+                        const checkOutDate = new Date(todayAttendance.checkout);
+                        const diffInMilliseconds = checkOutDate - checkInDate;
+                        const diffInHours = diffInMilliseconds / (1000 * 60 * 60);
+                        const hours = Math.floor(diffInHours);
+                        const minutes = Math.floor((diffInHours % 1) * 60);
+                        todayTotalHours = `${hours}:${minutes.toString().padStart(2, '0')}`;
+                    }
+                }
+            }
+
             // Update state in batch for better performance
             const { latitude, longitude } = locationResponse.coords;
             const coordinates = `${latitude.toFixed(6)}, ${longitude.toFixed(6)}`;
@@ -323,6 +365,11 @@ const Kehadiran = () => {
                 setLocation(coordinates);
                 setLocationName(locationName);
                 setErrorMsg(null);
+
+                // Set today's attendance times
+                setCheckInTime(todayCheckInTime);
+                setCheckOutTime(todayCheckOutTime);
+                setTotalHours(todayTotalHours);
             }
         } catch (error) {
             if (mountedRef.current && !error.message?.includes('No attendance records found')) {
@@ -638,14 +685,14 @@ const Kehadiran = () => {
         return getStatusConfig(status).color;
     }, []);
 
-    // Memoized attendance stats calculation (now uses attendanceStats from useMemo)
-    const getAttendanceStats = useCallback(() => attendanceStats, [attendanceStats]);
 
     // Memoized AttendanceStats component for better performance
     const AttendanceStats = memo(() => {
         const stats = attendanceStats;
 
         if (stats.total === 0) return null;
+
+        const contentHeight = useRef(new Animated.Value(0)).current;
 
         const handleStatsToggle = useCallback(() => {
             if (Platform.OS === 'ios') {
@@ -687,7 +734,9 @@ const Kehadiran = () => {
                             {
                                 opacity: fadeAnim,
                                 transform: [{ translateY: statsSlideAnim }],
+                                // height: heightInterpolation, overflow: 'hidden'
                             },
+
                         ]}
                     >
                         <View style={styles.statCard}>
@@ -711,53 +760,8 @@ const Kehadiran = () => {
             </View>
         );
     });
+
     AttendanceStats.displayName = 'AttendanceStats';
-
-    // Export attendance data function
-    const exportAttendanceData = async () => {
-        try {
-            if (attendanceData.length === 0) {
-                showAlert('Tidak ada data kehadiran untuk diekspor', 'error');
-                return;
-            }
-
-            const stats = getAttendanceStats();
-            let csvData = 'Data Kehadiran Ekspor\n\n';
-            csvData += `Total Kehadiran: ${stats.total}\n`;
-            csvData += `Tepat Waktu: ${stats.onTime}\n`;
-            csvData += `Terlambat: ${stats.late}\n`;
-            csvData += `Lebih Awal: ${stats.early}\n\n`;
-            csvData += 'Tanggal,Status,Jam Masuk,Jam Keluar,Durasi,Catatan,Lokasi Kerja\n';
-
-            attendanceData.forEach((record) => {
-                const date = new Date(record.date).toLocaleDateString('id-ID');
-                const checkIn = record.checkin
-                    ? new Date(record.checkin).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })
-                    : '-';
-                const checkOut = record.checkout
-                    ? new Date(record.checkout).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })
-                    : '-';
-                const duration =
-                    record.checkin && record.checkout
-                        ? calculateDuration(new Date(record.checkin), new Date(record.checkout))
-                        : '-';
-                const notes = record.note || 'Tidak ada catatan';
-                const workLocation = record.isWFH ? 'Work From Home' : 'Bekerja di Kantor';
-
-                csvData += `${date},${record.status},${checkIn},${checkOut},${duration},"${notes}",${workLocation}\n`;
-            });
-
-            csvData += `\nDiekspor pada: ${new Date().toLocaleString('id-ID')}\n`;
-
-            await Share.share({
-                message: csvData,
-                title: 'Data Kehadiran',
-            });
-        } catch (error) {
-            console.error('Error exporting data:', error);
-            showAlert('Gagal mengekspor data', 'error');
-        }
-    };
 
     // Memoized image renderer for better performance
     const renderImage = useCallback((imageUri) => {
@@ -800,18 +804,18 @@ const Kehadiran = () => {
             const status = attendanceForDate?.status || 'Not Absent';
             const checkIn = attendanceForDate?.checkin
                 ? new Date(attendanceForDate.checkin).toLocaleTimeString('id-ID', {
-                      hour: '2-digit',
-                      minute: '2-digit',
-                      hour12: false,
-                  })
+                    hour: '2-digit',
+                    minute: '2-digit',
+                    hour12: false,
+                })
                 : '-';
 
             const checkOut = attendanceForDate?.checkout
                 ? new Date(attendanceForDate.checkout).toLocaleTimeString('id-ID', {
-                      hour: '2-digit',
-                      minute: '2-digit',
-                      hour12: false,
-                  })
+                    hour: '2-digit',
+                    minute: '2-digit',
+                    hour12: false,
+                })
                 : '-';
 
             const duration = attendanceForDate
@@ -852,16 +856,6 @@ const Kehadiran = () => {
                         <View style={styles.dateSection}>
                             <Text style={styles.dateText}>{formattedDateForUpper}</Text>
                             <View style={styles.statusRow}>
-                                <View style={[styles.statusBadge, { backgroundColor: getBackgroundColor(status) }]}>
-                                    <Ionicons
-                                        name={getStatusIcon(status)}
-                                        size={14}
-                                        color={getStatusIconColor(status)}
-                                    />
-                                    <Text style={[styles.statusText, { color: getStatusIconColor(status) }]}>
-                                        {status}
-                                    </Text>
-                                </View>
                                 {wfh !== 'Tidak ada data' && (
                                     <View
                                         style={[
@@ -888,8 +882,19 @@ const Kehadiran = () => {
                                         </Text>
                                     </View>
                                 )}
+                                <View style={[styles.statusBadge, { backgroundColor: getBackgroundColor(status) }]}>
+                                    <Ionicons
+                                        name={getStatusIcon(status)}
+                                        size={12}
+                                        color={getStatusIconColor(status)}
+                                    />
+                                    <Text style={[styles.statusText, { color: getStatusIconColor(status) }]}>
+                                        {status}
+                                    </Text>
+                                </View>
                             </View>
                         </View>
+                        <View style={styles.imageContainer}>{renderImage(attendanceImage)}</View>
                     </View>
 
                     {/* Card Content */}
@@ -935,7 +940,7 @@ const Kehadiran = () => {
                         </View>
 
                         {/* Attendance Image */}
-                        <View style={styles.imageContainer}>{renderImage(attendanceImage)}</View>
+
                     </View>
                 </Animated.View>
             );
@@ -1200,62 +1205,137 @@ const Kehadiran = () => {
                                 </View>
                             ) : (
                                 <>
+                                    {/* Date above the time */}
+                                    <Text
+                                        style={styles.todayText}
+                                    >
+                                        {new Date().toLocaleDateString('id-ID', {
+                                            weekday: 'long',
+                                            year: 'numeric',
+                                            month: 'long',
+                                            day: 'numeric',
+                                        })}
+                                    </Text>
                                     <Text style={styles.timeText}>{currentTime}</Text>
                                     <View style={styles.locationContainer}>
                                         <Ionicons name="location" size={16} color="#6B7280" />
                                         <Text style={styles.locationText}>{errorMsg || locationName}</Text>
                                     </View>
+
                                 </>
+                            )}
+                            <View style={styles.buttonContainer}>
+                                {isLoading ? (
+                                    <Animated.View style={{ transform: [{ scale: scaleAnim }] }}>
+                                        <CircularButton
+                                            title="Memuat..."
+                                            colors={['#E5E7EB', '#D1D5DB', '#9CA3AF']}
+                                            disabled={true}
+                                        />
+                                    </Animated.View>
+                                ) : isCheckedIn == 0 ? (
+                                    <Animated.View
+                                        style={{
+                                            transform: [{ scale: scaleAnim }, { scale: buttonPulseAnim }],
+                                        }}
+                                    >
+                                        <CircularButton
+                                            title="Clock In"
+                                            colors={['#4A90E2', '#357ABD', '#2E5984']}
+                                            onPress={handleClockIn}
+                                        />
+                                    </Animated.View>
+                                ) : isCheckedIn == 1 && isCheckedOut == false ? (
+                                    <Animated.View style={{ transform: [{ scale: scaleAnim }] }}>
+                                        <CircularButton
+                                            title="Clock Out"
+                                            onPress={handleClockOut}
+                                            colors={['#EF4444', '#DC2626', '#B91C1C']}
+                                        />
+                                    </Animated.View>
+                                ) : isCheckedIn == 1 && isCheckedOut == true ? (
+                                    <Animated.View style={{ transform: [{ scale: scaleAnim }] }}>
+                                        <CircularButton
+                                            title="Selesai"
+                                            colors={['#10B981', '#059669', '#047857']}
+                                            disabled={true}
+                                        />
+                                    </Animated.View>
+                                ) : (
+                                    <Animated.View style={{ transform: [{ scale: scaleAnim }] }}>
+                                        <CircularButton
+                                            title="Clock In"
+                                            colors={['#4A90E2', '#357ABD', '#2E5984']}
+                                            disabled={true}
+                                        />
+                                    </Animated.View>
+                                )}
+                            </View>
+                        </View>
+
+                        <View style={styles.attendanceDataContainer}>
+                            {/* Today attendance data */}
+                            <View style={styles.attendanceHeader}>
+                                <Text style={styles.attendanceTitle}>Data Kehadiran Hari Ini</Text>
+                            </View>
+
+                            {isLoading ? (
+                                <View style={styles.attendanceDataRow}>
+                                    <Shimmer width={80} height={60} style={styles.shimmerCard} />
+                                    <Shimmer width={80} height={60} style={styles.shimmerCard} />
+                                    <Shimmer width={80} height={60} style={styles.shimmerCard} />
+                                </View>
+                            ) : (
+                                <View style={styles.attendanceDataRow}>
+                                    {/* Check In Time */}
+                                    <View style={styles.attendanceCard}>
+                                        <View style={styles.attendanceIconContainer}>
+                                            <Ionicons name="time" size={20} color="#10B981" />
+                                        </View>
+                                        <Text style={styles.attendanceCardValue}>
+                                            {checkInTime ? checkInTime : "--:--"}
+                                        </Text>
+                                        <Text style={styles.attendanceCardLabel}>Masuk</Text>
+                                    </View>
+
+                                    {/* Check Out Time */}
+                                    <View style={styles.attendanceCard}>
+                                        <View style={styles.attendanceIconContainer}>
+                                            <Ionicons name="time-outline" size={20} color="#EF4444" />
+                                        </View>
+                                        <Text style={styles.attendanceCardValue}>
+                                            {checkOutTime ? checkOutTime : "--:--"}
+                                        </Text>
+                                        <Text style={styles.attendanceCardLabel}>Pulang</Text>
+                                    </View>
+
+                                    {/* Total Hours */}
+                                    <View style={styles.attendanceCard}>
+                                        <View style={styles.attendanceIconContainer}>
+                                            <Ionicons name="hourglass" size={20} color="#6366F1" />
+                                        </View>
+                                        <Text style={styles.attendanceCardValue}>
+                                            {totalHours ? totalHours : "0:00"}
+                                        </Text>
+                                        <Text style={styles.attendanceCardLabel}>Total Jam</Text>
+                                    </View>
+                                </View>
+                            )}
+
+                            {/* Attendance Status Message */}
+                            {!isLoading && (
+                                <View style={styles.attendanceStatusContainer}>
+                                    <Text style={styles.attendanceStatusText}>
+                                        {isCheckedIn === 0
+                                            ? "Anda belum melakukan check-in hari ini"
+                                            : isCheckedOut
+                                                ? "Anda telah menyelesaikan kerja hari ini"
+                                                : "Anda sedang dalam jam kerja"}
+                                    </Text>
+                                </View>
                             )}
                         </View>
 
-                        <View style={styles.buttonContainer}>
-                            {isLoading ? (
-                                <Animated.View style={{ transform: [{ scale: scaleAnim }] }}>
-                                    <CircularButton
-                                        title="Memuat..."
-                                        colors={['#E5E7EB', '#D1D5DB', '#9CA3AF']}
-                                        disabled={true}
-                                    />
-                                </Animated.View>
-                            ) : isCheckedIn == 0 ? (
-                                <Animated.View
-                                    style={{
-                                        transform: [{ scale: scaleAnim }, { scale: buttonPulseAnim }],
-                                    }}
-                                >
-                                    <CircularButton
-                                        title="Clock In"
-                                        colors={['#4A90E2', '#357ABD', '#2E5984']}
-                                        onPress={handleClockIn}
-                                    />
-                                </Animated.View>
-                            ) : isCheckedIn == 1 && isCheckedOut == false ? (
-                                <Animated.View style={{ transform: [{ scale: scaleAnim }] }}>
-                                    <CircularButton
-                                        title="Clock Out"
-                                        onPress={handleClockOut}
-                                        colors={['#EF4444', '#DC2626', '#B91C1C']}
-                                    />
-                                </Animated.View>
-                            ) : isCheckedIn == 1 && isCheckedOut == true ? (
-                                <Animated.View style={{ transform: [{ scale: scaleAnim }] }}>
-                                    <CircularButton
-                                        title="Selesai"
-                                        colors={['#10B981', '#059669', '#047857']}
-                                        disabled={true}
-                                    />
-                                </Animated.View>
-                            ) : (
-                                <Animated.View style={{ transform: [{ scale: scaleAnim }] }}>
-                                    <CircularButton
-                                        title="Clock In"
-                                        colors={['#4A90E2', '#357ABD', '#2E5984']}
-                                        disabled={true}
-                                    />
-                                </Animated.View>
-                            )}
-                        </View>
                     </Animated.View>
 
                     {/* Attendance History */}
@@ -1451,7 +1531,7 @@ const Kehadiran = () => {
                                                     style={[
                                                         styles.paginationButton,
                                                         currentPage === totalPages - 1 &&
-                                                            styles.disabledPaginationButton,
+                                                        styles.disabledPaginationButton,
                                                     ]}
                                                     accessibilityLabel="Halaman berikutnya"
                                                 >
@@ -1516,6 +1596,7 @@ const Kehadiran = () => {
         </View>
     );
 };
+
 const styles = StyleSheet.create({
     container: {
         flex: 1,
@@ -1556,7 +1637,7 @@ const styles = StyleSheet.create({
         elevation: 5,
     },
     header: {
-        fontSize: FONTS.size['5xl'],
+        fontSize: FONTS.size['4xl'],
         fontFamily: FONTS.family.bold,
         color: 'white',
         textAlign: 'center',
@@ -1703,8 +1784,13 @@ const styles = StyleSheet.create({
         marginTop: -3,
     },
     timeSection: {
-        alignItems: 'center',
-        marginBottom: 24,
+        alignItems: 'center'
+    },
+    todayText: {
+        fontSize: 12,
+        color: '#6B7280',
+        fontFamily: FONTS.family.semiBold,
+        marginBottom: 4,
     },
     timeText: {
         fontSize: FONTS.size['6xl'],
@@ -1715,24 +1801,93 @@ const styles = StyleSheet.create({
     },
     locationContainer: {
         flexDirection: 'row',
-        alignItems: 'center',
-        marginTop: 8,
+        alignItems: 'start',
+        marginHorizontal: 12,
         paddingHorizontal: 12,
         paddingVertical: 6,
         backgroundColor: '#F3F4F6',
         borderRadius: 12,
     },
     locationText: {
-        fontSize: FONTS.size.base,
+        fontSize: FONTS.size.sm,
         fontFamily: FONTS.family.regular,
         color: '#6B7280',
         marginLeft: 6,
-        textAlign: 'center',
+        textAlign: 'start',
         maxWidth: width * 0.7,
     },
     buttonContainer: {
         alignItems: 'center',
+        marginVertical: 10,
     },
+
+    attendanceDataContainer: {
+        marginTop: 4,
+        paddingHorizontal: 0,
+    },
+    attendanceHeader: {
+        marginBottom: 16,
+    },
+    attendanceTitle: {
+        fontSize: 16,
+        fontWeight: '600',
+        color: '#1F2937',
+        textAlign: 'center',
+    },
+    attendanceDataRow: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        marginBottom: 16,
+    },
+    attendanceCard: {
+        flex: 1,
+        backgroundColor: '#FFFFFF',
+        borderRadius: 12,
+        padding: 12,
+        marginHorizontal: 4,
+        alignItems: 'center',
+        shadowColor: '#000',
+        shadowOffset: {
+            width: 0,
+            height: 2,
+        },
+        shadowOpacity: 0.1,
+        shadowRadius: 3.84,
+        elevation: 5,
+    },
+    attendanceIconContainer: {
+        width: 32,
+        height: 32,
+        borderRadius: 16,
+        backgroundColor: '#F3F4F6',
+        justifyContent: 'center',
+        alignItems: 'center',
+        marginBottom: 8,
+    },
+    attendanceCardValue: {
+        fontSize: 16,
+        fontWeight: '700',
+        color: '#1F2937',
+        marginBottom: 4,
+    },
+    attendanceCardLabel: {
+        fontSize: 12,
+        color: '#6B7280',
+        textAlign: 'center',
+    },
+    attendanceStatusContainer: {
+        backgroundColor: '#F9FAFB',
+        borderRadius: 8,
+        padding: 12,
+        marginTop: 8,
+    },
+    attendanceStatusText: {
+        fontSize: 14,
+        color: '#6B7280',
+        textAlign: 'center',
+        fontStyle: 'italic',
+    },
+
     centerContent: {
         alignItems: 'center',
     },
@@ -1759,28 +1914,31 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         justifyContent: 'space-between',
         alignItems: 'center',
-        marginBottom: 16,
     },
     statsTitle: {
         fontSize: FONTS.size.lg,
         fontFamily: FONTS.family.bold,
         color: '#1F2937',
+        letterSpacing: -0.5,
     },
     statsGrid: {
         flexDirection: 'row',
+        flexWrap: 'wrap',
         justifyContent: 'space-between',
-        gap: 12,
+        gap: 10,
+        marginTop: 16,
     },
     statCard: {
-        flex: 1,
         backgroundColor: '#F8FAFC',
         borderRadius: 12,
-        padding: 16,
+        padding: 8,
         alignItems: 'center',
-        gap: 8,
+        gap: 2,
+        width: '48%',
+        boxShadow: '0 1px 3px rgba(0, 0, 0, 0.2)',
     },
     statNumber: {
-        fontSize: FONTS.size['2xl'],
+        fontSize: FONTS.size['3xl'],
         fontFamily: FONTS.family.bold,
         color: '#1F2937',
     },
@@ -1798,10 +1956,10 @@ const styles = StyleSheet.create({
         borderRadius: 20,
         padding: 20,
         shadowColor: '#000',
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.12,
-        shadowRadius: 12,
-        elevation: 8,
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.08,
+        shadowRadius: 8,
+        elevation: 4,
         borderLeftWidth: 4,
         borderLeftColor: '#4A90E2',
     },
@@ -1823,7 +1981,7 @@ const styles = StyleSheet.create({
         gap: 10,
     },
     historySectionTitle: {
-        fontSize: FONTS.size['2xl'],
+        fontSize: FONTS.size.lg,
         fontFamily: FONTS.family.bold,
         color: '#1F2937',
         letterSpacing: -0.5,
@@ -1878,33 +2036,39 @@ const styles = StyleSheet.create({
         padding: 16,
         borderBottomWidth: 1,
         borderBottomColor: '#F3F4F6',
+        display: 'flex',
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        backgroundColor: '#F8FAFC',
     },
     dateSection: {
-        gap: 12,
+        gap: 6,
     },
     dateText: {
         fontSize: FONTS.size.lg,
         fontFamily: FONTS.family.bold,
         color: '#1F2937',
-        marginBottom: 4,
+        marginBottom: 2,
     },
     statusRow: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        gap: 8,
+        flexDirection: 'column',
+        alignItems: 'start',
+        gap: 4,
         flexWrap: 'wrap',
     },
     statusBadge: {
         flexDirection: 'row',
         alignItems: 'center',
-        paddingHorizontal: 12,
-        paddingVertical: 6,
-        borderRadius: 12,
-        gap: 6,
+        paddingHorizontal: 10,
+        paddingVertical: 4,
+        borderRadius: 10,
+        gap: 3,
+        boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1)',
     },
     statusText: {
-        fontSize: FONTS.size.sm,
-        fontFamily: FONTS.family.semiBold,
+        fontSize: FONTS.size.xs,
+        fontFamily: FONTS.family.medium,
     },
     wfhBadge: {
         flexDirection: 'row',
@@ -1912,7 +2076,8 @@ const styles = StyleSheet.create({
         paddingHorizontal: 10,
         paddingVertical: 4,
         borderRadius: 10,
-        gap: 4,
+        gap: 3,
+        boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1)',
     },
     wfhText: {
         fontSize: FONTS.size.xs,
@@ -1942,6 +2107,7 @@ const styles = StyleSheet.create({
         padding: 12,
         alignItems: 'center',
         gap: 6,
+        boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1)',
     },
     timeIconContainer: {
         width: 32,
@@ -1950,6 +2116,7 @@ const styles = StyleSheet.create({
         backgroundColor: 'white',
         alignItems: 'center',
         justifyContent: 'center',
+        boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1)',
     },
     timeLabel: {
         fontSize: FONTS.size.xs,
@@ -1969,6 +2136,7 @@ const styles = StyleSheet.create({
         backgroundColor: '#F8FAFC',
         borderRadius: 12,
         padding: 12,
+        boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1)',
     },
     notesHeader: {
         flexDirection: 'row',
@@ -1991,7 +2159,7 @@ const styles = StyleSheet.create({
     // Image Container
     imageContainer: {
         width: 90,
-        height: 120,
+        height: 90,
         borderRadius: 12,
         overflow: 'hidden',
         backgroundColor: '#F3F4F6',
@@ -2014,7 +2182,7 @@ const styles = StyleSheet.create({
         gap: 8,
     },
     noImageText: {
-        fontSize: 12,
+        fontSize: FONTS.size.xs,
         color: '#9CA3AF',
         fontFamily: FONTS.family.medium,
     },

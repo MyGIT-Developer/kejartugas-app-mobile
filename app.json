@@ -23,7 +23,10 @@
       "enabled": true
     },
     "assetBundlePatterns": [
-      "**/*"
+      "assets/fonts/*",
+      "assets/images/*",
+      "assets/icon/*",
+      "assets/animations/*"
     ],
     "ios": {
       "supportsTablet": true,
@@ -51,21 +54,14 @@
         "WRITE_EXTERNAL_STORAGE",
         "ACCESS_FINE_LOCATION",
         "ACCESS_COARSE_LOCATION",
-        "RECORD_AUDIO",
-        "READ_CONTACTS",
-        "WRITE_CONTACTS",
-        "CALL_PHONE",
         "SEND_SMS",
-        "READ_PHONE_STATE",
         "ACCESS_NETWORK_STATE",
         "INTERNET",
         "android.permission.ACCESS_COARSE_LOCATION",
         "android.permission.ACCESS_FINE_LOCATION",
         "NOTIFICATIONS",
         "RECEIVE_BOOT_COMPLETED",
-        "VIBRATE",
-        "SCHEDULE_EXACT_ALARM",
-        "USE_EXACT_ALARM"
+        "VIBRATE"
       ]
     },
     "plugins": [
@@ -84,11 +80,6 @@
           "mode": "production"
         }
       ]
-    ],
-    "extra": {
-      "eas": {
-        "projectId": "b1891ad1-b0f4-4ef4-8e81-7156592a713d"
-      }
-    }
+    ]
   }
 }

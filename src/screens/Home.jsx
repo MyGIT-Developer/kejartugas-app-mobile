@@ -633,6 +633,7 @@ const styles = StyleSheet.create({
     container: {
         flex: 1,
         backgroundColor: '#F8F9FA',
+        paddingBottom: Platform.OS === 'ios' ? 0 : 50,
     },
     headerWrapper: {
         width: '100%',
@@ -745,7 +746,7 @@ const styles = StyleSheet.create({
         fontFamily: 'Poppins-Medium',
         textAlign: 'center',
         lineHeight: 18,
-        letterSpacing: 0.2,
+        letterSpacing: -0.5
     },
     lowerContainer: {
         marginTop: 8,
@@ -762,7 +763,7 @@ const styles = StyleSheet.create({
         fontSize: 18,
         color: '#1C1C1E',
         fontFamily: 'Poppins-SemiBold',
-        letterSpacing: 0.3,
+        letterSpacing: -0.5,
     },
     sectionLinkContainer: {
         flexDirection: 'row',
