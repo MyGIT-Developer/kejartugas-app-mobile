@@ -685,7 +685,6 @@ const Kehadiran = () => {
         return getStatusConfig(status).color;
     }, []);
 
-
     // Memoized AttendanceStats component for better performance
     const AttendanceStats = memo(() => {
         const stats = attendanceStats;
@@ -736,7 +735,6 @@ const Kehadiran = () => {
                                 transform: [{ translateY: statsSlideAnim }],
                                 // height: heightInterpolation, overflow: 'hidden'
                             },
-
                         ]}
                     >
                         <View style={styles.statCard}>
@@ -804,18 +802,18 @@ const Kehadiran = () => {
             const status = attendanceForDate?.status || 'Not Absent';
             const checkIn = attendanceForDate?.checkin
                 ? new Date(attendanceForDate.checkin).toLocaleTimeString('id-ID', {
-                    hour: '2-digit',
-                    minute: '2-digit',
-                    hour12: false,
-                })
+                      hour: '2-digit',
+                      minute: '2-digit',
+                      hour12: false,
+                  })
                 : '-';
 
             const checkOut = attendanceForDate?.checkout
                 ? new Date(attendanceForDate.checkout).toLocaleTimeString('id-ID', {
-                    hour: '2-digit',
-                    minute: '2-digit',
-                    hour12: false,
-                })
+                      hour: '2-digit',
+                      minute: '2-digit',
+                      hour12: false,
+                  })
                 : '-';
 
             const duration = attendanceForDate
@@ -827,11 +825,7 @@ const Kehadiran = () => {
                 ? `https://app.kejartugas.com/${attendanceForDate.attendance_image}`
                 : null;
 
-            const wfh = attendanceForDate
-                ? attendanceForDate.isWFH
-                    ? 'Work From Home'
-                    : 'Bekerja di Kantor'
-                : 'Tidak ada data';
+            const wfh = attendanceForDate ? (attendanceForDate.isWFH ? 'At Home' : 'In Office') : 'Tidak ada data';
 
             return (
                 <Animated.View
@@ -854,47 +848,58 @@ const Kehadiran = () => {
                     {/* Card Header */}
                     <View style={styles.cardHeader}>
                         <View style={styles.dateSection}>
-                            <Text style={styles.dateText}>{formattedDateForUpper}</Text>
-                            <View style={styles.statusRow}>
-                                {wfh !== 'Tidak ada data' && (
-                                    <View
-                                        style={[
-                                            styles.wfhBadge,
-                                            {
-                                                backgroundColor: attendanceForDate?.isWFH ? '#FEF3C7' : '#DBEAFE',
-                                            },
-                                        ]}
-                                    >
+                            <View
+                                style={{
+                                    flexDirection: 'row',
+                                    alignItems: 'center',
+                                    gap: 8,
+                                    width: '100%',
+                                    justifyContent: 'space-between',
+                                }}
+                            >
+                                <Text style={styles.dateText}>{formattedDateForUpper}</Text>
+                                <View style={styles.statusRow}>
+                                    <View style={[styles.statusBadge, { backgroundColor: getBackgroundColor(status) }]}>
                                         <Ionicons
-                                            name={attendanceForDate?.isWFH ? 'home' : 'business'}
+                                            name={getStatusIcon(status)}
                                             size={12}
-                                            color={attendanceForDate?.isWFH ? '#D97706' : '#2563EB'}
+                                            color={getStatusIconColor(status)}
                                         />
-                                        <Text
+                                        <Text style={[styles.statusText, { color: getStatusIconColor(status) }]}>
+                                            {status}
+                                        </Text>
+                                    </View>
+                                    {wfh !== 'Tidak ada data' && (
+                                        <View
                                             style={[
-                                                styles.wfhText,
+                                                styles.wfhBadge,
                                                 {
-                                                    color: attendanceForDate?.isWFH ? '#D97706' : '#2563EB',
+                                                    backgroundColor: attendanceForDate?.isWFH ? '#FEF3C7' : '#DBEAFE',
                                                 },
                                             ]}
                                         >
-                                            {wfh}
-                                        </Text>
-                                    </View>
-                                )}
-                                <View style={[styles.statusBadge, { backgroundColor: getBackgroundColor(status) }]}>
-                                    <Ionicons
-                                        name={getStatusIcon(status)}
-                                        size={12}
-                                        color={getStatusIconColor(status)}
-                                    />
-                                    <Text style={[styles.statusText, { color: getStatusIconColor(status) }]}>
-                                        {status}
-                                    </Text>
+                                            <Ionicons
+                                                name={attendanceForDate?.isWFH ? 'home' : 'business'}
+                                                size={12}
+                                                color={attendanceForDate?.isWFH ? '#D97706' : '#2563EB'}
+                                            />
+                                            <Text
+                                                style={[
+                                                    styles.wfhText,
+                                                    {
+                                                        color: attendanceForDate?.isWFH ? '#D97706' : '#2563EB',
+                                                    },
+                                                ]}
+                                            >
+                                                {wfh}
+                                            </Text>
+                                        </View>
+                                    )}
                                 </View>
                             </View>
+
+                            {/* <View style={styles.imageContainer}>{renderImage(attendanceImage)}</View> */}
                         </View>
-                        <View style={styles.imageContainer}>{renderImage(attendanceImage)}</View>
                     </View>
 
                     {/* Card Content */}
@@ -928,7 +933,7 @@ const Kehadiran = () => {
                             </View>
 
                             {/* Notes Section */}
-                            <View style={styles.notesSection}>
+                            {/* <View style={styles.notesSection}>
                                 <View style={styles.notesHeader}>
                                     <Ionicons name="document-text" size={16} color="#6B7280" />
                                     <Text style={styles.notesLabel}>Catatan:</Text>
@@ -936,11 +941,10 @@ const Kehadiran = () => {
                                 <Text style={styles.notesText} numberOfLines={3} ellipsizeMode="tail">
                                     {notes}
                                 </Text>
-                            </View>
+                            </View> */}
                         </View>
 
                         {/* Attendance Image */}
-
                     </View>
                 </Animated.View>
             );
@@ -969,6 +973,130 @@ const Kehadiran = () => {
     return (
         <View style={styles.container}>
             <StatusBar barStyle="light-content" backgroundColor="transparent" translucent={true} />
+            {/* Enhanced Header Background */}
+            <Animated.View
+                style={[
+                    styles.backgroundBox,
+                    {
+                        opacity: headerAnim,
+                        transform: [
+                            {
+                                scale: headerScaleAnim.interpolate({
+                                    inputRange: [0.9, 1],
+                                    outputRange: [0.95, 1],
+                                    extrapolate: 'clamp',
+                                }),
+                            },
+                        ],
+                    },
+                ]}
+            >
+                <LinearGradient
+                    colors={['#4A90E2', '#357ABD', '#2E5984']}
+                    style={styles.linearGradient}
+                    start={{ x: 0, y: 0 }}
+                    end={{ x: 1, y: 1 }}
+                />
+
+                {/* Header decorative elements */}
+                <View style={styles.headerDecorations}>
+                    <Animated.View
+                        style={[
+                            styles.decorativeCircle1,
+                            {
+                                opacity: headerAnim.interpolate({
+                                    inputRange: [0, 1],
+                                    outputRange: [0, 0.6],
+                                }),
+                                transform: [
+                                    {
+                                        scale: headerAnim.interpolate({
+                                            inputRange: [0, 1],
+                                            outputRange: [0.5, 1],
+                                        }),
+                                    },
+                                ],
+                            },
+                        ]}
+                    />
+                    <Animated.View
+                        style={[
+                            styles.decorativeCircle2,
+                            {
+                                opacity: headerAnim.interpolate({
+                                    inputRange: [0, 1],
+                                    outputRange: [0, 0.4],
+                                }),
+                                transform: [
+                                    {
+                                        scale: headerAnim.interpolate({
+                                            inputRange: [0, 1],
+                                            outputRange: [0.3, 1],
+                                        }),
+                                    },
+                                ],
+                            },
+                        ]}
+                    />
+                    <Animated.View
+                        style={[
+                            styles.decorativeCircle3,
+                            {
+                                opacity: headerAnim.interpolate({
+                                    inputRange: [0, 1],
+                                    outputRange: [0, 0.5],
+                                }),
+                                transform: [
+                                    {
+                                        scale: headerAnim.interpolate({
+                                            inputRange: [0, 1],
+                                            outputRange: [0.7, 1],
+                                        }),
+                                    },
+                                ],
+                            },
+                        ]}
+                    />
+                    <Animated.View
+                        style={[
+                            styles.decorativeCircle4,
+                            {
+                                opacity: headerAnim.interpolate({
+                                    inputRange: [0, 1],
+                                    outputRange: [0, 0.5],
+                                }),
+                                transform: [
+                                    {
+                                        scale: headerAnim.interpolate({
+                                            inputRange: [0, 1],
+                                            outputRange: [0.7, 1],
+                                        }),
+                                    },
+                                ],
+                            },
+                        ]}
+                    />
+                    <Animated.View
+                        style={[
+                            styles.decorativeCircle5,
+                            {
+                                opacity: headerAnim.interpolate({
+                                    inputRange: [0, 1],
+                                    outputRange: [0, 0.5],
+                                }),
+                                transform: [
+                                    {
+                                        scale: headerAnim.interpolate({
+                                            inputRange: [0, 1],
+                                            outputRange: [0.7, 1],
+                                        }),
+                                    },
+                                ],
+                            },
+                        ]}
+                    />
+                </View>
+            </Animated.View>
 
             <ScrollView
                 contentContainerStyle={styles.scrollViewContent}
@@ -983,93 +1111,6 @@ const Kehadiran = () => {
                 }
                 showsVerticalScrollIndicator={false}
             >
-                {/* Enhanced Header Background */}
-                <Animated.View
-                    style={[
-                        styles.backgroundBox,
-                        {
-                            opacity: headerAnim,
-                            transform: [
-                                {
-                                    scale: headerScaleAnim.interpolate({
-                                        inputRange: [0.9, 1],
-                                        outputRange: [0.95, 1],
-                                        extrapolate: 'clamp',
-                                    }),
-                                },
-                            ],
-                        },
-                    ]}
-                >
-                    <LinearGradient
-                        colors={['#4A90E2', '#357ABD', '#2E5984']}
-                        style={styles.linearGradient}
-                        start={{ x: 0, y: 0 }}
-                        end={{ x: 1, y: 1 }}
-                    />
-
-                    {/* Header decorative elements */}
-                    <View style={styles.headerDecorations}>
-                        <Animated.View
-                            style={[
-                                styles.decorativeCircle1,
-                                {
-                                    opacity: headerAnim.interpolate({
-                                        inputRange: [0, 1],
-                                        outputRange: [0, 0.6],
-                                    }),
-                                    transform: [
-                                        {
-                                            scale: headerAnim.interpolate({
-                                                inputRange: [0, 1],
-                                                outputRange: [0.5, 1],
-                                            }),
-                                        },
-                                    ],
-                                },
-                            ]}
-                        />
-                        <Animated.View
-                            style={[
-                                styles.decorativeCircle2,
-                                {
-                                    opacity: headerAnim.interpolate({
-                                        inputRange: [0, 1],
-                                        outputRange: [0, 0.4],
-                                    }),
-                                    transform: [
-                                        {
-                                            scale: headerAnim.interpolate({
-                                                inputRange: [0, 1],
-                                                outputRange: [0.3, 1],
-                                            }),
-                                        },
-                                    ],
-                                },
-                            ]}
-                        />
-                        <Animated.View
-                            style={[
-                                styles.decorativeCircle3,
-                                {
-                                    opacity: headerAnim.interpolate({
-                                        inputRange: [0, 1],
-                                        outputRange: [0, 0.5],
-                                    }),
-                                    transform: [
-                                        {
-                                            scale: headerAnim.interpolate({
-                                                inputRange: [0, 1],
-                                                outputRange: [0.7, 1],
-                                            }),
-                                        },
-                                    ],
-                                },
-                            ]}
-                        />
-                    </View>
-                </Animated.View>
-
                 {/* Enhanced Header Content */}
                 <Animated.View
                     style={[
@@ -1206,9 +1247,7 @@ const Kehadiran = () => {
                             ) : (
                                 <>
                                     {/* Date above the time */}
-                                    <Text
-                                        style={styles.todayText}
-                                    >
+                                    <Text style={styles.todayText}>
                                         {new Date().toLocaleDateString('id-ID', {
                                             weekday: 'long',
                                             year: 'numeric',
@@ -1218,10 +1257,11 @@ const Kehadiran = () => {
                                     </Text>
                                     <Text style={styles.timeText}>{currentTime}</Text>
                                     <View style={styles.locationContainer}>
-                                        <Ionicons name="location" size={16} color="#6B7280" />
+                                        <View style={styles.locationIconContainer}>
+                                            <Ionicons name="location" size={16} color="#10B981" />
+                                        </View>
                                         <Text style={styles.locationText}>{errorMsg || locationName}</Text>
                                     </View>
-
                                 </>
                             )}
                             <View style={styles.buttonContainer}>
@@ -1290,10 +1330,10 @@ const Kehadiran = () => {
                                     {/* Check In Time */}
                                     <View style={styles.attendanceCard}>
                                         <View style={styles.attendanceIconContainer}>
-                                            <Ionicons name="time" size={20} color="#10B981" />
+                                            <Ionicons name="time" size={16} color="#10B981" />
                                         </View>
                                         <Text style={styles.attendanceCardValue}>
-                                            {checkInTime ? checkInTime : "--:--"}
+                                            {checkInTime ? checkInTime : '--:--'}
                                         </Text>
                                         <Text style={styles.attendanceCardLabel}>Masuk</Text>
                                     </View>
@@ -1301,10 +1341,10 @@ const Kehadiran = () => {
                                     {/* Check Out Time */}
                                     <View style={styles.attendanceCard}>
                                         <View style={styles.attendanceIconContainer}>
-                                            <Ionicons name="time-outline" size={20} color="#EF4444" />
+                                            <Ionicons name="time-outline" size={16} color="#EF4444" />
                                         </View>
                                         <Text style={styles.attendanceCardValue}>
-                                            {checkOutTime ? checkOutTime : "--:--"}
+                                            {checkOutTime ? checkOutTime : '--:--'}
                                         </Text>
                                         <Text style={styles.attendanceCardLabel}>Pulang</Text>
                                     </View>
@@ -1312,10 +1352,10 @@ const Kehadiran = () => {
                                     {/* Total Hours */}
                                     <View style={styles.attendanceCard}>
                                         <View style={styles.attendanceIconContainer}>
-                                            <Ionicons name="hourglass" size={20} color="#6366F1" />
+                                            <Ionicons name="hourglass" size={16} color="#6366F1" />
                                         </View>
                                         <Text style={styles.attendanceCardValue}>
-                                            {totalHours ? totalHours : "0:00"}
+                                            {totalHours ? totalHours : '0:00'}
                                         </Text>
                                         <Text style={styles.attendanceCardLabel}>Total Jam</Text>
                                     </View>
@@ -1323,7 +1363,7 @@ const Kehadiran = () => {
                             )}
 
                             {/* Attendance Status Message */}
-                            {!isLoading && (
+                            {/* {!isLoading && (
                                 <View style={styles.attendanceStatusContainer}>
                                     <Text style={styles.attendanceStatusText}>
                                         {isCheckedIn === 0
@@ -1333,9 +1373,8 @@ const Kehadiran = () => {
                                                 : "Anda sedang dalam jam kerja"}
                                     </Text>
                                 </View>
-                            )}
+                            )} */}
                         </View>
-
                     </Animated.View>
 
                     {/* Attendance History */}
@@ -1531,7 +1570,7 @@ const Kehadiran = () => {
                                                     style={[
                                                         styles.paginationButton,
                                                         currentPage === totalPages - 1 &&
-                                                        styles.disabledPaginationButton,
+                                                            styles.disabledPaginationButton,
                                                     ]}
                                                     accessibilityLabel="Halaman berikutnya"
                                                 >
@@ -1607,7 +1646,7 @@ const styles = StyleSheet.create({
         paddingBottom: 120,
     },
     backgroundBox: {
-        height: 160,
+        height: 325,
         width: '100%',
         position: 'absolute',
         top: 0,
@@ -1616,13 +1655,14 @@ const styles = StyleSheet.create({
     },
     linearGradient: {
         flex: 1,
-        borderBottomLeftRadius: 35,
-        borderBottomRightRadius: 35,
+        borderBottomLeftRadius: 24,
+        borderBottomRightRadius: 24,
         shadowColor: '#000',
-        shadowOffset: { width: 0, height: 6 },
-        shadowOpacity: 0.15,
+        shadowOffset: { width: 0, height: 20 },
+        shadowOpacity: 0.5,
         shadowRadius: 12,
         elevation: 8,
+        marginBottom: 30,
     },
     headerContainer: {
         alignItems: 'center',
@@ -1764,7 +1804,24 @@ const styles = StyleSheet.create({
         top: 80,
         right: 30,
     },
-
+    decorativeCircle4: {
+        position: 'absolute',
+        width: 60,
+        height: 60,
+        borderRadius: 30,
+        backgroundColor: 'rgba(255, 255, 255, 0.1)',
+        top: 150,
+        Left: -10,
+    },
+    decorativeCircle5: {
+        position: 'absolute',
+        width: 120,
+        height: 120,
+        borderRadius: 60,
+        backgroundColor: 'rgba(255, 255, 255, 0.08)',
+        top: 120,
+        left: 30,
+    },
     mainContainer: {
         flex: 1,
         paddingHorizontal: 20,
@@ -1775,7 +1832,7 @@ const styles = StyleSheet.create({
     upperContainer: {
         backgroundColor: 'white',
         borderRadius: 20,
-        padding: 24,
+        padding: 20,
         shadowColor: '#000',
         shadowOffset: { width: 0, height: 4 },
         shadowOpacity: 0.1,
@@ -1784,10 +1841,10 @@ const styles = StyleSheet.create({
         marginTop: -3,
     },
     timeSection: {
-        alignItems: 'center'
+        alignItems: 'center',
     },
     todayText: {
-        fontSize: 12,
+        fontSize: 14,
         color: '#6B7280',
         fontFamily: FONTS.family.semiBold,
         marginBottom: 4,
@@ -1801,20 +1858,30 @@ const styles = StyleSheet.create({
     },
     locationContainer: {
         flexDirection: 'row',
-        alignItems: 'start',
+        alignItems: 'center',
         marginHorizontal: 12,
-        paddingHorizontal: 12,
-        paddingVertical: 6,
-        backgroundColor: '#F3F4F6',
+        paddingHorizontal: 16,
+        paddingVertical: 10,
+        backgroundColor: '#F0FDF4',
+        borderRadius: 16,
+        borderWidth: 1,
+        borderColor: '#BBF7D0',
+    },
+    locationIconContainer: {
+        width: 24,
+        height: 24,
         borderRadius: 12,
+        backgroundColor: '#DCFCE7',
+        justifyContent: 'center',
+        alignItems: 'center',
+        marginRight: 8,
     },
     locationText: {
         fontSize: FONTS.size.sm,
-        fontFamily: FONTS.family.regular,
-        color: '#6B7280',
-        marginLeft: 6,
-        textAlign: 'start',
-        maxWidth: width * 0.7,
+        fontFamily: FONTS.family.semiBold,
+        color: '#15803D',
+        textAlign: 'center',
+        maxWidth: width * 0.6,
     },
     buttonContainer: {
         alignItems: 'center',
@@ -1826,43 +1893,51 @@ const styles = StyleSheet.create({
         paddingHorizontal: 0,
     },
     attendanceHeader: {
-        marginBottom: 16,
+        marginBottom: 8,
     },
     attendanceTitle: {
-        fontSize: 16,
+        fontSize: 14,
         fontWeight: '600',
-        color: '#1F2937',
+        color: '#808080',
         textAlign: 'center',
     },
     attendanceDataRow: {
         flexDirection: 'row',
         justifyContent: 'space-between',
-        marginBottom: 16,
+        backgroundColor: '#F8FAFC',
+        borderRadius: 12,
+        padding: 8,
+        marginHorizontal: 4,
+        alignItems: 'center',
+        borderColor: '#357ABD',
+        borderWidth: 1,
+        borderOpacity: 0.2,
+        // shadowColor: '#000',
+        // shadowOffset: {
+        //     width: 0,
+        //     height: 2,
+        // },
+        // shadowOpacity: 0.1,
+        // shadowRadius: 3.84,
+        // elevation: 5,
     },
     attendanceCard: {
         flex: 1,
-        backgroundColor: '#FFFFFF',
-        borderRadius: 12,
-        padding: 12,
-        marginHorizontal: 4,
         alignItems: 'center',
-        shadowColor: '#000',
-        shadowOffset: {
-            width: 0,
-            height: 2,
-        },
-        shadowOpacity: 0.1,
-        shadowRadius: 3.84,
-        elevation: 5,
     },
     attendanceIconContainer: {
-        width: 32,
-        height: 32,
+        width: 24,
+        height: 24,
         borderRadius: 16,
-        backgroundColor: '#F3F4F6',
+        backgroundColor: '#fff',
         justifyContent: 'center',
         alignItems: 'center',
         marginBottom: 8,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 1 },
+        shadowOpacity: 0.1,
+        shadowRadius: 2,
+        elevation: 3,
     },
     attendanceCardValue: {
         fontSize: 16,
@@ -2040,22 +2115,21 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         justifyContent: 'space-between',
         alignItems: 'center',
-        backgroundColor: '#F8FAFC',
+        backgroundColor: '#7dbfff',
     },
     dateSection: {
         gap: 6,
     },
     dateText: {
-        fontSize: FONTS.size.lg,
+        fontSize: FONTS.size.md,
         fontFamily: FONTS.family.bold,
         color: '#1F2937',
-        marginBottom: 2,
     },
     statusRow: {
-        flexDirection: 'column',
-        alignItems: 'start',
+        flexDirection: 'row',
         gap: 4,
         flexWrap: 'wrap',
+        justifyContent: 'space-between',
     },
     statusBadge: {
         flexDirection: 'row',
@@ -2083,7 +2157,6 @@ const styles = StyleSheet.create({
         fontSize: FONTS.size.xs,
         fontFamily: FONTS.family.medium,
     },
-
     cardContent: {
         flexDirection: 'row',
         padding: 16,
@@ -2107,7 +2180,11 @@ const styles = StyleSheet.create({
         padding: 12,
         alignItems: 'center',
         gap: 6,
-        boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1)',
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 1 },
+        shadowOpacity: 0.1,
+        shadowRadius: 2,
+        elevation: 3,
     },
     timeIconContainer: {
         width: 32,

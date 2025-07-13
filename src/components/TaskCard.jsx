@@ -65,16 +65,15 @@ const styles = StyleSheet.create({
         shadowRadius: 4,
     },
     projectTitle: {
-        fontSize: 18,
-        marginBottom: 12,
+        fontSize: 14,
         color: '#1C1C1E',
-        fontFamily: 'Poppins-Bold',
+        fontFamily: 'Poppins-SemiBold',
     },
     taskSection: {
-        marginBottom: 12,
-        paddingVertical: 8,
-        borderBottomWidth: 1,
-        borderBottomColor: '#E9E9EB',
+        marginTop: 12,
+        paddingVertical: 12,
+        borderTopWidth: 1,
+        borderTopColor: '#E9E9EB',
         gap: 10,
     },
     taskItem: {
@@ -88,7 +87,7 @@ const styles = StyleSheet.create({
         gap: 10,
     },
     taskName: {
-        fontSize: 16,
+        fontSize: 12,
         color: '#1C1C1E',
         fontFamily: 'Poppins-Medium',
         marginBottom: 4,
@@ -105,8 +104,8 @@ const styles = StyleSheet.create({
         alignSelf: 'flex-start',
     },
     badgeText: {
-        fontSize: 12,
-        fontFamily: 'Poppins-Medium',
+        fontSize: 10,
+        fontFamily: 'Poppins-SemiBold',
     },
 });
 

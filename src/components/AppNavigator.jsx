@@ -1,4 +1,4 @@
-import React, { useRef, useCallback, useMemo } from 'react';
+import React, { useRef, useCallback, useMemo, useEffect, useState } from 'react';
 import { View, Animated, Platform, StyleSheet, Dimensions } from 'react-native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -9,19 +9,21 @@ import Profile from '../screens/Profile';
 import ProjectDashboard from '../screens/ProjectDashboard';
 import Tugas from '../screens/Tugas';
 import { HomeIcon, KehadiranIcon, ProfileIcon, ProjectIcon, TugasIcon } from '../../assets/icon/icons';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const Tab = createBottomTabNavigator();
 const { width } = Dimensions.get('window');
 
 const SCREEN_OPTIONS = {
     Home: { component: Home, icon: HomeIcon },
-    Tugas: { component: Tugas, icon: TugasIcon },
     Kehadiran: { component: Kehadiran, icon: KehadiranIcon },
+    Tugas: { component: Tugas, icon: TugasIcon },
     Project: { component: ProjectDashboard, icon: ProjectIcon },
-    Profile: { component: Profile, icon: ProfileIcon },
+    // Profile: { component: Profile, icon: ProfileIcon },
 };
 
 const AppNavigator = () => {
+    const [hasAccess, setHasAccess] = useState(false);
     const insets = useSafeAreaInsets();
     const tabBarVisibility = useRef(new Animated.Value(1)).current;
     const scaleAnims = useRef({
@@ -43,6 +45,20 @@ const AppNavigator = () => {
         },
         [scaleAnims],
     );
+
+    useEffect(() => {
+        const checkAccessPermission = async () => {
+            try {
+                const accessPermissions = await AsyncStorage.getItem('access_permissions');
+                const permissions = JSON.parse(accessPermissions);
+                setHasAccess(permissions);
+            } catch (error) {
+                console.error('Error checking access permission:', error);
+                setHasAccess(false);
+            }
+        };
+        checkAccessPermission();
+    }, []);
 
     const screenOptions = useCallback(
         ({ route }) => ({
@@ -127,13 +143,14 @@ const AppNavigator = () => {
         }).start();
     }, [tabBarVisibility]);
 
-    const screenList = useMemo(
-        () =>
-            Object.entries(SCREEN_OPTIONS).map(([name, { component }]) => (
-                <Tab.Screen key={name} name={name} component={component} />
-            )),
-        [],
-    );
+    const screenList = useMemo(() => {
+        return Object.entries(SCREEN_OPTIONS).map(([name, { component }]) => {
+            if (name === 'Project' && !hasAccess?.access_project) {
+                return null; // Don't render the Project tab if no permission
+            }
+            return <Tab.Screen key={name} name={name} component={component} />;
+        });
+    }, [hasAccess]);
 
     return <Tab.Navigator screenOptions={screenOptions}>{screenList}</Tab.Navigator>;
 };

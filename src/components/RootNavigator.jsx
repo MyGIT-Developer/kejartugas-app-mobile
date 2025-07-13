@@ -24,6 +24,8 @@ import SubmitForm from '../components/SubmitForm';
 import EditAdhoc from '../screens/EditAdhoc';
 import PersonalInformation from '../screens/PersonalInformation';
 import NotificationScreen from '../screens/NotificationScreen';
+import Profile from '../screens/Profile';
+import ProjectDashboard from '../screens/ProjectDashboard';
 
 const Stack = createStackNavigator();
 
@@ -58,6 +60,8 @@ const screens = [
     { name: 'EditAdhoc', component: EditAdhoc },
     { name: 'PersonalInformation', component: PersonalInformation },
     { name: 'NotificationScreen', component: NotificationScreen },
+    { name: 'Profile', component: Profile },
+    { name: 'ProjectDashboard', component: ProjectDashboard },
 ];
 
 const RootNavigator = () => (

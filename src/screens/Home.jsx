@@ -136,7 +136,7 @@ const MenuButton = ({ icon, description, onPress }) => {
         </TouchableOpacity>
     );
 };
-
+const HEADER_HEIGHT = 325;
 const Home = () => {
     // Custom hooks for data management
     const employeeData = useEmployeeData();
@@ -161,6 +161,8 @@ const Home = () => {
     const fadeAnim = useRef(new Animated.Value(0)).current;
     const slideAnim = useRef(new Animated.Value(50)).current;
     const statsAnimations = useRef([...Array(4)].map(() => new Animated.Value(0))).current;
+    const headerAnim = useRef(new Animated.Value(0)).current;
+    const headerScaleAnim = useRef(new Animated.Value(0.9)).current;
 
     const navigation = useNavigation();
     const isLoading = dashboardLoading || tasksLoading;
@@ -225,6 +227,15 @@ const Home = () => {
             }
 
             switch (menuId) {
+                case 'project':
+                    console.log('Navigating to Project Dashboard');
+                    try {
+                        navigation.navigate('ProjectDashboard');
+                    } catch (navError) {
+                        console.error('Navigation error:', navError);
+                        showAlert('Error navigating to Project Dashboard', 'error');
+                    }
+                    break;
                 case 'adhoc':
                     console.log('Navigating to AdhocDashboard');
                     try {
@@ -242,6 +253,7 @@ const Home = () => {
                     console.log('Showing claim alert');
                     showAlert('Fitur Belum Tersedia. Mohon maaf, fitur Klaim sedang dalam pengembangan.', 'error');
                     break;
+
                 default:
                     console.log('Unknown menu ID:', menuId);
                     showAlert('Menu tidak dikenal', 'error');
@@ -355,26 +367,26 @@ const Home = () => {
     const statistics = dashboardData
         ? [
               {
-                  description: 'Projek Dalam Pengerjaan',
-                  value: dashboardData.total_projects_working_on_it,
+                  description: 'Dalam Pengerjaan',
+                  value: `${dashboardData.total_projects_working_on_it} Projek`,
                   color: '#FAA1A7',
                   icon: 'monitor',
               },
               {
-                  description: 'Total Projek Selesai',
-                  value: dashboardData.total_projects_complete,
+                  description: 'Selesai',
+                  value: `${dashboardData.total_projects_complete} Projek`,
                   color: '#3E84CF',
                   icon: 'check-circle',
               },
               {
-                  description: 'Tugas Dalam Pengerjaan',
-                  value: dashboardData.total_tasks_working_on_it,
+                  description: 'Dalam Pengerjaan',
+                  value: `${dashboardData.total_tasks_working_on_it} Tugas`,
                   color: '#DD9968',
                   icon: 'rotate-cw',
               },
               {
-                  description: 'Tugas Selesai',
-                  value: dashboardData.total_tasks_completed,
+                  description: 'Selesai',
+                  value: `${dashboardData.total_tasks_completed} Tugas`,
                   color: '#3AD665',
                   icon: 'check-square',
               },
@@ -397,13 +409,13 @@ const Home = () => {
     // Header animation based on scroll
     const headerOpacity = scrollY.interpolate({
         inputRange: [0, 100],
-        outputRange: [1, 0.9],
+        outputRange: [1, 1],
         extrapolate: 'clamp',
     });
 
     const headerScale = scrollY.interpolate({
         inputRange: [0, 100],
-        outputRange: [1, 0.98],
+        outputRange: [1, 1],
         extrapolate: 'clamp',
     });
 
@@ -423,48 +435,170 @@ const Home = () => {
                     style={styles.headerGradient}
                     start={{ x: 0, y: 0 }}
                     end={{ x: 1, y: 1 }}
-                >
-                    <SafeAreaView style={styles.safeArea}>
-                        <View style={styles.headerContainer}>
-                            <Animated.View
-                                style={[
-                                    styles.greetingContainer,
+                />
+
+                {/* Header decorative elements */}
+                <View style={styles.headerDecorations}>
+                    <Animated.View
+                        style={[
+                            styles.decorativeCircle1,
+                            {
+                                opacity: headerAnim.interpolate({
+                                    inputRange: [0, 1],
+                                    outputRange: [0, 0.6],
+                                }),
+                                transform: [
                                     {
-                                        opacity: fadeAnim,
-                                        transform: [{ translateY: slideAnim }],
+                                        scale: headerAnim.interpolate({
+                                            inputRange: [0, 1],
+                                            outputRange: [0.5, 1],
+                                        }),
                                     },
-                                ]}
-                            >
-                                <Text style={styles.greetingText}>{greeting}</Text>
-                                <Text style={styles.nameText} numberOfLines={1} ellipsizeMode="tail">
-                                    {employeeData.name}
-                                </Text>
-                            </Animated.View>
-                            <View style={styles.headerRight}>
-                                <NotificationIcon unreadCount={unreadCount} onPress={handleNotificationPress} />
-                            </View>
-                        </View>
-                    </SafeAreaView>
-                </LinearGradient>
+                                ],
+                            },
+                        ]}
+                    />
+                    <Animated.View
+                        style={[
+                            styles.decorativeCircle2,
+                            {
+                                opacity: headerAnim.interpolate({
+                                    inputRange: [0, 1],
+                                    outputRange: [0, 0.4],
+                                }),
+                                transform: [
+                                    {
+                                        scale: headerAnim.interpolate({
+                                            inputRange: [0, 1],
+                                            outputRange: [0.3, 1],
+                                        }),
+                                    },
+                                ],
+                            },
+                        ]}
+                    />
+                    <Animated.View
+                        style={[
+                            styles.decorativeCircle3,
+                            {
+                                opacity: headerAnim.interpolate({
+                                    inputRange: [0, 1],
+                                    outputRange: [0, 0.5],
+                                }),
+                                transform: [
+                                    {
+                                        scale: headerAnim.interpolate({
+                                            inputRange: [0, 1],
+                                            outputRange: [0.7, 1],
+                                        }),
+                                    },
+                                ],
+                            },
+                        ]}
+                    />
+                    <Animated.View
+                        style={[
+                            styles.decorativeCircle4,
+                            {
+                                opacity: headerAnim.interpolate({
+                                    inputRange: [0, 1],
+                                    outputRange: [0, 0.5],
+                                }),
+                                transform: [
+                                    {
+                                        scale: headerAnim.interpolate({
+                                            inputRange: [0, 1],
+                                            outputRange: [0.7, 1],
+                                        }),
+                                    },
+                                ],
+                            },
+                        ]}
+                    />
+                    <Animated.View
+                        style={[
+                            styles.decorativeCircle5,
+                            {
+                                opacity: headerAnim.interpolate({
+                                    inputRange: [0, 1],
+                                    outputRange: [0, 0.5],
+                                }),
+                                transform: [
+                                    {
+                                        scale: headerAnim.interpolate({
+                                            inputRange: [0, 1],
+                                            outputRange: [0.7, 1],
+                                        }),
+                                    },
+                                ],
+                            },
+                        ]}
+                    />
+                </View>
             </Animated.View>
 
             <Animated.ScrollView
                 contentContainerStyle={styles.scrollViewContent}
                 showsVerticalScrollIndicator={false}
+                onScroll={Animated.event([{ nativeEvent: { contentOffset: { y: scrollY } } }], {
+                    useNativeDriver: true,
+                })}
                 refreshControl={
                     <RefreshControl
                         refreshing={refreshing}
                         onRefresh={onRefresh}
-                        colors={['#0E509E']}
-                        tintColor="#0E509E"
-                        progressBackgroundColor="#F8F9FA"
+                        colors={['#4A90E2']}
+                        tintColor="#4A90E2"
+                        progressBackgroundColor="#ffffff"
                     />
                 }
-                onScroll={Animated.event([{ nativeEvent: { contentOffset: { y: scrollY } } }], {
-                    useNativeDriver: false,
-                })}
-                scrollEventThrottle={16}
             >
+                <View style={styles.headerContainer}>
+                    <Animated.View
+                        style={[
+                            styles.greetingContainer,
+                            {
+                                opacity: fadeAnim,
+                                transform: [{ translateY: slideAnim }],
+                            },
+                        ]}
+                    >
+                        <Text style={styles.greetingText}>{greeting}</Text>
+                        <Text style={styles.nameText} numberOfLines={1} ellipsizeMode="tail">
+                            {employeeData.name}
+                        </Text>
+                    </Animated.View>
+                    <View style={styles.headerRight}>
+                        <NotificationIcon unreadCount={unreadCount} onPress={handleNotificationPress} />
+                        <TouchableOpacity
+                            style={{
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                            }}
+                            onPress={() => navigation.navigate('Profile')}
+                            activeOpacity={0.8}
+                            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                        >
+                            <View
+                                style={{
+                                    width: 40,
+                                    height: 40,
+                                    borderRadius: 20,
+                                    backgroundColor: '#fff',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    shadowColor: '#000',
+                                    shadowOffset: { width: 0, height: 2 },
+                                    shadowOpacity: 0.08,
+                                    shadowRadius: 4,
+                                    elevation: 2,
+                                }}
+                            >
+                                <Feather name="user" size={24} color="#0E509E" />
+                            </View>
+                        </TouchableOpacity>
+                    </View>
+                </View>
                 {/* Statistics Cards */}
                 <Animated.View
                     style={[
@@ -504,10 +638,18 @@ const Home = () => {
                 >
                     <View style={styles.menuContainer} pointerEvents="box-none">
                         <MenuButton
-                            icon="users"
-                            description="Tugas Ad Hoc"
+                            icon="folder"
+                            description="Project"
                             onPress={() => {
-                                console.log('Ad Hoc button pressed');
+                                console.log('Project button pressed');
+                                handleMenuPress('project');
+                            }}
+                        />
+                        <MenuButton
+                            icon="users"
+                            description="Adhoc"
+                            onPress={() => {
+                                console.log('Adhoc button pressed');
                                 handleMenuPress('adhoc');
                             }}
                         />
@@ -632,22 +774,95 @@ const Home = () => {
 const styles = StyleSheet.create({
     container: {
         flex: 1,
-        backgroundColor: '#F8F9FA',
-        paddingBottom: Platform.OS === 'ios' ? 0 : 50,
+        backgroundColor: '#F8FAFC',
+    },
+    scrollViewContent: {
+        flexGrow: 1,
+        paddingBottom: 120,
     },
     headerWrapper: {
-        width: '100%',
-        zIndex: 10,
-        elevation: 8,
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.1,
-        shadowRadius: 8,
+        position: 'absolute',
+        top: 0,
+        left: 0,
+        right: 0,
+        height: HEADER_HEIGHT,
     },
     headerGradient: {
-        paddingBottom: 24,
-        borderBottomRightRadius: 32,
-        borderBottomLeftRadius: 32,
+        flex: 1,
+        borderBottomLeftRadius: 24,
+        borderBottomRightRadius: 24,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 20 },
+        shadowOpacity: 0.5,
+        shadowRadius: 12,
+        elevation: 8,
+        marginBottom: 30,
+    },
+    headerDecorativeElements: {
+        position: 'absolute',
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0,
+        overflow: 'hidden',
+    },
+    decorativeCircle: {
+        position: 'absolute',
+        borderRadius: 50,
+        backgroundColor: 'rgba(255, 255, 255, 0.08)',
+    },
+    headerDecorations: {
+        position: 'absolute',
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0,
+        overflow: 'hidden',
+    },
+    decorativeCircle1: {
+        position: 'absolute',
+        width: 120,
+        height: 120,
+        borderRadius: 60,
+        backgroundColor: 'rgba(255, 255, 255, 0.08)',
+        top: -30,
+        right: -20,
+    },
+    decorativeCircle2: {
+        position: 'absolute',
+        width: 80,
+        height: 80,
+        borderRadius: 40,
+        backgroundColor: 'rgba(255, 255, 255, 0.06)',
+        top: 40,
+        left: -25,
+    },
+    decorativeCircle3: {
+        position: 'absolute',
+        width: 60,
+        height: 60,
+        borderRadius: 30,
+        backgroundColor: 'rgba(255, 255, 255, 0.1)',
+        top: 80,
+        right: 30,
+    },
+    decorativeCircle4: {
+        position: 'absolute',
+        width: 60,
+        height: 60,
+        borderRadius: 30,
+        backgroundColor: 'rgba(255, 255, 255, 0.1)',
+        top: 150,
+        Left: -10,
+    },
+    decorativeCircle5: {
+        position: 'absolute',
+        width: 120,
+        height: 120,
+        borderRadius: 60,
+        backgroundColor: 'rgba(255, 255, 255, 0.08)',
+        top: 120,
+        left: 30,
     },
     safeArea: {
         width: '100%',
@@ -681,26 +896,21 @@ const styles = StyleSheet.create({
     headerRight: {
         flexDirection: 'row',
         alignItems: 'center',
-    },
-    scrollViewContent: {
-        flexGrow: 1,
-        paddingTop: 24,
-        paddingBottom: 40,
+        gap: 12,
     },
     upperGridContainer: {
         flexDirection: 'row',
         flexWrap: 'wrap',
         justifyContent: 'center',
-        gap: 16,
+        gap: 8,
         marginBottom: 24,
-        paddingHorizontal: 16,
+        width: '100%',
     },
     menuSection: {
         backgroundColor: 'white',
         marginHorizontal: 16,
-        borderRadius: 20,
-        paddingVertical: 20,
-        paddingHorizontal: 8,
+        borderRadius: 10,
+        padding: 12,
         marginBottom: 24,
         elevation: 3,
         shadowColor: '#000',
@@ -719,14 +929,12 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         justifyContent: 'center',
         flex: 1,
-        paddingVertical: 8,
-        paddingHorizontal: 4,
         pointerEvents: 'auto',
     },
     menuIconContainer: {
         backgroundColor: 'white',
         borderRadius: 16,
-        padding: 16,
+        padding: 12,
         alignItems: 'center',
         justifyContent: 'center',
         width: 56,
@@ -746,7 +954,7 @@ const styles = StyleSheet.create({
         fontFamily: 'Poppins-Medium',
         textAlign: 'center',
         lineHeight: 18,
-        letterSpacing: -0.5
+        letterSpacing: -0.5,
     },
     lowerContainer: {
         marginTop: 8,
@@ -760,27 +968,24 @@ const styles = StyleSheet.create({
         paddingHorizontal: 4,
     },
     sectionTitle: {
-        fontSize: 18,
+        fontSize: 14,
         color: '#1C1C1E',
         fontFamily: 'Poppins-SemiBold',
-        letterSpacing: -0.5,
     },
     sectionLinkContainer: {
         flexDirection: 'row',
         alignItems: 'center',
         paddingVertical: 8,
         paddingHorizontal: 12,
-        borderRadius: 12,
+        borderRadius: 8,
         backgroundColor: 'rgba(14, 80, 158, 0.1)',
+        gap: 4,
     },
     sectionLink: {
-        fontSize: 14,
+        fontSize: 12,
         color: '#0E509E',
         fontFamily: 'Poppins-Medium',
-        marginRight: 4,
-    },
-    sectionLinkIcon: {
-        marginLeft: 2,
+        letterSpacing: -0.5,
     },
     tasksContainer: {
         minHeight: 120,

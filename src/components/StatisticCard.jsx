@@ -4,26 +4,24 @@ import { Feather } from '@expo/vector-icons';
 import Shimmer from './Shimmer';
 
 const { width } = Dimensions.get('window');
-const cardWidth = (width - 60) / 2;
+const cardWidth = (width - 40) / 2;
 
 const StatisticSkeleton = () => (
-    <View style={[styles.statisticCard, { borderColor: '#e0e0e0' }]}>
-        <View style={[styles.textContainer, { gap: 5, display: 'flex', flexDirection: 'column', marginRight: 10 }]}>
-            <Shimmer width={60} height={25} style={styles.shimmerTitle} />
-            <Shimmer width={50} height={20} style={styles.shimmerTitle} />
-        </View>
-        <Shimmer width={50} height={55} style={styles.shimmerTitle} />
+    <View style={[styles.statisticCard, { borderColor: '#e0e0e0', gap: 2 }]}>
+        <Shimmer width={20} height={20} style={styles.shimmerTitle} />
+        <Shimmer width={60} height={25} style={styles.shimmerTitle} />
+        <Shimmer width={75} height={25} style={styles.shimmerTitle} />
     </View>
 );
 
 const StatisticCard = ({ value, description, color, icon, onPress }) => (
     <TouchableOpacity onPress={onPress}>
-        <View style={[styles.statisticCard, { borderColor: color }]}>
-            <View style={styles.textContainer}>
+        <View style={[styles.statisticCard]}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent:"space-between", gap: 8 }}>
                 <Text style={styles.valueText}>{value}</Text>
-                <Text style={styles.descriptionText}>{description}</Text>
+                <Feather name={icon} size={20} color={color} />
             </View>
-            <Feather name={icon} size={30} color={color} style={styles.icon} />
+            <Text style={styles.descriptionText}>{description}</Text>
         </View>
     </TouchableOpacity>
 );
@@ -31,43 +29,35 @@ const StatisticCard = ({ value, description, color, icon, onPress }) => (
 const styles = StyleSheet.create({
     statisticCard: {
         width: cardWidth,
-        height: 80,
         backgroundColor: 'white',
         borderRadius: 10,
-        padding: 12,
-        flexDirection: 'row',
+        paddingHorizontal: 12,
+        padding: 8,
+        flexDirection: 'column',
         justifyContent: 'space-between',
-        alignItems: 'center',
-        borderWidth: 2,
+        alignItems: 'start',
+        // borderWidth: 1,
+        // borderOpacity: 0.1,
+        // borderColor: '#0E509E',
         shadowColor: '#000',
         shadowOffset: {
             width: 0,
             height: 2,
         },
         shadowOpacity: 0.25,
-        shadowRadius: 3.84,
-        elevation: 5,
-    },
-    textContainer: {
-        flex: 1,
-        justifyContent: 'center',
+        shadowRadius: 10
     },
     valueText: {
-        fontSize: 24,
-        color: 'black',
-        fontFamily: 'Poppins-Bold',
+        fontSize: 18,
+        color: '#0E509E',
+        fontFamily: 'Poppins-SemiBold',
         letterSpacing: -0.5,
-        lineHeight: 30,
     },
     descriptionText: {
-        fontSize: 11,
+        fontSize: 12,
         color: 'black',
-        fontFamily: 'Poppins-Medium',
+        fontFamily: 'Poppins-Regular',
         letterSpacing: -0.3,
-        lineHeight: 13,
-    },
-    icon: {
-        marginLeft: 8,
     },
     shimmerTitle: {
         borderRadius: 4,
