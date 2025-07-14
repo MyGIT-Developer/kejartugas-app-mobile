@@ -125,6 +125,8 @@ const RejectConfirmationModal = ({ visible, onConfirm, onCancel }) => {
 };
 
 const DraggableModalTask = ({ visible, onClose, taskDetails }) => {
+    console.log('DraggableModalTask received taskDetails:', taskDetails); // Debug log
+
     const navigation = useNavigation();
     const modalY = useRef(new Animated.Value(SCREEN_HEIGHT)).current;
     const fontsLoaded = useFonts();
@@ -384,7 +386,9 @@ const DraggableModalTask = ({ visible, onClose, taskDetails }) => {
                                                 <Ionicons name="person-outline" size={16} color="#666" />
                                                 <Text style={styles.infoLabel}>Ditugaskan Oleh</Text>
                                             </View>
-                                            <Text style={styles.infoValue}>{taskDetails.assignedBy}</Text>
+                                            <Text style={styles.infoValue}>
+                                                {taskDetails.assignedByName || taskDetails.assignedBy || 'N/A'}
+                                            </Text>
                                         </View>
                                         <View style={styles.infoColumn}>
                                             <View style={styles.infoItem}>
