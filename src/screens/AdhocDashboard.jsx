@@ -1112,6 +1112,7 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         justifyContent: 'center',
         gap: 12,
+        marginTop: 35,
         marginBottom: 8,
     },
     headerIconContainer: {
@@ -1189,7 +1190,7 @@ const styles = StyleSheet.create({
     tabsContainer: {
         backgroundColor: 'white',
         marginHorizontal: 20,
-        marginTop: -70,
+        marginTop: 10,
         borderRadius: 16,
         shadowColor: '#000',
         shadowOffset: { width: 0, height: 2 },
