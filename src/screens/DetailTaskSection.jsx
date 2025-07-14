@@ -1,11 +1,30 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, SafeAreaView, StatusBar, ScrollView } from 'react-native';
+import {
+    View,
+    Text,
+    StyleSheet,
+    TouchableOpacity,
+    SafeAreaView,
+    StatusBar,
+    ScrollView,
+    Dimensions,
+    Platform,
+} from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import DraggableModalTask from '../components/DraggableModalTask';
 import ReusableModalSuccess from '../components/TaskModalSuccess';
 import { Ionicons } from '@expo/vector-icons';
 import { fetchTaskById } from '../api/task'; // Import the fetchTaskById function
+
+const { width: SCREEN_WIDTH } = Dimensions.get('window');
+
+// Function to calculate responsive font size
+const calculateFontSize = (size) => {
+    const scale = SCREEN_WIDTH / 375;
+    const newSize = size * scale;
+    return Math.round(newSize);
+};
 
 // Group tasks by project name
 const groupTasksByProject = (tasks) => {
@@ -28,50 +47,50 @@ const calculateRemainingDays = (endDate) => {
 
 const getStatusBadgeColor = (status, endDate) => {
     if (status === 'Completed') {
-        return { color: '#C9F8C1', textColor: '#333333', label: 'Selesai' };
+        return { color: '#DCFCE7', textColor: '#166534', label: 'Selesai' };
     }
 
     const remainingDays = calculateRemainingDays(endDate, status);
 
     if (remainingDays === 0) {
-        return { color: '#F69292', textColor: '#811616', label: 'Deadline Tugas Hari Ini' };
+        return { color: '#FEF2F2', textColor: '#DC2626', label: 'Deadline Hari Ini' };
     } else if (remainingDays < 0) {
-        return { color: '#F69292', textColor: '#811616', label: `Terlambat selama ${Math.abs(remainingDays)} hari` };
+        return { color: '#FEF2F2', textColor: '#DC2626', label: `Terlambat ${Math.abs(remainingDays)} hari` };
     } else if (remainingDays > 0) {
-        return { color: '#FFE9CB', textColor: '#E07706', label: `Tersisa ${remainingDays} hari` };
+        return { color: '#FEF3C7', textColor: '#D97706', label: `Tersisa ${remainingDays} hari` };
     }
 
     // Existing status handling logic
     switch (status) {
         case 'workingOnIt':
-            return { color: '#CCC8C8', textColor: '#333333', label: 'Dalam Pengerjaan' };
+            return { color: '#F1F5F9', textColor: '#475569', label: 'Dalam Pengerjaan' };
         case 'onReview':
-            return { color: '#9AE1EA', textColor: '#333333', label: 'Dalam Peninjauan' };
+            return { color: '#DBEAFE', textColor: '#1D4ED8', label: 'Dalam Peninjauan' };
         case 'rejected':
-            return { color: '#050404FF', textColor: '#811616', label: 'Ditolak' };
+            return { color: '#FEF2F2', textColor: '#DC2626', label: 'Ditolak' };
         case 'onHold':
-            return { color: '#F69292', textColor: '#811616', label: 'Ditunda' };
+            return { color: '#FEF3C7', textColor: '#D97706', label: 'Ditunda' };
         case 'Completed':
-            return { color: '#C9F8C1', textColor: '#333333', label: 'Selesai' }; // Updated label
+            return { color: '#DCFCE7', textColor: '#166534', label: 'Selesai' };
         case 'onPending':
-            return { color: '#F0E08A', textColor: '#333333', label: 'Tersedia' };
+            return { color: '#EFF6FF', textColor: '#2563EB', label: 'Tersedia' };
         default:
-            return { color: '#E0E0E0', textColor: '#333333', label: status };
+            return { color: '#F8FAFC', textColor: '#64748B', label: status };
     }
 };
 
 const getCollectionStatusBadgeColor = (status) => {
     switch (status) {
         case 'finish':
-            return { color: '#A7C8E5', textColor: '#092D58', label: 'Selesai' };
+            return { color: '#DBEAFE', textColor: '#1E40AF', label: 'Selesai' };
         case 'earlyFinish':
-            return { color: '#9ADFAD', textColor: '#0A642E', label: 'Selesai Lebih Awal' };
+            return { color: '#DCFCE7', textColor: '#166534', label: 'Selesai Lebih Awal' };
         case 'finish in delay':
-            return { color: '#F0E089', textColor: '#80490A', label: 'Selesai Terlambat' };
+            return { color: '#FEF3C7', textColor: '#D97706', label: 'Selesai Terlambat' };
         case 'overdue':
-            return { color: '#F69292', textColor: '#811616', label: 'Terlambat' };
+            return { color: '#FEF2F2', textColor: '#DC2626', label: 'Terlambat' };
         default:
-            return { color: '#E0E0E0', textColor: '#000000', label: status || 'Belum Dikumpulkan' };
+            return { color: '#F8FAFC', textColor: '#64748B', label: status || 'Belum Dikumpulkan' };
     }
 };
 
@@ -119,7 +138,18 @@ const TaskCard = ({ projectName, tasks, onTaskPress }) => {
 
     return (
         <View style={styles.taskCard}>
-            <Text style={styles.projectTitle}>{projectName}</Text>
+            <View style={styles.projectHeader}>
+                <View style={styles.projectTitleContainer}>
+                    <Text style={styles.projectTitle} numberOfLines={2} ellipsizeMode="tail">
+                        {projectName}
+                    </Text>
+                </View>
+                <View style={styles.taskCountBadge}>
+                    <Text style={styles.taskCountText}>
+                        {tasks.length} Task{tasks.length > 1 ? 's' : ''}
+                    </Text>
+                </View>
+            </View>
             {tasks.map((task, index) => (
                 <View key={task.id || index} style={styles.taskItem}>
                     <View style={styles.taskInfo}>
@@ -127,13 +157,10 @@ const TaskCard = ({ projectName, tasks, onTaskPress }) => {
                             {truncateText(task.title, 50)}
                         </Text>
                         {renderStatusOrDays(task)}
+                        <TouchableOpacity style={styles.detailButton} onPress={() => onTaskPress(task)}>
+                            <Text style={styles.detailButtonText}>Lihat Detail</Text>
+                        </TouchableOpacity>
                     </View>
-                    <TouchableOpacity
-                        style={[styles.detailButton, { alignSelf: 'flex-start', marginTop: 5 }]}
-                        onPress={() => onTaskPress(task)}
-                    >
-                        <Text style={styles.detailButtonText}>Detail</Text>
-                    </TouchableOpacity>
                 </View>
             ))}
             <TouchableOpacity style={styles.projectDetailButton} onPress={() => setIsExpanded(!isExpanded)}>
@@ -142,8 +169,8 @@ const TaskCard = ({ projectName, tasks, onTaskPress }) => {
                 </Text>
                 <Ionicons
                     name={isExpanded ? 'chevron-up' : 'chevron-down'}
-                    size={20}
-                    color="#1f1f1f"
+                    size={18}
+                    color="#475569"
                     style={styles.chevronIcon}
                 />
             </TouchableOpacity>
@@ -151,15 +178,19 @@ const TaskCard = ({ projectName, tasks, onTaskPress }) => {
                 <View style={styles.projectDetails}>
                     <View style={styles.detailRow}>
                         <View style={styles.leftColumn}>
-                            <Text style={styles.detailLabel}>Ditugaskan Oleh:</Text>
+                            <Text style={styles.detailLabel}>Ditugaskan Oleh</Text>
                             <Text style={styles.detailValue}>{projectDetails.assignedBy}</Text>
-                            <Text style={styles.detailLabel}>Durasi Proyek:</Text>
+                        </View>
+                        <View style={styles.rightColumn}>
+                            <Text style={styles.detailLabel}>Durasi Proyek</Text>
                             <Text style={styles.detailValue}>
                                 {calculateDuration(projectDetails.start_date, projectDetails.end_date)}
                             </Text>
                         </View>
-                        <View style={styles.rightColumn}>
-                            <Text style={styles.detailLabel}>Keterangan Proyek:</Text>
+                    </View>
+                    <View style={{ marginTop: 16 }}>
+                        <View style={[styles.leftColumn, { marginRight: 0 }]}>
+                            <Text style={styles.detailLabel}>Keterangan Proyek</Text>
                             <Text style={styles.detailValue}>
                                 {projectDetails.description || 'Tidak ada Keterangan'}
                             </Text>
@@ -242,25 +273,55 @@ const DetailTaskSection = () => {
 
     return (
         <SafeAreaView style={styles.safeArea}>
-            <StatusBar barStyle="light-content" />
-            <LinearGradient colors={['#0E509E', '#5FA0DC', '#9FD2FF']} style={styles.header}>
-                <View style={styles.headerContent}>
-                    <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
-                        <Ionicons name="arrow-back" size={24} color="white" />
-                    </TouchableOpacity>
-                    <Text style={styles.headerTitle}>{sectionTitle || 'Tasks'}</Text>
-                </View>
-            </LinearGradient>
-            <ScrollView contentContainerStyle={styles.scrollContent}>
-                {Object.keys(groupedTasks).map((projectName, index) => (
-                    <TaskCard
-                        key={index}
-                        projectName={projectName}
-                        tasks={groupedTasks[projectName]}
-                        onTaskPress={handleTaskDetailPress} // Update here
-                    />
-                ))}
-            </ScrollView>
+            <StatusBar barStyle="light-content" backgroundColor="#4A90E2" />
+
+            {/* Header with AdhocDashboard style */}
+            <View style={styles.backgroundBox}>
+                <LinearGradient
+                    colors={['#4A90E2', '#357ABD', '#7dbfff']}
+                    start={{ x: 0, y: 0 }}
+                    end={{ x: 1, y: 1 }}
+                    style={styles.linearGradient}
+                >
+                    <View style={styles.headerDecorations}>
+                        <View style={styles.decorativeCircle1} />
+                        <View style={styles.decorativeCircle2} />
+                        <View style={styles.decorativeCircle3} />
+                        <View style={styles.decorativeCircle4} />
+                        <View style={styles.decorativeCircle5} />
+                    </View>
+                    <View style={styles.headerContainer}>
+                        <View style={styles.headerCenterContent}>
+                            <View style={styles.headerTitleWrapper}>
+                                <View style={styles.headerIconContainer}>
+                                    <Ionicons name="list-outline" size={28} color="white" />
+                                </View>
+                                <Text style={styles.header}>{sectionTitle || 'Tasks'}</Text>
+                            </View>
+                            <Text style={styles.headerSubtitle}>Detail tugas dan progres proyek Anda</Text>
+                        </View>
+                    </View>
+                </LinearGradient>
+            </View>
+
+            {/* Main Content */}
+            <View style={styles.mainContent}>
+                <ScrollView contentContainerStyle={styles.scrollContent}>
+                    {Object.keys(groupedTasks).map((projectName, index) => (
+                        <TaskCard
+                            key={index}
+                            projectName={projectName}
+                            tasks={groupedTasks[projectName]}
+                            onTaskPress={handleTaskDetailPress}
+                        />
+                    ))}
+                </ScrollView>
+            </View>
+
+            {/* Floating Back Button */}
+            <TouchableOpacity style={styles.floatingBackButton} onPress={() => navigation.goBack()}>
+                <Ionicons name="arrow-back" size={24} color="white" />
+            </TouchableOpacity>
 
             {modalType === 'default' ? (
                 <DraggableModalTask
@@ -285,136 +346,329 @@ const DetailTaskSection = () => {
 const styles = StyleSheet.create({
     safeArea: {
         flex: 1,
-        backgroundColor: '#F2F2F7',
+        backgroundColor: '#F8FAFC',
     },
-    header: {
-        height: 80,
-        paddingTop: 10,
-        paddingHorizontal: 20,
-        borderBottomLeftRadius: 30,
-        borderBottomRightRadius: 30,
+    backgroundBox: {
+        height: 220,
+        width: '100%',
+        position: 'absolute',
+        top: 0,
+        left: 0,
+        overflow: 'hidden',
+        zIndex: 1,
+    },
+    linearGradient: {
+        flex: 1,
+        borderBottomLeftRadius: 24,
+        borderBottomRightRadius: 24,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 20 },
+        shadowOpacity: 0.5,
+        shadowRadius: 12,
+        elevation: 8,
+    },
+    headerContainer: {
+        alignItems: 'center',
         justifyContent: 'center',
+        paddingTop: Platform.OS === 'ios' ? 70 : 50,
+        paddingBottom: 20,
+        paddingHorizontal: 20,
+        position: 'relative',
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.1,
+        shadowRadius: 8,
+        elevation: 5,
     },
-    headerTitle: {
-        fontSize: 24,
-        color: 'white',
-        fontFamily: 'Poppins-Bold',
-        alignSelf: 'center',
-    },
-    headerContent: {
-        flexDirection: 'row',
+    headerCenterContent: {
         alignItems: 'center',
         justifyContent: 'center',
     },
-    backButton: {
-        position: 'absolute',
-        left: 0,
-        top: 5,
+    header: {
+        fontSize: calculateFontSize(24),
+        fontFamily: 'Poppins-Bold',
+        color: 'white',
+        textAlign: 'center',
+        letterSpacing: -0.8,
+        marginBottom: 0,
+        textShadowColor: 'rgba(0, 0, 0, 0.15)',
+        textShadowOffset: { width: 0, height: 1 },
+        textShadowRadius: 3,
     },
-    scrollContent: {
-        padding: 16,
-        flexGrow: 1,
+    headerSubtitle: {
+        fontSize: calculateFontSize(13),
+        fontFamily: 'Poppins-Regular',
+        color: 'rgba(255, 255, 255, 0.85)',
+        textAlign: 'center',
+        marginTop: 4,
+        letterSpacing: 0.3,
+        lineHeight: calculateFontSize(18),
     },
-    taskCard: {
-        backgroundColor: 'white',
-        borderRadius: 10,
-        padding: 16,
-        marginBottom: 16,
-        elevation: 2,
+    headerTitleWrapper: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+        gap: 12,
+        marginTop: 20,
+        marginBottom: 8,
+    },
+    headerIconContainer: {
+        width: 40,
+        height: 40,
+        borderRadius: 20,
+        backgroundColor: 'rgba(255, 255, 255, 0.15)',
+        alignItems: 'center',
+        justifyContent: 'center',
         shadowColor: '#000',
         shadowOffset: { width: 0, height: 2 },
         shadowOpacity: 0.1,
         shadowRadius: 4,
+        elevation: 3,
+    },
+    headerDecorations: {
+        position: 'absolute',
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0,
+        overflow: 'hidden',
+    },
+    decorativeCircle1: {
+        position: 'absolute',
+        width: 120,
+        height: 120,
+        borderRadius: 60,
+        backgroundColor: 'rgba(255, 255, 255, 0.08)',
+        top: -30,
+        right: -20,
+    },
+    decorativeCircle2: {
+        position: 'absolute',
+        width: 80,
+        height: 80,
+        borderRadius: 40,
+        backgroundColor: 'rgba(255, 255, 255, 0.06)',
+        top: 40,
+        left: -25,
+    },
+    decorativeCircle3: {
+        position: 'absolute',
+        width: 60,
+        height: 60,
+        borderRadius: 30,
+        backgroundColor: 'rgba(255, 255, 255, 0.1)',
+        top: 80,
+        right: 30,
+    },
+    decorativeCircle4: {
+        position: 'absolute',
+        width: 60,
+        height: 60,
+        borderRadius: 30,
+        backgroundColor: 'rgba(255, 255, 255, 0.1)',
+        top: 150,
+        left: -10,
+    },
+    decorativeCircle5: {
+        position: 'absolute',
+        width: 120,
+        height: 120,
+        borderRadius: 60,
+        backgroundColor: 'rgba(255, 255, 255, 0.08)',
+        top: 120,
+        left: 30,
+    },
+    mainContent: {
+        flex: 1,
+        marginTop: 220,
+        backgroundColor: '#F8FAFC',
+    },
+    scrollContent: {
+        padding: 20,
+        flexGrow: 1,
+    },
+    taskCard: {
+        backgroundColor: 'white',
+        borderRadius: 20,
+        padding: 20,
+        marginBottom: 20,
+        shadowColor: '#64748B',
+        shadowOffset: { width: 0, height: 8 },
+        shadowOpacity: 0.1,
+        shadowRadius: 16,
+        elevation: 8,
+        borderWidth: 1,
+        borderColor: 'rgba(226, 232, 240, 0.8)',
+    },
+    projectHeader: {
+        flexDirection: 'column',
+        marginBottom: 16,
+    },
+    projectTitleContainer: {
+        marginBottom: 8,
     },
     projectTitle: {
-        fontSize: 18,
-        marginBottom: 8,
-        color: '#1C1C1E',
+        fontSize: 20,
+        color: '#0F172A',
+        fontFamily: 'Poppins-Bold',
+        letterSpacing: 0.3,
+        lineHeight: 26,
+    },
+    taskCountBadge: {
+        backgroundColor: '#EFF6FF',
+        paddingHorizontal: 12,
+        paddingVertical: 6,
+        borderRadius: 16,
+        borderWidth: 1,
+        borderColor: '#DBEAFE',
+        alignSelf: 'flex-start',
+        shadowColor: '#2563EB',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.1,
+        shadowRadius: 4,
+        elevation: 2,
+    },
+    taskCountText: {
+        fontSize: 12,
+        color: '#2563EB',
         fontFamily: 'Poppins-SemiBold',
+        letterSpacing: 0.3,
     },
     taskItem: {
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        alignItems: 'flex-start',
+        backgroundColor: '#F8FAFC',
+        borderRadius: 16,
+        padding: 16,
         marginBottom: 12,
+        borderWidth: 1,
+        borderColor: '#E2E8F0',
     },
     taskInfo: {
         flexDirection: 'column',
         flex: 1,
-        marginRight: 10,
+        marginBottom: 12,
     },
     taskName: {
         fontSize: 16,
-        color: '#1C1C1E',
-        fontFamily: 'Poppins-Medium',
-        marginBottom: 4,
+        color: '#1E293B',
+        fontFamily: 'Poppins-SemiBold',
+        marginBottom: 8,
+        lineHeight: 22,
     },
     badge: {
-        paddingHorizontal: 8,
-        paddingVertical: 4,
-        borderRadius: 12,
+        paddingHorizontal: 12,
+        paddingVertical: 6,
+        borderRadius: 16,
         alignSelf: 'flex-start',
-        marginTop: 4,
+        marginBottom: 8,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.1,
+        shadowRadius: 4,
+        elevation: 2,
     },
     badgeText: {
         fontSize: 12,
-        fontFamily: 'Poppins-Medium',
+        fontFamily: 'Poppins-SemiBold',
+        letterSpacing: 0.2,
     },
     detailButton: {
-        paddingHorizontal: 12,
-        paddingVertical: 6,
-        backgroundColor: '#E9E9EB',
-        borderRadius: 6,
+        paddingHorizontal: 16,
+        paddingVertical: 10,
+        backgroundColor: '#3B82F6',
+        borderRadius: 12,
         alignSelf: 'flex-start',
+        shadowColor: '#3B82F6',
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.2,
+        shadowRadius: 8,
+        elevation: 4,
     },
     detailButtonText: {
         fontSize: 14,
-        color: '#1f1f1f',
-        fontFamily: 'Poppins-Regular',
+        color: 'white',
+        fontFamily: 'Poppins-SemiBold',
+        letterSpacing: 0.3,
     },
     projectDetailButton: {
         flexDirection: 'row',
         alignItems: 'center',
         alignSelf: 'flex-end',
-        marginTop: 10,
+        marginTop: 16,
+        backgroundColor: '#F1F5F9',
+        paddingHorizontal: 16,
+        paddingVertical: 8,
+        borderRadius: 20,
+        borderWidth: 1,
+        borderColor: '#CBD5E1',
     },
     projectDetailButtonText: {
         fontSize: 14,
-        color: '#1f1f1f',
-        marginRight: 5,
-        fontFamily: 'Poppins-Regular',
+        color: '#475569',
+        marginRight: 6,
+        fontFamily: 'Poppins-Medium',
     },
     chevronIcon: {
-        marginTop: 2,
+        marginTop: 1,
     },
     projectDetails: {
-        marginTop: 10,
-        padding: 10,
-        backgroundColor: 'transparent',
-        borderRadius: 5,
+        marginTop: 16,
+        padding: 16,
+        backgroundColor: '#F8FAFC',
+        borderRadius: 16,
+        borderWidth: 1,
+        borderColor: '#E2E8F0',
     },
     detailRow: {
-        flexDirection: 'row',
-        justifyContent: 'space-between',
+        flexDirection: 'column',
+        gap: 16,
     },
     leftColumn: {
         flex: 1,
-        marginRight: 10,
+        backgroundColor: 'white',
+        padding: 12,
+        borderRadius: 12,
+        borderWidth: 1,
+        borderColor: '#E2E8F0',
     },
     rightColumn: {
         flex: 1,
+        backgroundColor: 'white',
+        padding: 12,
+        borderRadius: 12,
+        borderWidth: 1,
+        borderColor: '#E2E8F0',
     },
     detailLabel: {
-        fontSize: 14,
-        color: '#333',
-        marginBottom: 2,
+        fontSize: 12,
+        color: '#64748B',
+        marginBottom: 4,
         fontFamily: 'Poppins-Medium',
+        textTransform: 'uppercase',
+        letterSpacing: 0.5,
     },
     detailValue: {
         fontSize: 14,
-        color: '#333',
-        marginBottom: 8,
+        color: '#1E293B',
+        marginBottom: 0,
         fontFamily: 'Poppins-Regular',
+        lineHeight: 20,
+    },
+    floatingBackButton: {
+        position: 'absolute',
+        bottom: 30,
+        right: 20,
+        width: 56,
+        height: 56,
+        borderRadius: 28,
+        backgroundColor: '#4A90E2',
+        alignItems: 'center',
+        justifyContent: 'center',
+        shadowColor: '#4A90E2',
+        shadowOffset: { width: 0, height: 6 },
+        shadowOpacity: 0.3,
+        shadowRadius: 12,
+        elevation: 8,
+        zIndex: 1000,
     },
 });
 
