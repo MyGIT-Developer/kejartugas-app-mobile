@@ -20,6 +20,7 @@ import {
     getStatusBadgeColor as utilsGetStatusBadgeColor,
     getCollectionStatusBadgeColor as utilsGetCollectionStatusBadgeColor,
 } from '../utils/taskUtils';
+import { useFonts } from '../utils/UseFonts';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
@@ -28,6 +29,25 @@ const calculateFontSize = (size) => {
     const scale = SCREEN_WIDTH / 375;
     const newSize = size * scale;
     return Math.round(newSize);
+};
+
+// Consistent font system
+const FONTS = {
+    family: {
+        regular: 'Poppins-Regular',
+        medium: 'Poppins-Medium',
+        semiBold: 'Poppins-SemiBold',
+        bold: 'Poppins-Bold',
+    },
+    size: {
+        xs: calculateFontSize(10),
+        sm: calculateFontSize(12),
+        base: calculateFontSize(14),
+        lg: calculateFontSize(16),
+        xl: calculateFontSize(18),
+        '2xl': calculateFontSize(20),
+        '3xl': calculateFontSize(24),
+    },
 };
 
 // Group tasks by project name
@@ -214,7 +234,7 @@ const TaskCard = ({ projectName, tasks, onTaskPress }) => {
                             </Text>
                         </View>
                     </View>
-                    <View style={{ marginTop: 16 }}>
+                    <View style={{ marginTop: 12 }}>
                         <View style={[styles.leftColumn, { marginRight: 0 }]}>
                             <Text style={styles.detailLabel}>Keterangan Proyek</Text>
                             <Text style={styles.detailValue}>
@@ -232,12 +252,18 @@ const DetailTaskSection = () => {
     const navigation = useNavigation();
     const route = useRoute();
     const { sectionTitle, tasks = [] } = route.params || {};
+    const fontsLoaded = useFonts();
 
     const [draggableModalVisible, setDraggableModalVisible] = useState(false);
     const [selectedTask, setSelectedTask] = useState(null);
     const [modalType, setModalType] = useState('default'); // Initialize modalType state
 
     const groupedTasks = groupTasksByProject(tasks);
+
+    // Return null if fonts are not loaded
+    if (!fontsLoaded) {
+        return null;
+    }
 
     const handleTaskDetailPress = async (task) => {
         const baseUrl = 'https://app.kejartugas.com/';
@@ -352,38 +378,44 @@ const DetailTaskSection = () => {
     };
 
     return (
-        <SafeAreaView style={styles.container}>
+        <View style={styles.container}>
             <StatusBar barStyle="light-content" backgroundColor="#4A90E2" />
 
-            {/* ScrollView with content */}
-            <ScrollView contentContainerStyle={styles.scrollViewContent} showsVerticalScrollIndicator={false}>
-                {/* Header with AdhocDashboard style */}
-                <View style={styles.backgroundBox}>
-                    <LinearGradient
-                        colors={['#4A90E2', '#357ABD', '#7dbfff']}
-                        start={{ x: 0, y: 0 }}
-                        end={{ x: 1, y: 1 }}
-                        style={styles.linearGradient}
-                    >
-                        <View style={styles.headerDecorations}>
-                            <View style={styles.decorativeCircle1} />
-                            <View style={styles.decorativeCircle2} />
-                            <View style={styles.decorativeCircle3} />
-                            <View style={styles.decorativeCircle4} />
-                            <View style={styles.decorativeCircle5} />
-                        </View>
-                        <View style={styles.headerContainer}>
-                            <View style={styles.headerCenterContent}>
-                                <View style={styles.headerTitleWrapper}>
-                                    <View style={styles.headerIconContainer}>
-                                        <Ionicons name="list-outline" size={28} color="white" />
-                                    </View>
-                                    <Text style={styles.header}>{sectionTitle || 'Tasks'}</Text>
-                                </View>
-                                <Text style={styles.headerSubtitle}>Detail tugas dan progres proyek Anda</Text>
+            {/* Fixed Header Background */}
+            <View style={styles.backgroundBox}>
+                <LinearGradient
+                    colors={['#4A90E2', '#357ABD', '#2E5984']}
+                    start={{ x: 0, y: 0 }}
+                    end={{ x: 1, y: 1 }}
+                    style={styles.linearGradient}
+                >
+                    <View style={styles.headerDecorations}>
+                        <View style={styles.decorativeCircle1} />
+                        <View style={styles.decorativeCircle2} />
+                        <View style={styles.decorativeCircle3} />
+                        <View style={styles.decorativeCircle4} />
+                        <View style={styles.decorativeCircle5} />
+                    </View>
+                </LinearGradient>
+            </View>
+
+            {/* Scrollable Content */}
+            <ScrollView
+                contentContainerStyle={styles.scrollViewContent}
+                showsVerticalScrollIndicator={false}
+                style={styles.scrollView}
+            >
+                {/* Header Content Inside ScrollView */}
+                <View style={styles.headerContainer}>
+                    <View style={styles.headerCenterContent}>
+                        <View style={styles.headerTitleWrapper}>
+                            <View style={styles.headerIconContainer}>
+                                <Ionicons name="list-outline" size={28} color="white" />
                             </View>
+                            <Text style={styles.header}>{sectionTitle || 'Tasks'}</Text>
                         </View>
-                    </LinearGradient>
+                        <Text style={styles.headerSubtitle}>Detail tugas dan progres proyek Anda</Text>
+                    </View>
                 </View>
 
                 {/* Main Container */}
@@ -421,7 +453,7 @@ const DetailTaskSection = () => {
                     taskDetails={selectedTask || {}}
                 />
             )}
-        </SafeAreaView>
+        </View>
     );
 };
 
@@ -430,14 +462,20 @@ const styles = StyleSheet.create({
         flex: 1,
         backgroundColor: '#F8FAFC',
     },
+    scrollView: {
+        flex: 1,
+    },
     scrollViewContent: {
         flexGrow: 1,
+        paddingTop: 20,
         paddingBottom: 120,
     },
     backgroundBox: {
         height: 325,
         width: '100%',
-        position: 'relative',
+        position: 'absolute',
+        top: 0,
+        left: 0,
         overflow: 'hidden',
     },
     linearGradient: {
@@ -465,8 +503,8 @@ const styles = StyleSheet.create({
     mainContainer: {
         flex: 1,
         paddingHorizontal: 20,
-        gap: 32,
-        marginTop: -50,
+        gap: 24,
+        marginTop: 20,
         zIndex: 1,
     },
     headerCenterContent: {
@@ -474,24 +512,24 @@ const styles = StyleSheet.create({
         justifyContent: 'center',
     },
     header: {
-        fontSize: calculateFontSize(24),
-        fontFamily: 'Poppins-Bold',
+        fontSize: FONTS.size.xl,
+        fontFamily: FONTS.family.bold,
         color: 'white',
         textAlign: 'center',
-        letterSpacing: -0.8,
+        letterSpacing: -0.5,
         marginBottom: 0,
         textShadowColor: 'rgba(0, 0, 0, 0.15)',
         textShadowOffset: { width: 0, height: 1 },
         textShadowRadius: 3,
     },
     headerSubtitle: {
-        fontSize: calculateFontSize(13),
-        fontFamily: 'Poppins-Regular',
+        fontSize: FONTS.size.sm,
+        fontFamily: FONTS.family.regular,
         color: 'rgba(255, 255, 255, 0.85)',
         textAlign: 'center',
         marginTop: 4,
-        letterSpacing: 0.3,
-        lineHeight: calculateFontSize(18),
+        letterSpacing: 0.2,
+        lineHeight: 16,
     },
     headerTitleWrapper: {
         flexDirection: 'row',
@@ -572,16 +610,15 @@ const styles = StyleSheet.create({
         flexGrow: 1,
     },
     taskCard: {
-        marginTop: -40,
         backgroundColor: 'white',
-        borderRadius: 24,
-        padding: 24,
-        marginBottom: 40,
+        borderRadius: 20,
+        padding: 20,
+        marginBottom: 16,
         shadowColor: '#000',
-        shadowOffset: { width: 0, height: 8 },
-        shadowOpacity: 0.15,
-        shadowRadius: 20,
-        elevation: 12,
+        shadowOffset: { width: 0, height: 6 },
+        shadowOpacity: 0.12,
+        shadowRadius: 16,
+        elevation: 8,
         borderWidth: 1,
         borderColor: '#F1F5F9',
         zIndex: 1,
@@ -590,8 +627,8 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         justifyContent: 'space-between',
         alignItems: 'flex-start',
-        marginBottom: 20,
-        paddingBottom: 16,
+        marginBottom: 16,
+        paddingBottom: 12,
         borderBottomWidth: 1,
         borderBottomColor: '#F1F5F9',
     },
@@ -600,11 +637,11 @@ const styles = StyleSheet.create({
         marginRight: 12,
     },
     projectTitle: {
-        fontSize: 18,
+        fontSize: FONTS.size.lg,
         color: '#0F172A',
-        fontFamily: 'Poppins-Bold',
-        letterSpacing: 0.3,
-        lineHeight: 24,
+        fontFamily: FONTS.family.bold,
+        letterSpacing: 0.2,
+        lineHeight: 20,
         marginBottom: 4,
     },
     taskCountBadge: {
@@ -621,14 +658,14 @@ const styles = StyleSheet.create({
         elevation: 3,
     },
     taskCountText: {
-        fontSize: 13,
+        fontSize: FONTS.size.xs,
         color: '#2563EB',
-        fontFamily: 'Poppins-Bold',
-        letterSpacing: 0.3,
+        fontFamily: FONTS.family.bold,
+        letterSpacing: 0.2,
     },
     taskItemSimple: {
-        marginBottom: 24,
-        paddingBottom: 20,
+        marginBottom: 16,
+        paddingBottom: 16,
         borderBottomWidth: 1,
         borderBottomColor: '#F1F5F9',
     },
@@ -637,132 +674,132 @@ const styles = StyleSheet.create({
         flex: 1,
     },
     taskName: {
-        fontSize: 16,
+        fontSize: FONTS.size.base,
         color: '#1E293B',
-        fontFamily: 'Poppins-SemiBold',
-        marginBottom: 10,
-        lineHeight: 22,
+        fontFamily: FONTS.family.semiBold,
+        marginBottom: 8,
+        lineHeight: 18,
     },
     badge: {
-        paddingHorizontal: 14,
-        paddingVertical: 8,
-        borderRadius: 20,
+        paddingHorizontal: 12,
+        paddingVertical: 6,
+        borderRadius: 16,
         alignSelf: 'flex-start',
-        marginBottom: 14,
+        marginBottom: 10,
         shadowColor: '#000',
         shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.1,
-        shadowRadius: 6,
-        elevation: 3,
+        shadowOpacity: 0.08,
+        shadowRadius: 4,
+        elevation: 2,
     },
     badgeText: {
-        fontSize: 12,
-        fontFamily: 'Poppins-Bold',
-        letterSpacing: 0.3,
+        fontSize: FONTS.size.xs,
+        fontFamily: FONTS.family.semiBold,
+        letterSpacing: 0.2,
     },
     detailButton: {
-        paddingHorizontal: 24,
-        paddingVertical: 14,
+        paddingHorizontal: 16,
+        paddingVertical: 10,
         backgroundColor: '#3B82F6',
-        borderRadius: 16,
+        borderRadius: 12,
         alignSelf: 'stretch',
         shadowColor: '#3B82F6',
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.25,
-        shadowRadius: 12,
-        elevation: 6,
-        marginTop: 8,
+        shadowOffset: { width: 0, height: 3 },
+        shadowOpacity: 0.2,
+        shadowRadius: 8,
+        elevation: 4,
+        marginTop: 4,
         alignItems: 'center',
     },
     detailButtonText: {
-        fontSize: 15,
+        fontSize: FONTS.size.sm,
         color: 'white',
-        fontFamily: 'Poppins-Bold',
-        letterSpacing: 0.3,
+        fontFamily: FONTS.family.semiBold,
+        letterSpacing: 0.1,
     },
     projectDetailButton: {
         flexDirection: 'row',
         alignItems: 'center',
         alignSelf: 'center',
-        marginTop: 20,
+        marginTop: 12,
         backgroundColor: '#F8FAFC',
-        paddingHorizontal: 20,
-        paddingVertical: 12,
-        borderRadius: 24,
-        borderWidth: 1,
-        borderColor: '#E2E8F0',
-        shadowColor: '#64748B',
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.08,
-        shadowRadius: 8,
-        elevation: 2,
-    },
-    projectDetailButtonText: {
-        fontSize: 14,
-        color: '#475569',
-        marginRight: 8,
-        fontFamily: 'Poppins-SemiBold',
-    },
-    chevronIcon: {
-        marginTop: 1,
-    },
-    projectDetails: {
-        marginTop: 20,
-        padding: 20,
-        backgroundColor: '#FAFBFC',
+        paddingHorizontal: 16,
+        paddingVertical: 8,
         borderRadius: 20,
         borderWidth: 1,
         borderColor: '#E2E8F0',
         shadowColor: '#64748B',
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.08,
-        shadowRadius: 12,
-        elevation: 3,
+        shadowOffset: { width: 0, height: 1 },
+        shadowOpacity: 0.06,
+        shadowRadius: 4,
+        elevation: 1,
+    },
+    projectDetailButtonText: {
+        fontSize: FONTS.size.xs,
+        color: '#475569',
+        marginRight: 6,
+        fontFamily: FONTS.family.medium,
+    },
+    chevronIcon: {
+        marginTop: 0,
+    },
+    projectDetails: {
+        marginTop: 16,
+        padding: 16,
+        backgroundColor: '#FAFBFC',
+        borderRadius: 16,
+        borderWidth: 1,
+        borderColor: '#E2E8F0',
+        shadowColor: '#64748B',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.06,
+        shadowRadius: 8,
+        elevation: 2,
     },
     detailRow: {
         flexDirection: 'column',
-        gap: 16,
+        gap: 12,
     },
     leftColumn: {
         flex: 1,
         backgroundColor: 'white',
-        padding: 16,
-        borderRadius: 16,
+        padding: 12,
+        borderRadius: 12,
         borderWidth: 1,
         borderColor: '#E2E8F0',
         shadowColor: '#64748B',
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.06,
-        shadowRadius: 8,
-        elevation: 2,
+        shadowOffset: { width: 0, height: 1 },
+        shadowOpacity: 0.04,
+        shadowRadius: 4,
+        elevation: 1,
     },
     rightColumn: {
         flex: 1,
         backgroundColor: 'white',
-        padding: 16,
-        borderRadius: 16,
+        padding: 12,
+        borderRadius: 12,
         borderWidth: 1,
         borderColor: '#E2E8F0',
         shadowColor: '#64748B',
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.06,
-        shadowRadius: 8,
-        elevation: 2,
+        shadowOffset: { width: 0, height: 1 },
+        shadowOpacity: 0.04,
+        shadowRadius: 4,
+        elevation: 1,
     },
     detailLabel: {
-        fontSize: 12,
+        fontSize: FONTS.size.xs,
         color: '#64748B',
-        marginBottom: 6,
-        fontFamily: 'Poppins-SemiBold',
+        marginBottom: 4,
+        fontFamily: FONTS.family.semiBold,
         textTransform: 'uppercase',
-        letterSpacing: 0.8,
+        letterSpacing: 0.5,
     },
     detailValue: {
-        fontSize: 15,
+        fontSize: FONTS.size.sm,
         color: '#1E293B',
         marginBottom: 0,
-        fontFamily: 'Poppins-Medium',
-        lineHeight: 22,
+        fontFamily: FONTS.family.medium,
+        lineHeight: 16,
     },
     floatingTaskContainer: {
         backgroundColor: 'white',
@@ -797,25 +834,25 @@ const styles = StyleSheet.create({
         backgroundColor: '#F8FAFC',
         borderWidth: 1,
         borderColor: '#E2E8F0',
-        paddingVertical: 12,
-        paddingHorizontal: 16,
-        borderRadius: 10,
-        marginTop: 8,
-        marginBottom: 8,
+        paddingVertical: 8,
+        paddingHorizontal: 12,
+        borderRadius: 8,
+        marginTop: 6,
+        marginBottom: 6,
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'center',
         elevation: 1,
         shadowColor: '#000',
         shadowOffset: { width: 0, height: 1 },
-        shadowOpacity: 0.05,
+        shadowOpacity: 0.04,
         shadowRadius: 1,
     },
     showMoreButtonText: {
-        fontSize: 14,
+        fontSize: FONTS.size.xs,
         color: '#3B82F6',
-        fontWeight: '600',
-        marginRight: 6,
+        fontFamily: FONTS.family.semiBold,
+        marginRight: 4,
     },
 });
 

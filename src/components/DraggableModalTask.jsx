@@ -558,26 +558,32 @@ const DraggableModalTask = ({ visible, onClose, taskDetails }) => {
                                 </TouchableOpacity>
 
                                 {/* Submit button for working/rejected tasks */}
-                                {(taskDetails.status === 'workingOnIt' || taskDetails.status === 'rejected') &&
-                                    taskDetails.assignedEmployees?.some(
-                                        (employee) => employee.employeeId == employeeId,
-                                    ) && (
-                                        <TouchableOpacity
-                                            style={styles.submitTaskButton}
-                                            onPress={handleSubmit}
-                                            activeOpacity={0.8}
+                                {console.log('Debug Submit Button:', {
+                                    status: taskDetails.status,
+                                    isWorkingOnIt: taskDetails.status === 'workingOnIt',
+                                    isRejected: taskDetails.status === 'rejected',
+                                    shouldShow:
+                                        taskDetails.status === 'workingOnIt' || taskDetails.status === 'rejected',
+                                    assignedEmployees: taskDetails.assignedEmployees,
+                                    employeeId: employeeId,
+                                })}
+                                {(taskDetails.status === 'workingOnIt' || taskDetails.status === 'rejected') && (
+                                    <TouchableOpacity
+                                        style={styles.submitTaskButton}
+                                        onPress={handleSubmit}
+                                        activeOpacity={0.8}
+                                    >
+                                        <LinearGradient
+                                            colors={['#4CAF50', '#2E7D32']}
+                                            style={styles.gradientButton}
+                                            start={{ x: 0, y: 0 }}
+                                            end={{ x: 1, y: 1 }}
                                         >
-                                            <LinearGradient
-                                                colors={['#4CAF50', '#2E7D32']}
-                                                style={styles.gradientButton}
-                                                start={{ x: 0, y: 0 }}
-                                                end={{ x: 1, y: 1 }}
-                                            >
-                                                <MaterialIcons name="upload" size={18} color="white" />
-                                                <Text style={styles.submitButtonText}>Submit Tugas</Text>
-                                            </LinearGradient>
-                                        </TouchableOpacity>
-                                    )}
+                                            <MaterialIcons name="upload" size={18} color="white" />
+                                            <Text style={styles.submitButtonText}>Submit Tugas</Text>
+                                        </LinearGradient>
+                                    </TouchableOpacity>
+                                )}
 
                                 {/* Review buttons for pending review */}
                                 {taskDetails.status === 'onReview' && taskDetails.assignedById == employeeId && (
