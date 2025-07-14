@@ -26,6 +26,7 @@ import { useFonts } from '../utils/UseFonts';
 import { useTasksData } from '../hooks/useTasksData';
 import { useAccessPermission } from '../hooks/useAccessPermission';
 import { getStatusBadgeColor, getCollectionStatusBadgeColor } from '../utils/taskUtils';
+import { FONTS } from '../constants/fonts';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
@@ -51,6 +52,8 @@ const Tugas = () => {
     const dot1Opacity = React.useRef(new Animated.Value(0.3)).current;
     const dot2Opacity = React.useRef(new Animated.Value(0.3)).current;
     const dot3Opacity = React.useRef(new Animated.Value(0.3)).current;
+    const headerAnim = React.useRef(new Animated.Value(1)).current;
+    const headerScaleAnim = React.useRef(new Animated.Value(1)).current;
 
     // Hooks
     const navigation = useNavigation();
@@ -238,58 +241,209 @@ const Tugas = () => {
         return <AccessDenied />;
     }
 
-    // Header for Tugas, styled like AdhocDashboard
     const renderHeader = () => (
-        <View style={styles.backgroundBox}>
+        <Animated.View
+            style={[
+                styles.backgroundBox,
+                {
+                    opacity: headerAnim,
+                    transform: [
+                        {
+                            scale: headerScaleAnim.interpolate({
+                                inputRange: [0.9, 1],
+                                outputRange: [0.95, 1],
+                                extrapolate: 'clamp',
+                            }),
+                        },
+                    ],
+                },
+            ]}
+        >
             <LinearGradient
-                colors={['#0E509E', '#5FA0DC', '#9FD2FF']}
+                colors={['#4A90E2', '#357ABD', '#2E5984']}
+                style={styles.linearGradient}
                 start={{ x: 0, y: 0 }}
                 end={{ x: 1, y: 1 }}
-                style={styles.linearGradient}
-            >
-                <View style={styles.headerDecorations}>
-                    <View style={styles.decorativeCircle1} />
-                    <View style={styles.decorativeCircle2} />
-                    <View style={styles.decorativeCircle3} />
-                    <View style={styles.decorativeCircle4} />
-                    <View style={styles.decorativeCircle5} />
-                </View>
-                <View style={styles.headerContainer}>
-                    <View style={styles.headerCenterContent}>
-                        <View style={styles.headerTitleWrapper}>
-                            <View style={styles.headerIconContainer}>
-                                <Ionicons name="clipboard-outline" size={28} color="white" />
-                            </View>
-                            <Text style={styles.header}>Tugas Saya</Text>
-                        </View>
-                        <Text style={styles.headerSubtitle}>Kelola dan pantau semua tugas Anda</Text>
-                    </View>
-                </View>
-            </LinearGradient>
-        </View>
+            />
+
+            {/* Header decorative elements */}
+            <View style={styles.headerDecorations}>
+                <Animated.View
+                    style={[
+                        styles.decorativeCircle1,
+                        {
+                            opacity: headerAnim.interpolate({
+                                inputRange: [0, 1],
+                                outputRange: [0, 0.6],
+                            }),
+                            transform: [
+                                {
+                                    scale: headerAnim.interpolate({
+                                        inputRange: [0, 1],
+                                        outputRange: [0.5, 1],
+                                    }),
+                                },
+                            ],
+                        },
+                    ]}
+                />
+                <Animated.View
+                    style={[
+                        styles.decorativeCircle2,
+                        {
+                            opacity: headerAnim.interpolate({
+                                inputRange: [0, 1],
+                                outputRange: [0, 0.4],
+                            }),
+                            transform: [
+                                {
+                                    scale: headerAnim.interpolate({
+                                        inputRange: [0, 1],
+                                        outputRange: [0.3, 1],
+                                    }),
+                                },
+                            ],
+                        },
+                    ]}
+                />
+                <Animated.View
+                    style={[
+                        styles.decorativeCircle3,
+                        {
+                            opacity: headerAnim.interpolate({
+                                inputRange: [0, 1],
+                                outputRange: [0, 0.5],
+                            }),
+                            transform: [
+                                {
+                                    scale: headerAnim.interpolate({
+                                        inputRange: [0, 1],
+                                        outputRange: [0.7, 1],
+                                    }),
+                                },
+                            ],
+                        },
+                    ]}
+                />
+                <Animated.View
+                    style={[
+                        styles.decorativeCircle4,
+                        {
+                            opacity: headerAnim.interpolate({
+                                inputRange: [0, 1],
+                                outputRange: [0, 0.5],
+                            }),
+                            transform: [
+                                {
+                                    scale: headerAnim.interpolate({
+                                        inputRange: [0, 1],
+                                        outputRange: [0.7, 1],
+                                    }),
+                                },
+                            ],
+                        },
+                    ]}
+                />
+                <Animated.View
+                    style={[
+                        styles.decorativeCircle5,
+                        {
+                            opacity: headerAnim.interpolate({
+                                inputRange: [0, 1],
+                                outputRange: [0, 0.5],
+                            }),
+                            transform: [
+                                {
+                                    scale: headerAnim.interpolate({
+                                        inputRange: [0, 1],
+                                        outputRange: [0.7, 1],
+                                    }),
+                                },
+                            ],
+                        },
+                    ]}
+                />
+            </View>
+        </Animated.View>
     );
 
     return (
-        <SafeAreaView style={styles.safeArea}>
+        <View style={styles.safeArea}>
             <StatusBar barStyle="light-content" backgroundColor="#0E509E" />
             {renderHeader()}
 
             <ScrollView
-                style={styles.container}
-                contentContainerStyle={styles.contentContainer}
+                contentContainerStyle={styles.scrollViewContent}
                 refreshControl={
                     <RefreshControl
                         refreshing={refreshing}
                         onRefresh={handleRefresh}
-                        tintColor="#0E509E"
-                        colors={['#0E509E']}
-                        title="Tarik untuk memuat ulang..."
-                        titleColor="#666"
+                        colors={['#4A90E2']}
+                        tintColor="#4A90E2"
+                        progressBackgroundColor="#ffffff"
                     />
                 }
+                showsHorizontalScrollIndicator={false}
             >
+                <Animated.View
+                    style={[
+                        styles.headerContainer,
+                        {
+                            opacity: headerAnim,
+                            transform: [
+                                {
+                                    translateY: headerAnim.interpolate({
+                                        inputRange: [0, 1],
+                                        outputRange: [-30, 0],
+                                    }),
+                                },
+                                { scale: headerScaleAnim },
+                            ],
+                        },
+                    ]}
+                >
+                    <View style={styles.headerContent}>
+                        <View style={styles.headerTitleWrapper}>
+                            <Animated.View
+                                style={[
+                                    styles.headerIconContainer,
+                                    {
+                                        opacity: headerAnim,
+                                        transform: [
+                                            {
+                                                scale: headerAnim.interpolate({
+                                                    inputRange: [0, 1],
+                                                    outputRange: [0.5, 1],
+                                                }),
+                                            },
+                                        ],
+                                    },
+                                ]}
+                            >
+                                <Ionicons name="clipboard-outline" size={28} color="white" />
+                            </Animated.View>
+                            <Animated.Text
+                                style={[
+                                    styles.header,
+                                    {
+                                        opacity: headerAnim,
+                                        transform: [
+                                            {
+                                                scale: headerAnim.interpolate({
+                                                    inputRange: [0, 1],
+                                                    outputRange: [0.8, 1],
+                                                }),
+                                            },
+                                        ],
+                                    },
+                                ]}
+                            >Tugas Saya</Animated.Text>
+                        </View>
+                        <Text style={styles.headerSubtitle}>Kelola dan pantau semua tugas Anda</Text>
+                    </View>
+                </Animated.View>
+
                 <View style={styles.mainContent}>
-                    {/* Task Statistics - positioned closer to header */}
                     <View style={styles.statisticsContainer}>
                         <TaskStatistics tasks={tasks} adhocTasks={adhocTasks} />
                     </View>
@@ -353,26 +507,26 @@ const Tugas = () => {
                         )}
                     </View>
                 </View>
-
-                <View style={styles.bottomSpacer} />
             </ScrollView>
 
-            {modalType === 'default' ? (
-                <DraggableModalTask
-                    visible={draggableModalVisible}
-                    onClose={() => {
-                        setDraggableModalVisible(false);
-                        setSelectedTask(null);
-                    }}
-                    taskDetails={selectedTask || {}}
-                />
-            ) : (
-                <ReusableModalSuccess
-                    visible={draggableModalVisible}
-                    onClose={() => setDraggableModalVisible(false)}
-                    taskDetails={selectedTask || {}}
-                />
-            )}
+            {
+                modalType === 'default' ? (
+                    <DraggableModalTask
+                        visible={draggableModalVisible}
+                        onClose={() => {
+                            setDraggableModalVisible(false);
+                            setSelectedTask(null);
+                        }}
+                        taskDetails={selectedTask || {}}
+                    />
+                ) : (
+                    <ReusableModalSuccess
+                        visible={draggableModalVisible}
+                        onClose={() => setDraggableModalVisible(false)}
+                        taskDetails={selectedTask || {}}
+                    />
+                )
+            }
 
             <DetailProyekModal
                 visible={modalVisible}
@@ -389,7 +543,7 @@ const Tugas = () => {
                     setError(null);
                 }}
             />
-        </SafeAreaView>
+        </View >
     );
 };
 
@@ -398,21 +552,19 @@ const styles = StyleSheet.create({
         flex: 1,
         backgroundColor: '#F8FAFC',
     },
-    container: {
-        flex: 1,
-    },
-    contentContainer: {
+    scrollViewContent: {
         flexGrow: 1,
+        paddingTop: 20,
+        paddingBottom: 120,
     },
     // New header styles matching AdhocDashboard
     backgroundBox: {
-        height: 220,
+        height: 325,
         width: '100%',
         position: 'absolute',
         top: 0,
         left: 0,
         overflow: 'hidden',
-        zIndex: 1,
     },
     linearGradient: {
         flex: 1,
@@ -423,13 +575,12 @@ const styles = StyleSheet.create({
         shadowOpacity: 0.5,
         shadowRadius: 12,
         elevation: 8,
+        marginBottom: 30,
     },
     headerContainer: {
-        flexDirection: 'row',
         alignItems: 'center',
-        justifyContent: 'center', // Changed to center for proper centering
         paddingTop: Platform.OS === 'ios' ? 70 : 50,
-        paddingBottom: 20,
+        paddingBottom: 30,
         paddingHorizontal: 20,
         position: 'relative',
         shadowColor: '#000',
@@ -438,13 +589,15 @@ const styles = StyleSheet.create({
         shadowRadius: 8,
         elevation: 5,
     },
-    headerCenterContent: {
+    headerContent: {
         alignItems: 'center',
         justifyContent: 'center',
+        width: '100%',
+        paddingHorizontal: 20,
     },
     header: {
-        fontSize: calculateFontSize(24),
-        fontFamily: 'Poppins-Bold',
+        fontSize: FONTS.size['3xl'],
+        fontFamily: FONTS.family.bold,
         color: 'white',
         textAlign: 'center',
         letterSpacing: -0.8,
@@ -468,20 +621,16 @@ const styles = StyleSheet.create({
         justifyContent: 'center',
         gap: 12,
         marginBottom: 8,
-        marginTop: 20, // Added margin to move icon down with the text
     },
     headerIconContainer: {
         width: 40,
         height: 40,
         borderRadius: 20,
-        backgroundColor: 'rgba(255, 255, 255, 0.15)',
-        alignItems: 'center',
+        backgroundColor: 'rgba(255, 255, 255, 0.2)',
         justifyContent: 'center',
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.1,
-        shadowRadius: 4,
-        elevation: 3,
+        alignItems: 'center',
+        borderWidth: 1,
+        borderColor: 'rgba(255, 255, 255, 0.3)',
     },
     headerDecorations: {
         position: 'absolute',
@@ -536,32 +685,13 @@ const styles = StyleSheet.create({
         top: 120,
         left: 30,
     },
-    mainContent: {
-        flex: 1,
-        marginTop: 220,
-        backgroundColor: '#F8FAFC',
-    },
     statisticsContainer: {
-        backgroundColor: 'white',
-        marginHorizontal: 20,
-        marginTop: 20, // Positive margin to ensure it's clearly below header
-        borderRadius: 16,
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.08,
-        shadowRadius: 8,
-        elevation: 4,
-        zIndex: 2,
-        paddingVertical: 16,
+        marginTop:20,
         paddingHorizontal: 20,
     },
     content: {
-        padding: 20,
-        paddingTop: 16, // Reduced top padding since statistics moved above
-        gap: 0, // Remove gap since sections now have their own spacing
-    },
-    bottomSpacer: {
-        height: 100,
+        marginTop:10,
+        paddingHorizontal: 20,
     },
     // Loading state styles
     loadingContainer: {

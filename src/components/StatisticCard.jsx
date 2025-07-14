@@ -8,16 +8,18 @@ const cardWidth = (width - 40) / 2;
 
 const StatisticSkeleton = () => (
     <View style={[styles.statisticCard, { borderColor: '#e0e0e0', gap: 2 }]}>
-        <Shimmer width={20} height={20} style={styles.shimmerTitle} />
-        <Shimmer width={60} height={25} style={styles.shimmerTitle} />
-        <Shimmer width={75} height={25} style={styles.shimmerTitle} />
+        <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: "space-between", gap: 8 }}>
+            <Shimmer width={75} height={25} style={styles.shimmerTitle} />
+             <Shimmer width={25} height={25} style={styles.shimmerTitle} />
+        </View>
+        <Shimmer width={50} height={20} style={styles.shimmerTitle} />
     </View>
 );
 
 const StatisticCard = ({ value, description, color, icon, onPress }) => (
     <TouchableOpacity onPress={onPress}>
         <View style={[styles.statisticCard]}>
-            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent:"space-between", gap: 8 }}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: "space-between", gap: 8 }}>
                 <Text style={styles.valueText}>{value}</Text>
                 <Feather name={icon} size={20} color={color} />
             </View>

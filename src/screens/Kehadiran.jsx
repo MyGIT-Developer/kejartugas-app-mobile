@@ -178,6 +178,10 @@ const Kehadiran = () => {
     const [isLoading, setIsLoading] = useState(true);
     const [showStats, setShowStats] = useState(false);
     const [showHistory, setShowHistory] = useState(false);
+    const [totalPages, setTotalPages] = useState(1);
+    const [isPaginating, setIsPaginating] = useState(false);
+    const [totalRecords, setTotalRecords] = useState(0);
+    const PAGE_SIZE = 10;
 
     // Animation refs for better performance
     const fadeAnim = useRef(new Animated.Value(0)).current;
@@ -198,7 +202,7 @@ const Kehadiran = () => {
     // Memoized calculations for better performance
     const daysDiff = useMemo(() => calculateDaysDiff(), []);
 
-    const totalPages = useMemo(() => Math.ceil((daysDiff + 1) / ITEMS_PER_PAGE), [daysDiff]);
+    // const totalPages = useMemo(() => Math.ceil((daysDiff + 1) / ITEMS_PER_PAGE), [daysDiff]);
 
     // State for attendance times
     const [checkInTime, setCheckInTime] = useState(null);
@@ -234,6 +238,9 @@ const Kehadiran = () => {
         return stats;
     }, [attendanceData]);
 
+    console.log("attendance data:", attendanceData);
+    console.log('Attendance Stats:', attendanceStats);
+
     // Memoized start date for pagination
     const startDate = useMemo(() => new Date(START_DATE), []);
 
@@ -252,10 +259,11 @@ const Kehadiran = () => {
     const fetchData = useCallback(async () => {
         if (!employeeId || !companyId || !mountedRef.current) return;
 
+        console.time("fetchData");
         setIsLoading(true);
 
         try {
-            // Request location permission
+            // Step 1: Request location permissions
             const { status } = await Location.requestForegroundPermissionsAsync();
             if (status !== 'granted') {
                 const errorMessage = 'Izin lokasi ditolak. Harap aktifkan akses lokasi di pengaturan.';
@@ -264,11 +272,41 @@ const Kehadiran = () => {
                 return;
             }
 
-            // Parallel API calls for better performance
-            const [attendanceResponse, parameterResponse, locationResponse] = await Promise.all([
-                getAttendance(employeeId).catch((error) => {
+            // Step 2: Fast location with fallback
+            console.time("getLocation");
+            let location = await Location.getLastKnownPositionAsync();
+            if (!location) {
+                location = await Location.getCurrentPositionAsync({
+                    accuracy: Location.Accuracy.Balanced,
+                    maximumAge: 10000,
+                });
+            }
+            console.timeEnd("getLocation");
+
+            const { latitude, longitude } = location.coords;
+            const coordinates = `${latitude.toFixed(6)}, ${longitude.toFixed(6)}`;
+
+            // Immediately update visible location
+            setLocation(coordinates);
+            setLocationName("Mengambil nama lokasi...");
+
+            // Step 3: Fire reverse geocode in background
+            const geocodePromise = Location.reverseGeocodeAsync({ latitude, longitude })
+                .then(([result]) => formatLocationName(result))
+                .catch((err) => {
+                    console.warn("Geocoding failed:", err.message);
+                    return "Tidak dapat mengambil nama lokasi";
+                });
+
+            // Step 4: Fetch attendance and parameters
+            const [attendanceResponse, parameterResponse] = await Promise.all([
+                getAttendance(employeeId, 1, PAGE_SIZE).catch((error) => {
                     if (error.message === 'No attendance records found') {
-                        return { attendance: [], isCheckedInToday: 0 };
+                        return {
+                            data: [],
+                            pagination: { totalPages: 1 },
+                            isCheckedInToday: 0,
+                        };
                     }
                     throw error;
                 }),
@@ -281,20 +319,13 @@ const Kehadiran = () => {
                         },
                     };
                 }),
-                Location.getCurrentPositionAsync({
-                    accuracy: Location.Accuracy.Balanced,
-                    maximumAge: 10000,
-                }),
             ]);
 
-            // Early return if component unmounted
-            if (!mountedRef.current) return;
-
-            // Process data with safe defaults
+            // Step 5: Extract params
             const jamTelat = parameterResponse?.data?.jam_telat || DEFAULT_LATE_TIME;
             const radius = parameterResponse?.data?.radius || DEFAULT_RADIUS;
 
-            // Calculate today's attendance status
+            // Step 6: Find today's attendance from first page
             const today = new Date().toISOString().split('T')[0];
             const todayAttendance = attendanceResponse.attendance?.find((record) => {
                 const recordDate = new Date(record.checkin).toISOString().split('T')[0];
@@ -302,14 +333,11 @@ const Kehadiran = () => {
             });
 
             const checkedOutStatus = Boolean(todayAttendance?.checkout);
-
-            // Extract today's check-in and check-out times
             let todayCheckInTime = null;
             let todayCheckOutTime = null;
             let todayTotalHours = null;
 
             if (todayAttendance) {
-                // Format check-in time
                 if (todayAttendance.checkin) {
                     const checkInDate = new Date(todayAttendance.checkin);
                     todayCheckInTime = checkInDate.toLocaleTimeString('id-ID', {
@@ -318,7 +346,6 @@ const Kehadiran = () => {
                     });
                 }
 
-                // Format check-out time
                 if (todayAttendance.checkout) {
                     const checkOutDate = new Date(todayAttendance.checkout);
                     todayCheckOutTime = checkOutDate.toLocaleTimeString('id-ID', {
@@ -326,10 +353,8 @@ const Kehadiran = () => {
                         minute: '2-digit',
                     });
 
-                    // Calculate total hours worked
                     if (todayAttendance.checkin) {
                         const checkInDate = new Date(todayAttendance.checkin);
-                        const checkOutDate = new Date(todayAttendance.checkout);
                         const diffInMilliseconds = checkOutDate - checkInDate;
                         const diffInHours = diffInMilliseconds / (1000 * 60 * 60);
                         const hours = Math.floor(diffInHours);
@@ -339,44 +364,33 @@ const Kehadiran = () => {
                 }
             }
 
-            // Update state in batch for better performance
-            const { latitude, longitude } = locationResponse.coords;
-            const coordinates = `${latitude.toFixed(6)}, ${longitude.toFixed(6)}`;
-
-            // Get location name
-            let locationName = 'Tidak dapat mengambil nama lokasi';
-            try {
-                const [reverseGeocodeResult] = await Location.reverseGeocodeAsync({
-                    latitude,
-                    longitude,
-                });
-                locationName = formatLocationName(reverseGeocodeResult);
-            } catch (geocodeError) {
-                console.warn('Geocoding failed:', geocodeError.message);
-            }
-
-            // Batch state updates
+            // Step 7: Update UI states
             if (mountedRef.current) {
                 setAttendanceData(attendanceResponse.attendance || []);
                 setIsCheckedIn(attendanceResponse.isCheckedInToday);
                 setIsCheckedOut(checkedOutStatus);
                 setJamTelat(jamTelat);
                 setRadius(radius);
-                setLocation(coordinates);
-                setLocationName(locationName);
                 setErrorMsg(null);
-
-                // Set today's attendance times
                 setCheckInTime(todayCheckInTime);
                 setCheckOutTime(todayCheckOutTime);
                 setTotalHours(todayTotalHours);
+                setCurrentPage(attendanceResponse.pagination.current_page - 1);
+                setTotalPages(attendanceResponse.pagination.last_page);
+                setTotalRecords(attendanceResponse.pagination.total || 0);
+            }
+
+            // Step 8: Apply location name
+            const locationName = await geocodePromise;
+            if (mountedRef.current) {
+                setLocationName(locationName);
             }
         } catch (error) {
-            if (mountedRef.current && !error.message?.includes('No attendance records found')) {
-                console.error('Error fetching data:', error);
-                const errorMessage = error.message?.includes('Location request failed')
-                    ? 'Gagal mendapatkan lokasi. Periksa pengaturan GPS Anda.'
-                    : 'Gagal memuat data. Silakan coba lagi.';
+            console.error('Error fetching data:', error);
+            const errorMessage = error.message?.includes('Location request failed')
+                ? 'Gagal mendapatkan lokasi. Periksa pengaturan GPS Anda.'
+                : 'Gagal memuat data. Silakan coba lagi.';
+            if (mountedRef.current) {
                 showAlert(errorMessage, 'error');
                 setErrorMsg(errorMessage);
             }
@@ -384,6 +398,7 @@ const Kehadiran = () => {
             if (mountedRef.current) {
                 setIsLoading(false);
             }
+            console.timeEnd("fetchData");
         }
     }, [employeeId, companyId]);
 
@@ -635,13 +650,26 @@ const Kehadiran = () => {
             if (Platform.OS === 'ios') {
                 Haptics.selectionAsync();
             }
-            // Add smooth transition animation
+
             Animated.timing(slideAnim, {
                 toValue: 30,
                 duration: 200,
                 useNativeDriver: true,
-            }).start(() => {
-                setCurrentPage(currentPage + 1);
+            }).start(async () => {
+                const nextPage = currentPage + 1;
+
+                try {
+                    const res = await getAttendance(employeeId, nextPage + 1, PAGE_SIZE);
+
+                    if (mountedRef.current) {
+                        setAttendanceData(res.attendance); // <-- use res.attendance
+                        setCurrentPage(res.pagination.current_page - 1); // <- make sure it stays 0-indexed in UI
+                        setTotalPages(res.pagination.last_page); // <- keep updated if total pages can change
+                    }
+                } catch (err) {
+                    console.error("Failed to fetch next page:", err);
+                }
+
                 Animated.timing(slideAnim, {
                     toValue: 0,
                     duration: 300,
@@ -656,13 +684,26 @@ const Kehadiran = () => {
             if (Platform.OS === 'ios') {
                 Haptics.selectionAsync();
             }
-            // Add smooth transition animation
+
             Animated.timing(slideAnim, {
                 toValue: -30,
                 duration: 200,
                 useNativeDriver: true,
-            }).start(() => {
-                setCurrentPage(currentPage - 1);
+            }).start(async () => {
+                const prevPage = currentPage - 1;
+
+                try {
+                    const res = await getAttendance(employeeId, prevPage + 1, PAGE_SIZE);
+
+                    if (mountedRef.current) {
+                        setAttendanceData(res.attendance); // <-- use res.attendance
+                        setCurrentPage(res.pagination.current_page - 1);
+                        setTotalPages(res.pagination.last_page);
+                    }
+                } catch (err) {
+                    console.error("Failed to fetch previous page:", err);
+                }
+
                 Animated.timing(slideAnim, {
                     toValue: 0,
                     duration: 300,
@@ -802,18 +843,18 @@ const Kehadiran = () => {
             const status = attendanceForDate?.status || 'Not Absent';
             const checkIn = attendanceForDate?.checkin
                 ? new Date(attendanceForDate.checkin).toLocaleTimeString('id-ID', {
-                      hour: '2-digit',
-                      minute: '2-digit',
-                      hour12: false,
-                  })
+                    hour: '2-digit',
+                    minute: '2-digit',
+                    hour12: false,
+                })
                 : '-';
 
             const checkOut = attendanceForDate?.checkout
                 ? new Date(attendanceForDate.checkout).toLocaleTimeString('id-ID', {
-                      hour: '2-digit',
-                      minute: '2-digit',
-                      hour12: false,
-                  })
+                    hour: '2-digit',
+                    minute: '2-digit',
+                    hour12: false,
+                })
                 : '-';
 
             const duration = attendanceForDate
@@ -1432,7 +1473,10 @@ const Kehadiran = () => {
                             <View style={styles.totalRecordsContainer}>
                                 <View style={styles.totalRecords}>
                                     <Ionicons name="document-text" size={14} color="white" />
-                                    <Text style={styles.totalRecordsText}>{attendanceData.length} catatan</Text>
+                                    <Text style={styles.totalRecordsText}>
+                                        Menampilkan {attendanceData.length} dari total {totalRecords} catatan
+                                    </Text>
+
                                 </View>
                                 {attendanceData.length > 0 && (
                                     <Text style={styles.lastUpdateText}>
@@ -1442,7 +1486,7 @@ const Kehadiran = () => {
                             </View>
                         </TouchableOpacity>
 
-                        {!showHistory && attendanceData.length > 0 && (
+                        {/* {!showHistory && attendanceData.length > 0 && (
                             <Animated.View
                                 style={[
                                     styles.collapsedIndicator,
@@ -1466,7 +1510,7 @@ const Kehadiran = () => {
                                     👆 Tap untuk melihat {attendanceData.length} riwayat kehadiran
                                 </Text>
                             </Animated.View>
-                        )}
+                        )} */}
 
                         {showHistory && (
                             <Animated.View
@@ -1566,11 +1610,11 @@ const Kehadiran = () => {
                                                         handleNextPage();
                                                         if (Platform.OS === 'ios') Haptics.selectionAsync();
                                                     }}
-                                                    disabled={currentPage === totalPages - 1}
+                                                    disabled={currentPage === totalPages - 1 || isPaginating}
                                                     style={[
                                                         styles.paginationButton,
                                                         currentPage === totalPages - 1 &&
-                                                            styles.disabledPaginationButton,
+                                                        styles.disabledPaginationButton,
                                                     ]}
                                                     accessibilityLabel="Halaman berikutnya"
                                                 >
@@ -1643,6 +1687,7 @@ const styles = StyleSheet.create({
     },
     scrollViewContent: {
         flexGrow: 1,
+        paddingTop: 20,
         paddingBottom: 120,
     },
     backgroundBox: {
@@ -1677,7 +1722,7 @@ const styles = StyleSheet.create({
         elevation: 5,
     },
     header: {
-        fontSize: FONTS.size['4xl'],
+        fontSize: FONTS.size['3xl'],
         fontFamily: FONTS.family.bold,
         color: 'white',
         textAlign: 'center',
@@ -1734,14 +1779,11 @@ const styles = StyleSheet.create({
         width: 40,
         height: 40,
         borderRadius: 20,
-        backgroundColor: 'rgba(255, 255, 255, 0.15)',
-        alignItems: 'center',
+        backgroundColor: 'rgba(255, 255, 255, 0.2)',
         justifyContent: 'center',
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.1,
-        shadowRadius: 4,
-        elevation: 3,
+        alignItems: 'center',
+        borderWidth: 1,
+        borderColor: 'rgba(255, 255, 255, 0.3)',
     },
     statusIndicatorContent: {
         flexDirection: 'row',
@@ -1755,19 +1797,6 @@ const styles = StyleSheet.create({
         backgroundColor: 'rgba(255, 255, 255, 0.2)',
         alignItems: 'center',
         justifyContent: 'center',
-    },
-    headerDecorativeElements: {
-        position: 'absolute',
-        top: 0,
-        left: 0,
-        right: 0,
-        bottom: 0,
-        overflow: 'hidden',
-    },
-    decorativeCircle: {
-        position: 'absolute',
-        borderRadius: 50,
-        backgroundColor: 'rgba(255, 255, 255, 0.08)',
     },
     headerDecorations: {
         position: 'absolute',
@@ -1885,7 +1914,7 @@ const styles = StyleSheet.create({
     },
     buttonContainer: {
         alignItems: 'center',
-        marginVertical: 10,
+        marginVertical: 16,
     },
 
     attendanceDataContainer: {
@@ -1926,9 +1955,10 @@ const styles = StyleSheet.create({
         alignItems: 'center',
     },
     attendanceIconContainer: {
-        width: 24,
-        height: 24,
+        width: 32,
+        height: 32,
         borderRadius: 16,
+        padding: 4,
         backgroundColor: '#fff',
         justifyContent: 'center',
         alignItems: 'center',
@@ -2062,10 +2092,10 @@ const styles = StyleSheet.create({
         letterSpacing: -0.5,
     },
     totalRecordsContainer: {
-        flexDirection: 'row',
-        alignItems: 'center',
+        flexDirection: 'column',
+        alignItems: 'start',
         justifyContent: 'space-between',
-        marginTop: 8,
+        gap: 12,
     },
     totalRecords: {
         flexDirection: 'row',
@@ -2115,7 +2145,7 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         justifyContent: 'space-between',
         alignItems: 'center',
-        backgroundColor: '#7dbfff',
+        backgroundColor: '#ddeeffff',
     },
     dateSection: {
         gap: 6,

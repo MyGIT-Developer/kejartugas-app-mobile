@@ -3,6 +3,7 @@ import { View, Text, TouchableOpacity, ScrollView, StyleSheet } from 'react-nati
 import { Feather } from '@expo/vector-icons';
 import TaskCardTugas from './TaskCardTugas';
 import ShimmerTaskCard from './ShimmerTaskCard';
+import { FONTS } from '../constants/fonts';
 
 const TaskSection = ({
     title = '',
@@ -96,13 +97,13 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         justifyContent: 'space-between',
         alignItems: 'center',
-        marginBottom: 16,
-        paddingBottom: 12,
+        paddingVertical: 6,
+        marginBottom: 10,
         borderBottomWidth: 1,
         borderBottomColor: '#F2F2F7',
     },
     sectionTitle: {
-        fontSize: 18,
+        fontSize: FONTS.size.md,
         fontFamily: 'Poppins-SemiBold',
         color: '#1C1C1E',
         letterSpacing: 0.2,
@@ -115,11 +116,9 @@ const styles = StyleSheet.create({
     },
     scrollView: {
         marginHorizontal: -20,
-        paddingBottom: 10,
     },
     scrollViewContent: {
         paddingHorizontal: 20,
-        paddingBottom: 15,
         paddingRight: 40,
     },
     firstCardContainer: {
