@@ -14,6 +14,7 @@ import {
     Modal,
     RefreshControl,
     Alert,
+    Platform,
 } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -32,6 +33,7 @@ import {
     rejectAdhocTask,
     getMyAdhocTasksAssigner,
 } from '../api/adhocTask';
+import { Ionicons } from '@expo/vector-icons';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
@@ -354,12 +356,7 @@ const AdhocDashboard = ({ navigation }) => {
                     onPress={() => setActiveTab(tab)}
                 >
                     <Text
-                        style={[
-                            styles.tabText,
-                            activeTab === tab ? styles.activeTabText : styles.inactiveTabText,
-                            fontsLoaded ? { fontFamily: 'Poppins-Medium' } : null,
-                            { fontSize: calculateFontSize(12) },
-                        ]}
+                        style={[styles.tabText, activeTab === tab ? styles.activeTabText : styles.inactiveTabText]}
                         numberOfLines={1}
                         adjustsFontSizeToFit
                     >
@@ -899,39 +896,70 @@ const AdhocDashboard = ({ navigation }) => {
         return tasks.map(renderFunction);
     };
 
+    // Header for AdhocDashboard, styled like Kehadiran
+    const renderHeader = () => (
+        <View style={styles.backgroundBox}>
+            <LinearGradient
+                colors={['#4A90E2', '#357ABD', '#7dbfff']}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 1 }}
+                style={styles.linearGradient}
+            >
+                <View style={styles.headerDecorations}>
+                    <View style={styles.decorativeCircle1} />
+                    <View style={styles.decorativeCircle2} />
+                    <View style={styles.decorativeCircle3} />
+                    <View style={styles.decorativeCircle4} />
+                    <View style={styles.decorativeCircle5} />
+                </View>
+                <View style={styles.headerContainer}>
+                    <View style={styles.headerCenterContent}>
+                        <View style={styles.headerTitleWrapper}>
+                            <View style={styles.headerIconContainer}>
+                                <Ionicons name="chatbubble-ellipses-outline" size={28} color="white" />
+                            </View>
+                            <Text style={styles.header}>Adhoc Dashboard</Text>
+                        </View>
+                        <Text style={styles.headerSubtitle}>Kelola dan pantau tugas adhoc Anda</Text>
+                    </View>
+                </View>
+            </LinearGradient>
+        </View>
+    );
+
     return (
         <SafeAreaView style={styles.container}>
             <StatusBar barStyle="light-content" backgroundColor="#4A90E2" />
-            <LinearGradient colors={['#4A90E2', '#4A90E2']} style={styles.header}>
-                <View style={styles.headerContent}>
-                    <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
-                        <Feather name="chevron-left" size={24} color="#FFF" />
-                    </TouchableOpacity>
-                    <Text style={[styles.headerTitle, fontsLoaded ? { fontFamily: 'Poppins-Bold' } : null]}>
-                        Tugas Ad Hoc
-                    </Text>
-                    <View style={styles.placeholder} />
-                </View>
-                {renderTabs()}
-            </LinearGradient>
-            <View style={styles.content}>
-                <ScrollView
-                    style={styles.taskList}
-                    contentContainerStyle={styles.taskListContent}
-                    refreshControl={
-                        <RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={['#4A90E2']} />
-                    }
-                >
-                    {renderTasks()}
-                </ScrollView>
-                {activeTab === 'Tugas Dibuat' && !error && (
-                    <TouchableOpacity
-                        style={styles.addButton}
-                        onPress={() => navigation.navigate('AddAdhocTask')} // Navigasi ke layar AddAdhoc
+            {renderHeader()}
+
+            <View style={styles.mainContent}>
+                <View style={styles.tabsContainer}>{renderTabs()}</View>
+
+                <View style={styles.content}>
+                    <ScrollView
+                        style={styles.taskList}
+                        contentContainerStyle={styles.taskListContent}
+                        refreshControl={
+                            <RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={['#4A90E2']} />
+                        }
+                        showsVerticalScrollIndicator={false}
                     >
-                        <Feather name="plus" size={24} color="#FFFFFF" />
+                        {renderTasks()}
+                    </ScrollView>
+                    {/* Floating Back Button */}
+                    <TouchableOpacity style={styles.floatingBackButton} onPress={() => navigation.goBack()}>
+                        <Feather name="chevron-left" size={24} color="#FFFFFF" />
                     </TouchableOpacity>
-                )}
+
+                    {activeTab === 'Tugas Dibuat' && !error && (
+                        <TouchableOpacity
+                            style={styles.addButton}
+                            onPress={() => navigation.navigate('AddAdhocTask')} // Navigasi ke layar AddAdhoc
+                        >
+                            <Feather name="plus" size={24} color="#FFFFFF" />
+                        </TouchableOpacity>
+                    )}
+                </View>
             </View>
             <ReusableModalBottom
                 visible={isDetailModalVisible}
@@ -1003,54 +1031,192 @@ const styles = StyleSheet.create({
         flex: 1,
         backgroundColor: '#F8FAFC',
     },
-    header: {
-        paddingTop: 20,
-        paddingBottom: 20,
-        paddingHorizontal: 20,
-        borderBottomLeftRadius: 25,
-        borderBottomRightRadius: 25,
+    // Header styles from Kehadiran
+    backgroundBox: {
+        height: 220,
+        width: '100%',
+        position: 'absolute',
+        top: 0,
+        left: 0,
+        overflow: 'hidden',
+        zIndex: 1,
     },
-    headerContent: {
+    linearGradient: {
+        flex: 1,
+        borderBottomLeftRadius: 24,
+        borderBottomRightRadius: 24,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 20 },
+        shadowOpacity: 0.5,
+        shadowRadius: 12,
+        elevation: 8,
+    },
+    headerContainer: {
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'space-between',
-        marginBottom: 20,
+        paddingTop: Platform.OS === 'ios' ? 70 : 50,
+        paddingBottom: 20,
+        paddingHorizontal: 20,
+        position: 'relative',
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.1,
+        shadowRadius: 8,
+        elevation: 5,
     },
-    backButton: {
-        padding: 8,
-        backgroundColor: 'rgba(255, 255, 255, 0.2)',
-        borderRadius: 12,
-    },
-    headerTitle: {
-        color: '#FFF',
-        fontSize: 22,
-        fontWeight: '700',
-        textAlign: 'center',
-    },
-    placeholder: {
+    backButtonContainer: {
         width: 40,
+        height: 40,
+        borderRadius: 20,
+        backgroundColor: 'rgba(255, 255, 255, 0.15)',
+        alignItems: 'center',
+        justifyContent: 'center',
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.1,
+        shadowRadius: 4,
+        elevation: 3,
+    },
+    headerCenterContent: {
+        flex: 1,
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
+    headerRightSpace: {
+        width: 40,
+        height: 40,
+    },
+    header: {
+        fontSize: calculateFontSize(24),
+        fontFamily: 'Poppins-Bold',
+        color: 'white',
+        textAlign: 'center',
+        letterSpacing: -0.8,
+        marginBottom: 0,
+        textShadowColor: 'rgba(0, 0, 0, 0.15)',
+        textShadowOffset: { width: 0, height: 1 },
+        textShadowRadius: 3,
+    },
+    headerSubtitle: {
+        fontSize: calculateFontSize(13),
+        fontFamily: 'Poppins-Regular',
+        color: 'rgba(255, 255, 255, 0.85)',
+        textAlign: 'center',
+        marginTop: 4,
+        letterSpacing: 0.3,
+        lineHeight: calculateFontSize(18),
+    },
+    headerTitleWrapper: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+        gap: 12,
+        marginBottom: 8,
+    },
+    headerIconContainer: {
+        width: 40,
+        height: 40,
+        borderRadius: 20,
+        backgroundColor: 'rgba(255, 255, 255, 0.15)',
+        alignItems: 'center',
+        justifyContent: 'center',
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.1,
+        shadowRadius: 4,
+        elevation: 3,
+    },
+    headerDecorations: {
+        position: 'absolute',
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0,
+        overflow: 'hidden',
+    },
+    decorativeCircle1: {
+        position: 'absolute',
+        width: 120,
+        height: 120,
+        borderRadius: 60,
+        backgroundColor: 'rgba(255, 255, 255, 0.08)',
+        top: -30,
+        right: -20,
+    },
+    decorativeCircle2: {
+        position: 'absolute',
+        width: 80,
+        height: 80,
+        borderRadius: 40,
+        backgroundColor: 'rgba(255, 255, 255, 0.06)',
+        top: 40,
+        left: -25,
+    },
+    decorativeCircle3: {
+        position: 'absolute',
+        width: 60,
+        height: 60,
+        borderRadius: 30,
+        backgroundColor: 'rgba(255, 255, 255, 0.1)',
+        top: 80,
+        right: 30,
+    },
+    decorativeCircle4: {
+        position: 'absolute',
+        width: 60,
+        height: 60,
+        borderRadius: 30,
+        backgroundColor: 'rgba(255, 255, 255, 0.1)',
+        top: 150,
+        left: -10,
+    },
+    decorativeCircle5: {
+        position: 'absolute',
+        width: 120,
+        height: 120,
+        borderRadius: 60,
+        backgroundColor: 'rgba(255, 255, 255, 0.08)',
+        top: 120,
+        left: 30,
+    },
+    // Main content layout
+    mainContent: {
+        flex: 1,
+        marginTop: 220, // Account for header height
+        backgroundColor: '#F8FAFC',
+    },
+    tabsContainer: {
+        backgroundColor: 'white',
+        marginHorizontal: 20,
+        marginTop: -70,
+        borderRadius: 16,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.08,
+        shadowRadius: 8,
+        elevation: 4,
+        zIndex: 2,
+        paddingVertical: 8,
     },
     tabContainer: {
         flexDirection: 'row',
-        backgroundColor: 'rgba(255, 255, 255, 0.15)',
-        borderRadius: 16,
-        padding: 4,
-        marginHorizontal: 8,
+        paddingHorizontal: 8,
     },
     tab: {
         flex: 1,
         paddingVertical: 12,
         paddingHorizontal: 8,
+        borderRadius: 12,
+        marginHorizontal: 4,
         alignItems: 'center',
         justifyContent: 'center',
-        borderRadius: 12,
-        minHeight: 40,
     },
     activeTab: {
-        backgroundColor: '#FFF',
-        shadowColor: '#000',
+        backgroundColor: '#4A90E2',
+        shadowColor: '#4A90E2',
         shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.1,
+        shadowOpacity: 0.3,
         shadowRadius: 4,
         elevation: 3,
     },
@@ -1059,27 +1225,31 @@ const styles = StyleSheet.create({
     },
     tabText: {
         textAlign: 'center',
-        fontSize: 13,
+        fontSize: calculateFontSize(11),
+        fontFamily: 'Poppins-Medium',
         fontWeight: '600',
     },
     activeTabText: {
-        color: '#4A90E2',
+        color: 'white',
+        fontFamily: 'Poppins-SemiBold',
     },
     inactiveTabText: {
-        color: 'rgba(255, 255, 255, 0.9)',
+        color: '#64748B',
+        fontFamily: 'Poppins-Medium',
     },
     content: {
         flex: 1,
         position: 'relative',
+        paddingTop: 20,
     },
     taskList: {
         flex: 1,
     },
     taskListContent: {
-        paddingHorizontal: 16,
-        paddingTop: 20,
+        paddingHorizontal: 20,
         paddingBottom: 100,
     },
+    // Task item styles
     taskItem: {
         backgroundColor: '#FFFFFF',
         borderRadius: 16,
@@ -1094,7 +1264,8 @@ const styles = StyleSheet.create({
         overflow: 'hidden',
     },
     selectedTaskItem: {
-        marginBottom: 20,
+        borderColor: '#4A90E2',
+        borderWidth: 2,
     },
     taskContent: {
         padding: 20,
@@ -1103,7 +1274,7 @@ const styles = StyleSheet.create({
         marginBottom: 16,
     },
     taskTitle: {
-        fontSize: 17,
+        fontSize: calculateFontSize(16),
         fontWeight: '600',
         color: '#1E293B',
         lineHeight: 24,
@@ -1112,57 +1283,109 @@ const styles = StyleSheet.create({
         marginBottom: 16,
         alignItems: 'flex-start',
     },
+    statusBadge: {
+        paddingHorizontal: 12,
+        paddingVertical: 6,
+        borderRadius: 12,
+        alignSelf: 'flex-start',
+    },
+    statusText: {
+        fontSize: calculateFontSize(12),
+        fontWeight: '600',
+    },
     taskActions: {
         flexDirection: 'row',
         justifyContent: 'space-between',
         alignItems: 'center',
-    },
-    moreButton: {
-        padding: 8,
-        borderRadius: 8,
-        backgroundColor: '#F8FAFC',
     },
     detailButton: {
         backgroundColor: '#4A90E2',
         paddingHorizontal: 16,
         paddingVertical: 8,
         borderRadius: 8,
-        flex: 1,
-        marginRight: 12,
-        alignItems: 'center',
     },
     detailButtonText: {
-        color: '#FFFFFF',
-        fontSize: 14,
+        color: 'white',
+        fontSize: calculateFontSize(14),
         fontWeight: '600',
     },
+    moreButton: {
+        padding: 8,
+    },
+    // Dropdown menu
     dropdownMenu: {
-        backgroundColor: '#F8F8F8',
+        backgroundColor: '#F8FAFC',
         borderTopWidth: 1,
-        borderTopColor: '#E0E0E0',
-        flexDirection: 'row',
-        justifyContent: 'space-around',
-        paddingVertical: 10,
+        borderTopColor: '#E2E8F0',
+        paddingVertical: 8,
     },
     dropdownItem: {
-        flexDirection: 'column',
+        flexDirection: 'row',
         alignItems: 'center',
         paddingHorizontal: 20,
+        paddingVertical: 12,
+        gap: 12,
     },
     dropdownText: {
-        marginTop: 5,
-        fontSize: 12,
-        textAlign: 'center',
+        fontSize: calculateFontSize(14),
+        color: '#374151',
+        fontWeight: '500',
     },
-    // Floating Action Button
+    // Loading and error states
+    centerContent: {
+        flex: 1,
+        justifyContent: 'center',
+        alignItems: 'center',
+        paddingVertical: 60,
+    },
+    errorText: {
+        fontSize: calculateFontSize(14),
+        color: '#EF4444',
+        textAlign: 'center',
+        marginBottom: 16,
+    },
+    emptyStateIcon: {
+        marginBottom: 16,
+    },
+    noTasksText: {
+        fontSize: calculateFontSize(18),
+        fontWeight: '600',
+        color: '#374151',
+        textAlign: 'center',
+        marginBottom: 8,
+    },
+    emptyStateSubtext: {
+        fontSize: calculateFontSize(14),
+        color: '#6B7280',
+        textAlign: 'center',
+        maxWidth: 280,
+        lineHeight: 20,
+    },
+    // Floating action button
+    floatingBackButton: {
+        position: 'absolute',
+        bottom: 90, // Position above the add button
+        right: 20,
+        width: 56,
+        height: 56,
+        borderRadius: 28,
+        backgroundColor: '#6C757D', // Slightly different color from add button
+        justifyContent: 'center',
+        alignItems: 'center',
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.3,
+        shadowRadius: 8,
+        elevation: 8,
+    },
     addButton: {
         position: 'absolute',
+        bottom: 20,
         right: 20,
-        bottom: 30,
+        width: 56,
+        height: 56,
+        borderRadius: 28,
         backgroundColor: '#4A90E2',
-        width: 64,
-        height: 64,
-        borderRadius: 32,
         justifyContent: 'center',
         alignItems: 'center',
         shadowColor: '#4A90E2',
@@ -1171,70 +1394,7 @@ const styles = StyleSheet.create({
         shadowRadius: 8,
         elevation: 8,
     },
-
-    // Empty States
-    centerContent: {
-        flex: 1,
-        justifyContent: 'center',
-        alignItems: 'center',
-        paddingHorizontal: 40,
-        paddingVertical: 60,
-    },
-    emptyStateIcon: {
-        width: 120,
-        height: 120,
-        borderRadius: 60,
-        backgroundColor: '#F1F5F9',
-        justifyContent: 'center',
-        alignItems: 'center',
-        marginBottom: 24,
-    },
-    errorText: {
-        fontSize: 16,
-        color: '#EF4444',
-        textAlign: 'center',
-        fontWeight: '500',
-        marginTop: 16,
-    },
-    noTasksText: {
-        fontSize: 18,
-        color: '#374151',
-        textAlign: 'center',
-        fontWeight: '600',
-        marginBottom: 8,
-    },
-    emptyStateSubtext: {
-        fontSize: 14,
-        color: '#6B7280',
-        textAlign: 'center',
-        fontWeight: '400',
-        lineHeight: 20,
-    },
-    detailContent: {
-        paddingHorizontal: 10,
-    },
-    detailRow: {
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        marginBottom: 15,
-    },
-    detailTitle: {
-        fontSize: calculateFontSize(14),
-        color: '#1f1f1f',
-        fontFamily: 'Poppins-Bold',
-    },
-    detailLabel: {
-        fontSize: calculateFontSize(14),
-        color: '#1f1f1f',
-        fontFamily: 'Poppins-Bold',
-    },
-    detailValue: {
-        fontSize: calculateFontSize(14),
-        color: '#1f1f1f',
-        fontFamily: 'Poppins-Medium',
-        textAlign: 'left',
-    },
-    // Task Card Styles
+    // Task items for different tabs
     myTaskItem: {
         backgroundColor: '#FFFFFF',
         borderRadius: 16,
@@ -1252,313 +1412,116 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         justifyContent: 'space-between',
         alignItems: 'flex-start',
-        marginBottom: 16,
+        marginBottom: 12,
     },
     myTaskTitle: {
-        fontSize: calculateFontSize(17),
+        fontSize: calculateFontSize(16),
+        fontWeight: '600',
         color: '#1E293B',
         flex: 1,
         marginRight: 12,
-        fontWeight: '600',
-        lineHeight: 24,
     },
     myTaskInfo: {
-        marginTop: 8,
         gap: 8,
     },
     infoItem: {
         flexDirection: 'row',
         alignItems: 'center',
-        backgroundColor: '#F8FAFC',
-        paddingHorizontal: 12,
-        paddingVertical: 8,
-        borderRadius: 10,
+        gap: 8,
     },
     infoText: {
-        marginLeft: 10,
-        fontSize: 13,
-        color: '#475569',
-        flex: 1,
-        fontWeight: '500',
-    },
-    statusBadge: {
-        paddingHorizontal: 14,
-        paddingVertical: 8,
-        borderRadius: 20,
-        marginLeft: 8,
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 1 },
-        shadowOpacity: 0.1,
-        shadowRadius: 2,
-        elevation: 2,
-    },
-    statusText: {
-        fontSize: calculateFontSize(12),
-        fontWeight: '600',
-        textTransform: 'uppercase',
-        letterSpacing: 0.5,
-    },
-    approvalItem: {
-        backgroundColor: '#FFF',
-        borderRadius: 15,
-        marginBottom: 15,
-        elevation: 3,
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.1,
-        shadowRadius: 4,
-    },
-    approvalHeader: {
-        padding: 15,
-        borderBottomWidth: 1,
-        borderBottomColor: '#F0F0F0',
-    },
-    approvalTitleContainer: {
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-    },
-    approvalTitle: {
-        fontSize: calculateFontSize(16),
-        color: '#333',
-        fontFamily: 'Poppins-SemiBold',
-        flex: 1,
-    },
-    statusContainer: {
-        backgroundColor: '#FFF3E0',
-        paddingHorizontal: 12,
-        paddingVertical: 6,
-        borderRadius: 20,
-    },
-    statusText: {
-        color: '#FB8C00',
-        fontSize: calculateFontSize(12),
-        fontFamily: 'Poppins-Medium',
-    },
-    approvalContent: {
-        padding: 15,
-    },
-    infoRow: {
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        gap: 15,
-    },
-    infoItemHalf: {
-        flex: 1,
-    },
-    infoLabel: {
-        fontSize: calculateFontSize(12),
-        color: '#666',
-        fontFamily: 'Poppins-Regular',
-        marginBottom: 8,
-    },
-    infoValueContainer: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        backgroundColor: '#F8F9FA',
-        padding: 12,
-        borderRadius: 8,
-    },
-    infoIcon: {
-        marginRight: 8,
-    },
-    infoValue: {
         fontSize: calculateFontSize(14),
-        color: '#333',
-        fontFamily: 'Poppins-Medium',
+        color: '#64748B',
         flex: 1,
     },
-    descriptionContainer: {
-        marginTop: 15,
-    },
-    descriptionLabel: {
-        fontSize: calculateFontSize(12),
-        color: '#666',
-        fontFamily: 'Poppins-Regular',
-        marginBottom: 8,
-    },
-    approvalDescription: {
-        fontSize: calculateFontSize(14),
-        color: '#333',
-        fontFamily: 'Poppins-Regular',
-        lineHeight: 20,
-    },
-    divider: {
-        height: 1,
-        backgroundColor: '#F0F0F0',
-        marginVertical: 15,
-    },
-    approvalActions: {
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        gap: 15,
-    },
-    approveButton: {
-        flex: 1,
-        backgroundColor: '#4CAF50',
-        paddingVertical: 12,
-        borderRadius: 8,
-        flexDirection: 'row',
-        justifyContent: 'center',
-        alignItems: 'center',
-        gap: 8,
-    },
-    rejectButton: {
-        flex: 1,
-        backgroundColor: '#F44336',
-        paddingVertical: 12,
-        borderRadius: 8,
-        flexDirection: 'row',
-        justifyContent: 'center',
-        alignItems: 'center',
-        gap: 8,
-    },
-    approveButtonText: {
-        color: '#FFF',
-        fontSize: calculateFontSize(14),
-        fontFamily: 'Poppins-Medium',
-    },
-    rejectButtonText: {
-        color: '#FFF',
-        fontSize: calculateFontSize(14),
-        fontFamily: 'Poppins-Medium',
-    },
-    // History Section Styles
-    historySection: {
-        marginBottom: 20,
+    // Approval task styles
+    approvalTaskItem: {
         backgroundColor: '#FFFFFF',
         borderRadius: 16,
+        marginBottom: 16,
+        padding: 20,
         shadowColor: '#000',
         shadowOffset: { width: 0, height: 2 },
         shadowOpacity: 0.08,
         shadowRadius: 8,
         elevation: 4,
-        marginHorizontal: 2,
-        overflow: 'hidden',
+        borderWidth: 1,
+        borderColor: '#F1F5F9',
     },
-    historySectionHeader: {
+    approvalTaskHeader: {
         flexDirection: 'row',
         justifyContent: 'space-between',
-        alignItems: 'center',
-        padding: 20,
-        backgroundColor: '#F8FAFC',
-        borderBottomWidth: 1,
-        borderBottomColor: '#E2E8F0',
-    },
-    historySectionTitleContainer: {
-        flexDirection: 'row',
-        alignItems: 'center',
-    },
-    historySectionTitle: {
-        fontSize: calculateFontSize(16),
-        color: '#1E293B',
-        fontWeight: '600',
-    },
-    historySectionBadge: {
-        backgroundColor: '#EBF4FF',
-        borderRadius: 12,
-        paddingHorizontal: 10,
-        paddingVertical: 4,
-        marginLeft: 10,
-    },
-    historySectionBadgeText: {
-        color: '#2563EB',
-        fontSize: calculateFontSize(12),
-        fontWeight: '600',
-    },
-    expandButton: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        gap: 6,
-        paddingHorizontal: 12,
-        paddingVertical: 6,
-        borderRadius: 8,
-        backgroundColor: '#EBF4FF',
-    },
-    expandButtonText: {
-        color: '#2563EB',
-        fontSize: calculateFontSize(13),
-        fontWeight: '600',
-    },
-    historyPreviewContainer: {
-        padding: 16,
-    },
-    historyPreviewItem: {
+        alignItems: 'flex-start',
         marginBottom: 12,
-        backgroundColor: '#F8FAFC',
-        borderRadius: 12,
-        overflow: 'hidden',
-        borderWidth: 1,
-        borderColor: '#E2E8F0',
     },
-    historyPreviewContent: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        padding: 16,
-    },
-    historyIconContainer: {
-        width: 44,
-        height: 44,
-        borderRadius: 22,
-        backgroundColor: '#EBF4FF',
-        justifyContent: 'center',
-        alignItems: 'center',
-        marginRight: 16,
-    },
-    historyPreviewInfo: {
+    approvalTaskTitle: {
+        fontSize: calculateFontSize(16),
+        fontWeight: '600',
+        color: '#1E293B',
         flex: 1,
         marginRight: 12,
     },
-    historyPreviewTitle: {
-        fontSize: calculateFontSize(15),
-        color: '#1E293B',
-        fontWeight: '600',
-        marginBottom: 6,
-    },
-    historyPreviewDate: {
-        fontSize: calculateFontSize(13),
-        color: '#64748B',
-        fontWeight: '500',
-    },
-    historySeparator: {
-        height: 1,
-        backgroundColor: '#E2E8F0',
-        marginHorizontal: 20,
-    },
-    detailList: {
-        padding: 12,
-    },
-
-    detailItemInfo: {
-        flex: 1,
-    },
-    detailItemTitle: {
-        fontSize: calculateFontSize(14),
-        color: '#333',
-        fontFamily: 'Poppins-Medium',
-        marginBottom: 4,
-    },
-    detailItemDate: {
-        fontSize: calculateFontSize(12),
-        color: '#666',
-        fontFamily: 'Poppins-Regular',
-    },
-    detailItemStatus: {
-        flexDirection: 'row',
-        alignItems: 'center',
+    approvalTaskInfo: {
         gap: 8,
     },
-    detailItemStatusBadge: {
-        backgroundColor: '#E8F5E9',
-        paddingHorizontal: 8,
-        paddingVertical: 4,
+    // Modal styles
+    modalContainer: {
+        flex: 1,
+        justifyContent: 'center',
+        alignItems: 'center',
+        backgroundColor: 'rgba(0, 0, 0, 0.7)',
+    },
+    modalContent: {
+        width: '90%',
+        backgroundColor: '#FFFFFF',
+        borderRadius: 16,
+        padding: 20,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.1,
+        shadowRadius: 4,
+        elevation: 4,
+    },
+    modalTitle: {
+        fontSize: calculateFontSize(18),
+        fontWeight: '600',
+        color: '#333',
+        marginBottom: 16,
+    },
+    modalInput: {
+        backgroundColor: '#F8FAFC',
         borderRadius: 12,
+        padding: 12,
+        fontSize: calculateFontSize(14),
+        color: '#333',
+        marginBottom: 16,
+        borderWidth: 1,
+        borderColor: '#E2E8F0',
     },
-    detailItemStatusText: {
-        color: '#4CAF50',
-        fontSize: calculateFontSize(12),
-        fontFamily: 'Poppins-Medium',
+    sendButton: {
+        backgroundColor: '#4A90E2',
+        borderRadius: 12,
+        paddingVertical: 12,
+        alignItems: 'center',
+        marginBottom: 12,
     },
+    sendButtonText: {
+        color: 'white',
+        fontSize: calculateFontSize(16),
+        fontWeight: '600',
+    },
+    cancelButton: {
+        backgroundColor: '#E2E8F0',
+        borderRadius: 12,
+        paddingVertical: 12,
+        alignItems: 'center',
+    },
+    cancelButtonText: {
+        color: '#333',
+        fontSize: calculateFontSize(16),
+        fontWeight: '600',
+    },
+    // Detail modal styles
     myTaskDetailContent: {
         paddingHorizontal: 20,
         paddingBottom: 24,
@@ -1568,7 +1531,8 @@ const styles = StyleSheet.create({
     },
     taskTitleWrapper: {
         flexDirection: 'row',
-        alignItems: 'center',
+        alignItems: 'flex-start',
+        justifyContent: 'space-between',
         marginBottom: 12,
     },
     taskMainTitle: {
@@ -1576,6 +1540,7 @@ const styles = StyleSheet.create({
         color: '#333',
         fontFamily: 'Poppins-SemiBold',
         flex: 1,
+        marginRight: 12,
     },
     assignerInfo: {
         flexDirection: 'row',
@@ -1648,78 +1613,210 @@ const styles = StyleSheet.create({
         fontSize: calculateFontSize(14),
         color: '#333',
         fontFamily: 'Poppins-Regular',
-        marginBottom: 12,
+        lineHeight: 20,
     },
-
-    attachmentsSection: {
+    assigneeSection: {
         marginBottom: 24,
     },
-    attachmentCard: {
-        backgroundColor: '#F8F9FA',
-        borderRadius: 12,
-        padding: 16,
+    assigneeList: {
+        gap: 12,
+        marginBottom: 16,
     },
-    attachmentItem: {
+    assigneeItem: {
         flexDirection: 'row',
         alignItems: 'center',
+        backgroundColor: '#F8FAFC',
+        padding: 12,
+        borderRadius: 12,
     },
-    attachmentIcon: {
-        width: 40,
-        height: 40,
-        borderRadius: 20,
-        backgroundColor: '#E3F2FD',
-        justifyContent: 'center',
+    assigneeAvatar: {
+        width: 36,
+        height: 36,
+        borderRadius: 18,
+        backgroundColor: '#4A90E2',
         alignItems: 'center',
+        justifyContent: 'center',
+        marginRight: 12,
     },
-    attachmentInfo: {
-        flex: 1,
-        marginLeft: 12,
+    assigneeInitial: {
+        color: 'white',
+        fontSize: calculateFontSize(14),
+        fontWeight: '600',
     },
-    attachmentName: {
+    assigneeName: {
         fontSize: calculateFontSize(14),
         color: '#333',
-        fontFamily: 'Poppins-Medium',
+        fontWeight: '500',
     },
-    attachmentSize: {
-        fontSize: calculateFontSize(12),
-        color: '#666',
-        fontFamily: 'Poppins-Regular',
-        marginTop: 2,
-    },
-    downloadButton: {
-        padding: 8,
-    },
-    submitButton: {
-        backgroundColor: '#4A90E2',
+    approvalLevelContainer: {
+        backgroundColor: '#EBF4FF',
+        padding: 12,
         borderRadius: 12,
-        padding: 16,
-        alignItems: 'center',
-        marginTop: 20, // Adding margin top for spacing between elements
     },
-    submitButtonText: {
-        color: '#FFF',
-        fontSize: calculateFontSize(16),
-        fontFamily: 'Poppins-SemiBold',
+    approvalLevelText: {
+        fontSize: calculateFontSize(14),
+        color: '#4A90E2',
+        fontWeight: '600',
+        textAlign: 'center',
+    },
+    attachmentSection: {
+        marginBottom: 24,
+    },
+    attachmentImage: {
+        width: '100%',
+        height: 200,
+        borderRadius: 12,
     },
     chatButton: {
         backgroundColor: '#FFF',
         borderRadius: 12,
         padding: 16,
         alignItems: 'center',
-        marginTop: 16,
-        marginBottom: 8,
-        borderWidth: 1,
+        marginBottom: 16,
+        borderWidth: 1.5,
         borderColor: '#4A90E2',
         flexDirection: 'row',
         justifyContent: 'center',
+        gap: 8,
     },
     chatButtonText: {
         color: '#4A90E2',
         fontSize: calculateFontSize(16),
         fontFamily: 'Poppins-SemiBold',
-        marginLeft: 8,
     },
-    // ...existing code...
+    // Approval buttons
+    approvalButtonsContainer: {
+        flexDirection: 'row',
+        gap: 12,
+        marginTop: 16,
+    },
+    approveButton: {
+        flex: 1,
+        backgroundColor: '#10B981',
+        borderRadius: 12,
+        padding: 16,
+        alignItems: 'center',
+    },
+    approveButtonText: {
+        color: 'white',
+        fontSize: calculateFontSize(16),
+        fontWeight: '600',
+    },
+    rejectButton: {
+        flex: 1,
+        backgroundColor: '#EF4444',
+        borderRadius: 12,
+        padding: 16,
+        alignItems: 'center',
+    },
+    rejectButtonText: {
+        color: 'white',
+        fontSize: calculateFontSize(16),
+        fontWeight: '600',
+    },
+    submitButton: {
+        backgroundColor: '#4A90E2',
+        borderRadius: 12,
+        padding: 16,
+        alignItems: 'center',
+        marginTop: 16,
+    },
+    submitButtonText: {
+        color: '#FFF',
+        fontSize: calculateFontSize(16),
+        fontFamily: 'Poppins-SemiBold',
+    },
+    // History section styles
+    historySection: {
+        marginBottom: 20,
+    },
+    historySectionHeader: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        marginBottom: 16,
+        paddingHorizontal: 4,
+    },
+    historySectionTitleContainer: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 8,
+    },
+    historySectionTitle: {
+        fontSize: calculateFontSize(16),
+        fontWeight: '600',
+        color: '#1E293B',
+    },
+    historySectionBadge: {
+        backgroundColor: '#4A90E2',
+        paddingHorizontal: 8,
+        paddingVertical: 4,
+        borderRadius: 12,
+    },
+    historySectionBadgeText: {
+        color: 'white',
+        fontSize: calculateFontSize(12),
+        fontWeight: '600',
+    },
+    expandButton: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 4,
+        paddingVertical: 4,
+        paddingHorizontal: 8,
+    },
+    expandButtonText: {
+        fontSize: calculateFontSize(14),
+        color: '#4A90E2',
+        fontWeight: '500',
+    },
+    historyPreviewContainer: {
+        backgroundColor: 'white',
+        borderRadius: 12,
+        overflow: 'hidden',
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.05,
+        shadowRadius: 8,
+        elevation: 2,
+    },
+    historyPreviewItem: {
+        padding: 16,
+        borderBottomWidth: 1,
+        borderBottomColor: '#F1F5F9',
+    },
+    historyPreviewContent: {
+        flexDirection: 'row',
+        alignItems: 'center',
+    },
+    historyIconContainer: {
+        width: 40,
+        height: 40,
+        borderRadius: 20,
+        backgroundColor: '#EBF4FF',
+        alignItems: 'center',
+        justifyContent: 'center',
+        marginRight: 12,
+    },
+    historyPreviewInfo: {
+        flex: 1,
+    },
+    historyPreviewTitle: {
+        fontSize: calculateFontSize(15),
+        color: '#1E293B',
+        fontWeight: '600',
+        marginBottom: 4,
+    },
+    historyPreviewDate: {
+        fontSize: calculateFontSize(13),
+        color: '#64748B',
+        fontWeight: '400',
+    },
+    historySeparator: {
+        height: 1,
+        backgroundColor: '#E2E8F0',
+        marginVertical: 16,
+    },
 });
 
 export default AdhocDashboard;

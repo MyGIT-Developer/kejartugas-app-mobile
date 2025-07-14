@@ -1,11 +1,22 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, SafeAreaView, RefreshControl, Animated } from 'react-native';
+import {
+    View,
+    Text,
+    StyleSheet,
+    ScrollView,
+    SafeAreaView,
+    RefreshControl,
+    Animated,
+    Dimensions,
+    Platform,
+    StatusBar,
+} from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import * as Haptics from 'expo-haptics';
 import DetailProyekModal from '../components/DetailProjectModal';
 import DraggableModalTask from '../components/DraggableModalTask';
 import ReusableModalSuccess from '../components/TaskModalSuccess';
-import { MaterialIcons } from '@expo/vector-icons';
+import { MaterialIcons, Ionicons, Feather } from '@expo/vector-icons';
 import ReusableAlert from '../components/ReusableAlert';
 import AccessDenied from '../components/AccessDenied';
 import TaskSection from '../components/TaskSection';
@@ -15,6 +26,15 @@ import { useFonts } from '../utils/UseFonts';
 import { useTasksData } from '../hooks/useTasksData';
 import { useAccessPermission } from '../hooks/useAccessPermission';
 import { getStatusBadgeColor, getCollectionStatusBadgeColor } from '../utils/taskUtils';
+
+const { width: SCREEN_WIDTH } = Dimensions.get('window');
+
+// Function to calculate responsive font size
+const calculateFontSize = (size) => {
+    const scale = SCREEN_WIDTH / 375;
+    const newSize = size * scale;
+    return Math.round(newSize);
+};
 
 const GRADIENT_COLORS = ['#0E509E', '#5FA0DC', '#9FD2FF'];
 
@@ -188,8 +208,42 @@ const Tugas = () => {
         return <AccessDenied />;
     }
 
+    // Header for Tugas, styled like AdhocDashboard
+    const renderHeader = () => (
+        <View style={styles.backgroundBox}>
+            <LinearGradient
+                colors={['#0E509E', '#5FA0DC', '#9FD2FF']}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 1 }}
+                style={styles.linearGradient}
+            >
+                <View style={styles.headerDecorations}>
+                    <View style={styles.decorativeCircle1} />
+                    <View style={styles.decorativeCircle2} />
+                    <View style={styles.decorativeCircle3} />
+                    <View style={styles.decorativeCircle4} />
+                    <View style={styles.decorativeCircle5} />
+                </View>
+                <View style={styles.headerContainer}>
+                    <View style={styles.headerCenterContent}>
+                        <View style={styles.headerTitleWrapper}>
+                            <View style={styles.headerIconContainer}>
+                                <Ionicons name="clipboard-outline" size={28} color="white" />
+                            </View>
+                            <Text style={styles.header}>Tugas Saya</Text>
+                        </View>
+                        <Text style={styles.headerSubtitle}>Kelola dan pantau semua tugas Anda</Text>
+                    </View>
+                </View>
+            </LinearGradient>
+        </View>
+    );
+
     return (
         <SafeAreaView style={styles.safeArea}>
+            <StatusBar barStyle="light-content" backgroundColor="#0E509E" />
+            {renderHeader()}
+
             <ScrollView
                 style={styles.container}
                 contentContainerStyle={styles.contentContainer}
@@ -204,75 +258,70 @@ const Tugas = () => {
                     />
                 }
             >
-                <LinearGradient
-                    colors={GRADIENT_COLORS}
-                    style={styles.header}
-                    start={{ x: 0, y: 0 }}
-                    end={{ x: 1, y: 1 }}
-                >
-                    <Text style={styles.headerTitle}>Tugas Saya</Text>
-                </LinearGradient>
+                <View style={styles.mainContent}>
+                    {/* Task Statistics - positioned closer to header */}
+                    <View style={styles.statisticsContainer}>
+                        <TaskStatistics tasks={tasks} />
+                    </View>
 
-                <View style={styles.content}>
-                    {!isLoading && !hasAnyTasks ? (
-                        <View style={styles.emptyStateContainer}>
-                            <View style={styles.emptyStateIcon}>
-                                <MaterialIcons name="assignment" size={64} color="#CCCCCC" />
+                    <View style={styles.content}>
+                        {!isLoading && !hasAnyTasks ? (
+                            <View style={styles.emptyStateContainer}>
+                                <View style={styles.emptyStateIcon}>
+                                    <Feather name="clipboard" size={64} color="#CBD5E1" />
+                                </View>
+                                <Text style={styles.emptyStateTitle}>Belum Ada Tugas</Text>
+                                <Text style={styles.emptyStateSubtitle}>
+                                    Anda belum memiliki tugas yang diberikan.{'\n'}
+                                    Tugas baru akan muncul di sini ketika tersedia.
+                                </Text>
                             </View>
-                            <Text style={styles.emptyStateTitle}>Belum Ada Tugas</Text>
-                            <Text style={styles.emptyStateSubtitle}>
-                                Anda belum memiliki tugas yang diberikan.{'\n'}
-                                Tugas baru akan muncul di sini ketika tersedia.
-                            </Text>
-                        </View>
-                    ) : (
-                        <>
-                            {/* Task Statistics */}
-                            <TaskStatistics tasks={tasks} />
-
-                            {/* Render shimmer if loading, otherwise render TaskSection */}
-                            <TaskSection
-                                title="Dalam Pengerjaan"
-                                tasks={tasks.inProgress}
-                                isLoading={isLoading}
-                                onProjectDetailPress={handleProjectDetailPress}
-                                onTaskDetailPress={handleTaskDetailPress}
-                                onSeeAllPress={() => handleSeeAllPress('Dalam Pengerjaan', tasks.inProgress)}
-                            />
-                            <TaskSection
-                                title="Dalam Peninjauan"
-                                tasks={tasks.inReview}
-                                isLoading={isLoading}
-                                onProjectDetailPress={handleProjectDetailPress}
-                                onTaskDetailPress={handleTaskDetailPress}
-                                onSeeAllPress={() => handleSeeAllPress('Dalam Peninjauan', tasks.inReview)}
-                            />
-                            <TaskSection
-                                title="Ditolak"
-                                tasks={tasks.rejected}
-                                isLoading={isLoading}
-                                onProjectDetailPress={handleProjectDetailPress}
-                                onTaskDetailPress={handleTaskDetailPress}
-                                onSeeAllPress={() => handleSeeAllPress('Ditolak', tasks.rejected)}
-                            />
-                            <TaskSection
-                                title="Ditunda"
-                                tasks={tasks.postponed}
-                                isLoading={isLoading}
-                                onProjectDetailPress={handleProjectDetailPress}
-                                onTaskDetailPress={handleTaskDetailPress}
-                                onSeeAllPress={() => handleSeeAllPress('Ditunda', tasks.postponed)}
-                            />
-                            <TaskSection
-                                title="Selesai"
-                                tasks={tasks.completed}
-                                isLoading={isLoading}
-                                onProjectDetailPress={handleProjectDetailPress}
-                                onTaskDetailPress={handleTaskDetailPress}
-                                onSeeAllPress={() => handleSeeAllPress('Selesai', tasks.completed)}
-                            />
-                        </>
-                    )}
+                        ) : (
+                            <>
+                                {/* Render shimmer if loading, otherwise render TaskSection */}
+                                <TaskSection
+                                    title="Dalam Pengerjaan"
+                                    tasks={tasks.inProgress}
+                                    isLoading={isLoading}
+                                    onProjectDetailPress={handleProjectDetailPress}
+                                    onTaskDetailPress={handleTaskDetailPress}
+                                    onSeeAllPress={() => handleSeeAllPress('Dalam Pengerjaan', tasks.inProgress)}
+                                />
+                                <TaskSection
+                                    title="Dalam Peninjauan"
+                                    tasks={tasks.inReview}
+                                    isLoading={isLoading}
+                                    onProjectDetailPress={handleProjectDetailPress}
+                                    onTaskDetailPress={handleTaskDetailPress}
+                                    onSeeAllPress={() => handleSeeAllPress('Dalam Peninjauan', tasks.inReview)}
+                                />
+                                <TaskSection
+                                    title="Ditolak"
+                                    tasks={tasks.rejected}
+                                    isLoading={isLoading}
+                                    onProjectDetailPress={handleProjectDetailPress}
+                                    onTaskDetailPress={handleTaskDetailPress}
+                                    onSeeAllPress={() => handleSeeAllPress('Ditolak', tasks.rejected)}
+                                />
+                                <TaskSection
+                                    title="Ditunda"
+                                    tasks={tasks.postponed}
+                                    isLoading={isLoading}
+                                    onProjectDetailPress={handleProjectDetailPress}
+                                    onTaskDetailPress={handleTaskDetailPress}
+                                    onSeeAllPress={() => handleSeeAllPress('Ditunda', tasks.postponed)}
+                                />
+                                <TaskSection
+                                    title="Selesai"
+                                    tasks={tasks.completed}
+                                    isLoading={isLoading}
+                                    onProjectDetailPress={handleProjectDetailPress}
+                                    onTaskDetailPress={handleTaskDetailPress}
+                                    onSeeAllPress={() => handleSeeAllPress('Selesai', tasks.completed)}
+                                />
+                            </>
+                        )}
+                    </View>
                 </View>
 
                 <View style={styles.bottomSpacer} />
@@ -317,7 +366,7 @@ const Tugas = () => {
 const styles = StyleSheet.create({
     safeArea: {
         flex: 1,
-        backgroundColor: '#F0F0F0',
+        backgroundColor: '#F8FAFC',
     },
     container: {
         flex: 1,
@@ -325,23 +374,161 @@ const styles = StyleSheet.create({
     contentContainer: {
         flexGrow: 1,
     },
-    header: {
-        height: 125,
-        paddingTop: 40,
+    // New header styles matching AdhocDashboard
+    backgroundBox: {
+        height: 220,
+        width: '100%',
+        position: 'absolute',
+        top: 0,
+        left: 0,
+        overflow: 'hidden',
+        zIndex: 1,
+    },
+    linearGradient: {
+        flex: 1,
+        borderBottomLeftRadius: 24,
+        borderBottomRightRadius: 24,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 20 },
+        shadowOpacity: 0.5,
+        shadowRadius: 12,
+        elevation: 8,
+    },
+    headerContainer: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center', // Changed to center for proper centering
+        paddingTop: Platform.OS === 'ios' ? 70 : 50,
+        paddingBottom: 20,
         paddingHorizontal: 20,
-        borderBottomLeftRadius: 30,
-        borderBottomRightRadius: 30,
+        position: 'relative',
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.1,
+        shadowRadius: 8,
+        elevation: 5,
+    },
+    headerCenterContent: {
+        alignItems: 'center',
         justifyContent: 'center',
     },
-    headerTitle: {
-        fontSize: 24,
+    header: {
+        fontSize: calculateFontSize(24),
         fontFamily: 'Poppins-Bold',
         color: 'white',
-        marginBottom: 10,
-        alignSelf: 'center',
+        textAlign: 'center',
+        letterSpacing: -0.8,
+        marginBottom: 0,
+        textShadowColor: 'rgba(0, 0, 0, 0.15)',
+        textShadowOffset: { width: 0, height: 1 },
+        textShadowRadius: 3,
+    },
+    headerSubtitle: {
+        fontSize: calculateFontSize(13),
+        fontFamily: 'Poppins-Regular',
+        color: 'rgba(255, 255, 255, 0.85)',
+        textAlign: 'center',
+        marginTop: 4,
+        letterSpacing: 0.3,
+        lineHeight: calculateFontSize(18),
+    },
+    headerTitleWrapper: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+        gap: 12,
+        marginBottom: 8,
+        marginTop: 35, // Added margin to move icon down with the text
+    },
+    headerIconContainer: {
+        width: 40,
+        height: 40,
+        borderRadius: 20,
+        backgroundColor: 'rgba(255, 255, 255, 0.15)',
+        alignItems: 'center',
+        justifyContent: 'center',
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.1,
+        shadowRadius: 4,
+        elevation: 3,
+    },
+    headerDecorations: {
+        position: 'absolute',
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0,
+        overflow: 'hidden',
+    },
+    decorativeCircle1: {
+        position: 'absolute',
+        width: 120,
+        height: 120,
+        borderRadius: 60,
+        backgroundColor: 'rgba(255, 255, 255, 0.08)',
+        top: -30,
+        right: -20,
+    },
+    decorativeCircle2: {
+        position: 'absolute',
+        width: 80,
+        height: 80,
+        borderRadius: 40,
+        backgroundColor: 'rgba(255, 255, 255, 0.06)',
+        top: 40,
+        left: -25,
+    },
+    decorativeCircle3: {
+        position: 'absolute',
+        width: 60,
+        height: 60,
+        borderRadius: 30,
+        backgroundColor: 'rgba(255, 255, 255, 0.1)',
+        top: 80,
+        right: 30,
+    },
+    decorativeCircle4: {
+        position: 'absolute',
+        width: 60,
+        height: 60,
+        borderRadius: 30,
+        backgroundColor: 'rgba(255, 255, 255, 0.1)',
+        top: 150,
+        left: -10,
+    },
+    decorativeCircle5: {
+        position: 'absolute',
+        width: 120,
+        height: 120,
+        borderRadius: 60,
+        backgroundColor: 'rgba(255, 255, 255, 0.08)',
+        top: 120,
+        left: 30,
+    },
+    mainContent: {
+        flex: 1,
+        marginTop: 220,
+        backgroundColor: '#F8FAFC',
+    },
+    statisticsContainer: {
+        backgroundColor: 'white',
+        marginHorizontal: 20,
+        marginTop: 20, // Positive margin to ensure it's clearly below header
+        borderRadius: 16,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.08,
+        shadowRadius: 8,
+        elevation: 4,
+        zIndex: 2,
+        paddingVertical: 16,
+        paddingHorizontal: 20,
     },
     content: {
         padding: 20,
+        paddingTop: 16, // Reduced top padding since statistics moved above
+        gap: 0, // Remove gap since sections now have their own spacing
     },
     bottomSpacer: {
         height: 100,
@@ -351,13 +538,13 @@ const styles = StyleSheet.create({
         flex: 1,
         justifyContent: 'center',
         alignItems: 'center',
-        backgroundColor: '#F0F0F0',
+        backgroundColor: '#F8FAFC',
     },
     loadingContent: {
         alignItems: 'center',
     },
     loadingText: {
-        fontSize: 16,
+        fontSize: calculateFontSize(16),
         fontFamily: 'Poppins-Medium',
         color: '#666',
         marginBottom: 20,
@@ -374,32 +561,32 @@ const styles = StyleSheet.create({
         backgroundColor: '#0E509E',
         marginHorizontal: 4,
     },
-    // Empty state styles
+    // Empty state styles - improved to match AdhocDashboard
     emptyStateContainer: {
         flex: 1,
         justifyContent: 'center',
         alignItems: 'center',
         paddingHorizontal: 40,
-        paddingVertical: 60,
+        paddingVertical: 80,
         minHeight: 400,
     },
     emptyStateIcon: {
-        marginBottom: 20,
-        opacity: 0.5,
+        marginBottom: 24,
     },
     emptyStateTitle: {
-        fontSize: 20,
+        fontSize: calculateFontSize(18),
         fontFamily: 'Poppins-SemiBold',
-        color: '#333',
-        marginBottom: 12,
+        color: '#374151',
         textAlign: 'center',
+        marginBottom: 8,
     },
     emptyStateSubtitle: {
-        fontSize: 14,
+        fontSize: calculateFontSize(14),
         fontFamily: 'Poppins-Regular',
-        color: '#666',
+        color: '#6B7280',
         textAlign: 'center',
         lineHeight: 20,
+        maxWidth: 280,
     },
 });
 
