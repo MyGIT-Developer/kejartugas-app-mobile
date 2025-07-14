@@ -1,15 +1,45 @@
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
+import Shimmer from './Shimmer';
 
-const TaskStatistics = ({ tasks, adhocTasks }) => {
+const TaskStatisticsSkeleton = () => (
+    <View style={styles.container}>
+        <View style={styles.statItem}>
+            <Shimmer width={40} height={28} style={styles.shimmerNumber} />
+            <Shimmer width={35} height={14} style={styles.shimmerLabel} />
+        </View>
+        <View style={styles.separator} />
+        <View style={styles.statItem}>
+            <Shimmer width={40} height={28} style={styles.shimmerNumber} />
+            <Shimmer width={60} height={14} style={styles.shimmerLabel} />
+        </View>
+        <View style={styles.separator} />
+        <View style={styles.statItem}>
+            <Shimmer width={40} height={28} style={styles.shimmerNumber} />
+            <Shimmer width={45} height={14} style={styles.shimmerLabel} />
+        </View>
+        <View style={styles.separator} />
+        <View style={styles.statItem}>
+            <Shimmer width={40} height={28} style={styles.shimmerNumber} />
+            <Shimmer width={40} height={14} style={styles.shimmerLabel} />
+        </View>
+    </View>
+);
+
+const TaskStatistics = ({ tasks, adhocTasks, isLoading = false }) => {
+    // Show skeleton while loading
+    if (isLoading) {
+        return <TaskStatisticsSkeleton />;
+    }
+
     // Calculate totals for regular tasks
-    const regularTotalTasks = Object.values(tasks).reduce((total, taskArray) => total + taskArray.length, 0);
-    const regularCompletedTasks = tasks.completed.length;
-    const regularInProgressTasks = tasks.inProgress.length;
-    const regularPendingReview = tasks.inReview.length;
+    const regularTotalTasks = Object.values(tasks || {}).reduce((total, taskArray) => total + (taskArray?.length || 0), 0);
+    const regularCompletedTasks = (tasks?.completed || []).length;
+    const regularInProgressTasks = (tasks?.inProgress || []).length;
+    const regularPendingReview = (tasks?.inReview || []).length;
 
     // Calculate totals for adhoc tasks
-    const adhocTotalTasks = Object.values(adhocTasks || {}).reduce((total, taskArray) => total + taskArray.length, 0);
+    const adhocTotalTasks = Object.values(adhocTasks || {}).reduce((total, taskArray) => total + (taskArray?.length || 0), 0);
     const adhocCompletedTasks = (adhocTasks?.completed || []).length;
     const adhocInProgressTasks = (adhocTasks?.inProgress || []).length;
     const adhocPendingReview = (adhocTasks?.inReview || []).length;
@@ -80,6 +110,13 @@ const styles = StyleSheet.create({
         width: 1,
         backgroundColor: '#E0E0E0',
         marginHorizontal: 8,
+    },
+    shimmerNumber: {
+        borderRadius: 4,
+        marginBottom: 4,
+    },
+    shimmerLabel: {
+        borderRadius: 4,
     },
 });
 

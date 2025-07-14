@@ -45,20 +45,19 @@ const TaskCard = React.memo(({ task, onProjectDetailPress = () => {}, onTaskDeta
 
 const styles = StyleSheet.create({
     taskCard: {
-        backgroundColor: 'white',
+        backgroundColor: '#ffffffff',
+        padding: 20,
         borderRadius: 16,
-        padding: 16,
-        marginRight: 16,
-        marginBottom: 10,
-        width: 300,
-        height: 180,
-        elevation: 3,
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 3 },
-        shadowOpacity: 0.12,
-        shadowRadius: 6,
+        alignItems: 'center',
+        justifyContent: 'center',
         borderWidth: 1,
-        borderColor: 'rgba(0, 0, 0, 0.06)',
+        borderColor: 'rgba(199, 199, 204, 0.3)',
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.25,
+        shadowRadius: 3.84,
+        elevation: 5,
+        marginHorizontal: 10
     },
     taskContent: {
         flex: 1,

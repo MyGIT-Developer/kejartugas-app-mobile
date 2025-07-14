@@ -10,6 +10,7 @@ import {
     Dimensions,
     Platform,
     StatusBar,
+    Pressable,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import * as Haptics from 'expo-haptics';
@@ -26,6 +27,7 @@ import { useFonts } from '../utils/UseFonts';
 import { useTasksData } from '../hooks/useTasksData';
 import { useAccessPermission } from '../hooks/useAccessPermission';
 import { getStatusBadgeColor, getCollectionStatusBadgeColor } from '../utils/taskUtils';
+import PagerView from 'react-native-pager-view';
 import { FONTS } from '../constants/fonts';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
@@ -40,6 +42,8 @@ const calculateFontSize = (size) => {
 const GRADIENT_COLORS = ['#0E509E', '#5FA0DC', '#9FD2FF'];
 
 const Tugas = () => {
+    const pagerRef = useRef(null);
+
     // State for modals and UI
     const [modalVisible, setModalVisible] = useState(false);
     const [selectedProject, setSelectedProject] = useState(null);
@@ -60,6 +64,17 @@ const Tugas = () => {
     const fontsLoaded = useFonts();
     const hasAccess = useAccessPermission('access_tasks');
     const { tasks, adhocTasks, isLoading, refreshing, error, fetchTasks, setError } = useTasksData();
+
+    // Tabs
+    const taskTabs = [
+        { key: 'inProgress', label: 'Dalam Pengerjaan' },
+        { key: 'inReview', label: 'Dalam Peninjauan' },
+        { key: 'rejected', label: 'Ditolak' },
+        { key: 'postponed', label: 'Ditunda' },
+        { key: 'completed', label: 'Selesai' },
+    ];
+
+    const [activeTab, setActiveTab] = useState('inProgress');
 
     // Animate loading dots
     React.useEffect(() => {
@@ -372,18 +387,8 @@ const Tugas = () => {
             <StatusBar barStyle="light-content" backgroundColor="#0E509E" />
             {renderHeader()}
 
-            <ScrollView
-                contentContainerStyle={styles.scrollViewContent}
-                refreshControl={
-                    <RefreshControl
-                        refreshing={refreshing}
-                        onRefresh={handleRefresh}
-                        colors={['#4A90E2']}
-                        tintColor="#4A90E2"
-                        progressBackgroundColor="#ffffff"
-                    />
-                }
-                showsHorizontalScrollIndicator={false}
+            <View
+                style={styles.scrollViewContent}
             >
                 <Animated.View
                     style={[
@@ -443,71 +448,82 @@ const Tugas = () => {
                     </View>
                 </Animated.View>
 
-                <View style={styles.mainContent}>
-                    <View style={styles.statisticsContainer}>
-                        <TaskStatistics tasks={tasks} adhocTasks={adhocTasks} />
-                    </View>
+                <View style={styles.statisticsContainer}>
+                    <TaskStatistics tasks={tasks} adhocTasks={adhocTasks} isLoading={isLoading} />
+                </View>
 
+                <View>
                     <View style={styles.content}>
-                        {!isLoading && !hasAnyTasks ? (
+                        {isLoading && hasAnyTasks ? (
                             <View style={styles.emptyStateContainer}>
                                 <View style={styles.emptyStateIcon}>
                                     <Feather name="clipboard" size={64} color="#CBD5E1" />
                                 </View>
                                 <Text style={styles.emptyStateTitle}>Belum Ada Tugas</Text>
                                 <Text style={styles.emptyStateSubtitle}>
-                                    Anda belum memiliki tugas yang diberikan.{'\n'}
+                                    Anda belum memiliki tugas yang diberikan.{"\n"}
                                     Tugas baru akan muncul di sini ketika tersedia.
                                 </Text>
                             </View>
                         ) : (
                             <>
-                                {/* Render shimmer if loading, otherwise render TaskSection */}
-                                <TaskSection
-                                    title="Dalam Pengerjaan"
-                                    tasks={getCombinedTasks('inProgress')}
-                                    isLoading={isLoading}
-                                    onProjectDetailPress={handleProjectDetailPress}
-                                    onTaskDetailPress={handleTaskDetailPress}
-                                    onSeeAllPress={() => handleSeeAllPress('Dalam Pengerjaan', 'inProgress')}
-                                />
-                                <TaskSection
-                                    title="Dalam Peninjauan"
-                                    tasks={getCombinedTasks('inReview')}
-                                    isLoading={isLoading}
-                                    onProjectDetailPress={handleProjectDetailPress}
-                                    onTaskDetailPress={handleTaskDetailPress}
-                                    onSeeAllPress={() => handleSeeAllPress('Dalam Peninjauan', 'inReview')}
-                                />
-                                <TaskSection
-                                    title="Ditolak"
-                                    tasks={getCombinedTasks('rejected')}
-                                    isLoading={isLoading}
-                                    onProjectDetailPress={handleProjectDetailPress}
-                                    onTaskDetailPress={handleTaskDetailPress}
-                                    onSeeAllPress={() => handleSeeAllPress('Ditolak', 'rejected')}
-                                />
-                                <TaskSection
-                                    title="Ditunda"
-                                    tasks={getCombinedTasks('postponed')}
-                                    isLoading={isLoading}
-                                    onProjectDetailPress={handleProjectDetailPress}
-                                    onTaskDetailPress={handleTaskDetailPress}
-                                    onSeeAllPress={() => handleSeeAllPress('Ditunda', 'postponed')}
-                                />
-                                <TaskSection
-                                    title="Selesai"
-                                    tasks={getCombinedTasks('completed')}
-                                    isLoading={isLoading}
-                                    onProjectDetailPress={handleProjectDetailPress}
-                                    onTaskDetailPress={handleTaskDetailPress}
-                                    onSeeAllPress={() => handleSeeAllPress('Selesai', 'completed')}
-                                />
+                                <ScrollView
+                                    horizontal
+                                    showsHorizontalScrollIndicator={false}
+                                    contentContainerStyle={styles.tabHeader}
+                                >
+                                    {taskTabs.map((tab, index) => (
+                                        <Pressable
+                                            key={tab.key}
+                                            style={[
+                                                styles.tabButton,
+                                                activeTab === tab.key && styles.activeTabButton,
+                                            ]}
+                                            onPress={() => {
+                                                setActiveTab(tab.key);
+                                                pagerRef.current?.setPage(index);
+                                            }}
+                                        >
+                                            <Text
+                                                style={[
+                                                    styles.tabLabel,
+                                                    activeTab === tab.key && styles.activeTabLabel,
+                                                ]}
+                                            >
+                                                {tab.label}
+                                            </Text>
+                                        </Pressable>
+                                    ))}
+                                </ScrollView>
+
+                                {/* Swipeable Content */}
+                                <PagerView
+                                    style={{ flex: 1, height: 'auto' }}
+                                    initialPage={taskTabs.findIndex(t => t.key === activeTab)}
+                                    onPageSelected={(e) => {
+                                        const index = e.nativeEvent.position;
+                                        setActiveTab(taskTabs[index].key);
+                                    }}
+                                    ref={pagerRef}
+                                >
+                                    {taskTabs.map((tab) => (
+                                        <View key={tab.key} style={{ flex: 1, padding: 16 }}>
+                                            <TaskSection
+                                                title={tab.label}
+                                                tasks={getCombinedTasks(tab.key)}
+                                                isLoading={isLoading}
+                                                onProjectDetailPress={handleProjectDetailPress}
+                                                onTaskDetailPress={handleTaskDetailPress}
+                                                onSeeAllPress={() => handleSeeAllPress(tab.label, tab.key)}
+                                            />
+                                        </View>
+                                    ))}
+                                </PagerView>
                             </>
                         )}
                     </View>
                 </View>
-            </ScrollView>
+            </View>
 
             {
                 modalType === 'default' ? (
@@ -686,13 +702,42 @@ const styles = StyleSheet.create({
         left: 30,
     },
     statisticsContainer: {
-        marginTop:20,
+        marginTop: 20,
         paddingHorizontal: 20,
+    },
+    taskScrollSection: {
+        width: '100%',
+        marginTop: 10,
     },
     content: {
-        marginTop:10,
+        marginTop: 10,
         paddingHorizontal: 20,
     },
+    tabHeader: {
+        flexDirection: 'row',
+        justifyContent: 'space-around',
+        borderRadius: 12,
+        marginBottom: 10,
+    },
+    tabButton: {
+        paddingVertical: 8,
+        borderBottomColor: '#E5E7EB',
+        borderBottomWidth: 1,
+        paddingHorizontal: 12,
+    },
+    activeTabButton: {
+        borderBottomColor: '#2563EB',
+        borderBottomWidth: 2,
+    },
+    tabLabel: {
+        fontSize: 14,
+        color: '#64748B',
+    },
+    activeTabLabel: {
+        color: '#2563EB',
+        fontWeight: '600',
+    },
+
     // Loading state styles
     loadingContainer: {
         flex: 1,

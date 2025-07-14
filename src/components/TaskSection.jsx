@@ -9,9 +9,9 @@ const TaskSection = ({
     title = '',
     tasks = [],
     isLoading = false,
-    onProjectDetailPress = () => {},
-    onTaskDetailPress = () => {},
-    onSeeAllPress = () => {},
+    onProjectDetailPress = () => { },
+    onTaskDetailPress = () => { },
+    onSeeAllPress = () => { },
 }) => {
     // Icon mapping for different task types
     const getIconForSection = (sectionTitle) => {
@@ -26,20 +26,11 @@ const TaskSection = ({
 
     return (
         <View style={styles.section}>
-            <View style={styles.sectionHeader}>
-                <Text style={styles.sectionTitle}>{title}</Text>
-                {tasks.length > 1 && !isLoading && (
-                    <TouchableOpacity onPress={onSeeAllPress}>
-                        <Text style={styles.seeAllText}>Lihat semua</Text>
-                    </TouchableOpacity>
-                )}
-            </View>
+            <Text style={styles.sectionTitle} onPress={onSeeAllPress}>lihat detail</Text>
             {isLoading ? (
                 <ScrollView
-                    horizontal
                     showsHorizontalScrollIndicator={false}
                     contentContainerStyle={styles.scrollViewContent}
-                    style={styles.scrollView}
                 >
                     {Array(3)
                         .fill()
@@ -51,10 +42,8 @@ const TaskSection = ({
                 </ScrollView>
             ) : tasks.length > 0 ? (
                 <ScrollView
-                    horizontal
                     showsHorizontalScrollIndicator={false}
                     contentContainerStyle={styles.scrollViewContent}
-                    style={styles.scrollView}
                 >
                     {tasks.map((task, index) => (
                         <View key={index} style={index === 0 ? styles.firstCardContainer : null}>
@@ -69,7 +58,7 @@ const TaskSection = ({
             ) : (
                 <View style={styles.noTasksBox}>
                     <View style={styles.noTasksIcon}>
-                        <Feather name={getIconForSection(title)} size={48} color="#8E8E93" />
+                        <Feather name={getIconForSection(title)} size={40} color="#8E8E93" />
                     </View>
                     <Text style={styles.noTasksText}>Tidak ada tugas {title.toLowerCase()}</Text>
                     <Text style={styles.noTasksSubtext}>
@@ -83,15 +72,10 @@ const TaskSection = ({
 
 const styles = StyleSheet.create({
     section: {
-        marginBottom: 24,
-        backgroundColor: 'white',
-        borderRadius: 16,
-        padding: 20,
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.08,
-        shadowRadius: 8,
-        elevation: 4,
+        paddingBottom: 150,
+        justifyContent: 'center',
+        alignItems: 'center',
+        width: '100%',
     },
     sectionHeader: {
         flexDirection: 'row',
@@ -114,34 +98,33 @@ const styles = StyleSheet.create({
         fontSize: 14,
         letterSpacing: 0.1,
     },
-    scrollView: {
-        marginHorizontal: -20,
-    },
     scrollViewContent: {
-        paddingHorizontal: 20,
-        paddingRight: 40,
+        width: '100%',
     },
     firstCardContainer: {
         paddingLeft: 0,
     },
     noTasksBox: {
-        backgroundColor: '#F8FAFC',
-        paddingVertical: 40,
-        paddingHorizontal: 24,
+        backgroundColor: '#ffffffff',
+        padding: 20,
         borderRadius: 16,
         alignItems: 'center',
         justifyContent: 'center',
         borderWidth: 1,
         borderColor: 'rgba(199, 199, 204, 0.3)',
-        marginHorizontal: -20,
-        marginBottom: -20,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.25,
+        shadowRadius: 3.84,
+        elevation: 5,
+        marginHorizontal: 10
     },
     noTasksIcon: {
         marginBottom: 16,
         opacity: 0.6,
     },
     noTasksText: {
-        fontSize: 16,
+        fontSize: FONTS.size.md,
         color: '#1C1C1E',
         fontFamily: 'Poppins-SemiBold',
         textAlign: 'center',
@@ -149,7 +132,7 @@ const styles = StyleSheet.create({
         letterSpacing: 0.2,
     },
     noTasksSubtext: {
-        fontSize: 14,
+        fontSize: FONTS.size.sm,
         color: '#8E8E93',
         fontFamily: 'Poppins-Regular',
         textAlign: 'center',
