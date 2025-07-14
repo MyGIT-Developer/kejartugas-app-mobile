@@ -161,8 +161,6 @@ const Home = () => {
     const fadeAnim = useRef(new Animated.Value(0)).current;
     const slideAnim = useRef(new Animated.Value(50)).current;
     const statsAnimations = useRef([...Array(4)].map(() => new Animated.Value(0))).current;
-    const headerAnim = useRef(new Animated.Value(0)).current;
-    const headerScaleAnim = useRef(new Animated.Value(0.9)).current;
 
     const navigation = useNavigation();
     const isLoading = dashboardLoading || tasksLoading;
@@ -439,101 +437,11 @@ const Home = () => {
 
                 {/* Header decorative elements */}
                 <View style={styles.headerDecorations}>
-                    <Animated.View
-                        style={[
-                            styles.decorativeCircle1,
-                            {
-                                opacity: headerAnim.interpolate({
-                                    inputRange: [0, 1],
-                                    outputRange: [0, 0.6],
-                                }),
-                                transform: [
-                                    {
-                                        scale: headerAnim.interpolate({
-                                            inputRange: [0, 1],
-                                            outputRange: [0.5, 1],
-                                        }),
-                                    },
-                                ],
-                            },
-                        ]}
-                    />
-                    <Animated.View
-                        style={[
-                            styles.decorativeCircle2,
-                            {
-                                opacity: headerAnim.interpolate({
-                                    inputRange: [0, 1],
-                                    outputRange: [0, 0.4],
-                                }),
-                                transform: [
-                                    {
-                                        scale: headerAnim.interpolate({
-                                            inputRange: [0, 1],
-                                            outputRange: [0.3, 1],
-                                        }),
-                                    },
-                                ],
-                            },
-                        ]}
-                    />
-                    <Animated.View
-                        style={[
-                            styles.decorativeCircle3,
-                            {
-                                opacity: headerAnim.interpolate({
-                                    inputRange: [0, 1],
-                                    outputRange: [0, 0.5],
-                                }),
-                                transform: [
-                                    {
-                                        scale: headerAnim.interpolate({
-                                            inputRange: [0, 1],
-                                            outputRange: [0.7, 1],
-                                        }),
-                                    },
-                                ],
-                            },
-                        ]}
-                    />
-                    <Animated.View
-                        style={[
-                            styles.decorativeCircle4,
-                            {
-                                opacity: headerAnim.interpolate({
-                                    inputRange: [0, 1],
-                                    outputRange: [0, 0.5],
-                                }),
-                                transform: [
-                                    {
-                                        scale: headerAnim.interpolate({
-                                            inputRange: [0, 1],
-                                            outputRange: [0.7, 1],
-                                        }),
-                                    },
-                                ],
-                            },
-                        ]}
-                    />
-                    <Animated.View
-                        style={[
-                            styles.decorativeCircle5,
-                            {
-                                opacity: headerAnim.interpolate({
-                                    inputRange: [0, 1],
-                                    outputRange: [0, 0.5],
-                                }),
-                                transform: [
-                                    {
-                                        scale: headerAnim.interpolate({
-                                            inputRange: [0, 1],
-                                            outputRange: [0.7, 1],
-                                        }),
-                                    },
-                                ],
-                            },
-                        ]}
-                    />
+                    <View style={styles.decorativeCircle1} />
+                    <View style={styles.decorativeCircle2} />
+                    <View style={styles.decorativeCircle3} />
+                    <View style={styles.decorativeCircle4} />
+                    <View style={styles.decorativeCircle5} />
                 </View>
             </Animated.View>
 
@@ -853,7 +761,7 @@ const styles = StyleSheet.create({
         borderRadius: 30,
         backgroundColor: 'rgba(255, 255, 255, 0.1)',
         top: 150,
-        Left: -10,
+        left: -10,
     },
     decorativeCircle5: {
         position: 'absolute',
