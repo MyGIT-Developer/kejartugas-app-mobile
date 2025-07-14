@@ -468,7 +468,7 @@ const styles = StyleSheet.create({
         justifyContent: 'center',
         gap: 12,
         marginBottom: 8,
-        marginTop: 35, // Added margin to move icon down with the text
+        marginTop: 20, // Added margin to move icon down with the text
     },
     headerIconContainer: {
         width: 40,
