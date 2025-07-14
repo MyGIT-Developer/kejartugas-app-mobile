@@ -56,7 +56,7 @@ const Tugas = () => {
     const navigation = useNavigation();
     const fontsLoaded = useFonts();
     const hasAccess = useAccessPermission('access_tasks');
-    const { tasks, isLoading, refreshing, error, fetchTasks, setError } = useTasksData();
+    const { tasks, adhocTasks, isLoading, refreshing, error, fetchTasks, setError } = useTasksData();
 
     // Animate loading dots
     React.useEffect(() => {
@@ -89,13 +89,18 @@ const Tugas = () => {
         fetchTasks();
     };
 
-    // Check if all task arrays are empty
+    // Check if all task arrays are empty (including adhoc tasks)
     const hasAnyTasks =
         tasks.inProgress.length > 0 ||
         tasks.inReview.length > 0 ||
         tasks.rejected.length > 0 ||
         tasks.postponed.length > 0 ||
-        tasks.completed.length > 0;
+        tasks.completed.length > 0 ||
+        adhocTasks.inProgress.length > 0 ||
+        adhocTasks.inReview.length > 0 ||
+        adhocTasks.rejected.length > 0 ||
+        adhocTasks.postponed.length > 0 ||
+        adhocTasks.completed.length > 0;
 
     // Show alert when error occurs
     React.useEffect(() => {
@@ -104,30 +109,56 @@ const Tugas = () => {
         }
     }, [error]);
 
-    const handleSeeAllPress = (sectionTitle, tasks) => {
+    // Combine regular tasks and adhoc tasks for each status
+    const getCombinedTasks = (status) => {
+        const regularTasks = tasks[status] || [];
+        const adhocTasksForStatus = adhocTasks[status] || [];
+
+        // Transform adhoc tasks to match regular task structure
+        const transformedAdhocTasks = adhocTasksForStatus.map((adhocTask) => ({
+            ...adhocTask,
+            task_name: adhocTask.name || adhocTask.task_name,
+            task_status: adhocTask.status,
+            project_name: adhocTask.project_name || 'Tugas Adhoc',
+            task_desc: adhocTask.description || adhocTask.task_desc,
+            assign_by_name: adhocTask.created_by_name || adhocTask.assign_by_name,
+            percentage_task: adhocTask.progress || adhocTask.percentage_task || 0,
+            assignedEmployees: [], // Adhoc tasks might not have assigned employees
+            isAdhoc: true, // Mark as adhoc task
+        }));
+
+        return [...regularTasks, ...transformedAdhocTasks].sort((a, b) => {
+            return new Date(b.start_date) - new Date(a.start_date);
+        });
+    };
+
+    const handleSeeAllPress = (sectionTitle, status) => {
+        const combinedTasks = getCombinedTasks(status);
         const baseUrl = 'https://app.kejartugas.com/';
+
         navigation.navigate('DetailTaskSection', {
             sectionTitle,
-            tasks: tasks.map((task) => ({
+            tasks: combinedTasks.map((task) => ({
                 title: task.task_name,
                 subtitle: task.project_name,
-                task_status: task.task_status, // Ensure this matches your data structure
+                task_status: task.task_status || task.status,
                 id: task.id,
-                task_desc: task.task_desc, // Ensure this matches your data structure
+                task_desc: task.task_desc,
                 start_date: task.start_date,
                 end_date: task.end_date,
                 assignedBy: task.assign_by_name,
-                project_desc: task.project_desc, // Ensure this matches your data structure
+                project_desc: task.project_desc,
                 project_start_date: task.project_start_date,
                 project_end_date: task.project_end_date,
-                percentage_task: task.percentage_task || 0, // Ensure this matches your data structure
-                statusColor: getStatusBadgeColor(task.task_status, task.end_date).color,
+                percentage_task: task.percentage_task || 0,
+                statusColor: getStatusBadgeColor(task.task_status || task.status, task.end_date).color,
                 collectionDate: task.task_submit_date || 'N/A',
                 collectionStatus: task.task_submit_status || 'N/A',
                 collectionStatusColor: getCollectionStatusBadgeColor(task.task_submit_status || 'N/A').color,
                 collectionStatusTextColor: getCollectionStatusBadgeColor(task.task_submit_status || 'N/A').textColor,
                 collectionDescription: task.task_desc || 'N/A',
                 task_image: task.task_image ? `${baseUrl}${task.task_image}` : null,
+                isAdhoc: task.isAdhoc || false,
             })),
         });
     };
@@ -146,38 +177,37 @@ const Tugas = () => {
 
     const handleTaskDetailPress = (task) => {
         const baseUrl = 'https://app.kejartugas.com/';
+        const taskStatus = task.task_status || task.status;
         const collectionStatus = getCollectionStatusBadgeColor(task.task_submit_status || 'N/A');
+
         const taskDetails = {
             id: task.id,
             title: task.task_name,
             subtitle: task.project_name,
             startDate: task.start_date,
             endDate: task.end_date,
-            assignedById: task.assign_by ? task.assign_by : 'N/A', // Accessing nested object
-            assignedByName: task.assign_by_name ? task.assign_by_name : 'N/A', // Accessing nested object
+            assignedById: task.assign_by ? task.assign_by : 'N/A',
+            assignedBy: task.assign_by_name ? task.assign_by_name : 'N/A',
             description: task.task_desc,
             progress: task.percentage_task || 0,
-            status: task.task_status,
-            project_desc: task.project_desc, // Ensure this matches your data structure
+            status: taskStatus,
+            project_desc: task.project_desc,
             project_start_date: task.project_start_date,
             project_end_date: task.project_end_date,
-            statusColor: getStatusBadgeColor(task.task_status, task.end_date).color,
+            statusColor: getStatusBadgeColor(taskStatus, task.end_date).color,
             collectionDate: task.task_submit_date || 'N/A',
             collectionStatus: collectionStatus.label,
             collectionStatusColor: collectionStatus.color,
             collectionStatusTextColor: collectionStatus.textColor,
             collectionDescription: task.task_desc || 'N/A',
             task_image: task.task_image ? `${baseUrl}${task.task_image}` : null,
-            assignedEmployees:
-                task.assignedEmployees.map((emp) => ({
-                    employeeId: emp.id,
-                    employeeName: emp.employee_name,
-                })) || [],
+            assignedEmployees: task.assignedEmployees || [],
+            isAdhoc: task.isAdhoc || false,
         };
 
         setSelectedTask(taskDetails);
 
-        if (task.task_status === 'Completed') {
+        if (taskStatus === 'Completed') {
             setModalType('success');
         } else {
             setModalType('default');
@@ -261,7 +291,7 @@ const Tugas = () => {
                 <View style={styles.mainContent}>
                     {/* Task Statistics - positioned closer to header */}
                     <View style={styles.statisticsContainer}>
-                        <TaskStatistics tasks={tasks} />
+                        <TaskStatistics tasks={tasks} adhocTasks={adhocTasks} />
                     </View>
 
                     <View style={styles.content}>
@@ -281,43 +311,43 @@ const Tugas = () => {
                                 {/* Render shimmer if loading, otherwise render TaskSection */}
                                 <TaskSection
                                     title="Dalam Pengerjaan"
-                                    tasks={tasks.inProgress}
+                                    tasks={getCombinedTasks('inProgress')}
                                     isLoading={isLoading}
                                     onProjectDetailPress={handleProjectDetailPress}
                                     onTaskDetailPress={handleTaskDetailPress}
-                                    onSeeAllPress={() => handleSeeAllPress('Dalam Pengerjaan', tasks.inProgress)}
+                                    onSeeAllPress={() => handleSeeAllPress('Dalam Pengerjaan', 'inProgress')}
                                 />
                                 <TaskSection
                                     title="Dalam Peninjauan"
-                                    tasks={tasks.inReview}
+                                    tasks={getCombinedTasks('inReview')}
                                     isLoading={isLoading}
                                     onProjectDetailPress={handleProjectDetailPress}
                                     onTaskDetailPress={handleTaskDetailPress}
-                                    onSeeAllPress={() => handleSeeAllPress('Dalam Peninjauan', tasks.inReview)}
+                                    onSeeAllPress={() => handleSeeAllPress('Dalam Peninjauan', 'inReview')}
                                 />
                                 <TaskSection
                                     title="Ditolak"
-                                    tasks={tasks.rejected}
+                                    tasks={getCombinedTasks('rejected')}
                                     isLoading={isLoading}
                                     onProjectDetailPress={handleProjectDetailPress}
                                     onTaskDetailPress={handleTaskDetailPress}
-                                    onSeeAllPress={() => handleSeeAllPress('Ditolak', tasks.rejected)}
+                                    onSeeAllPress={() => handleSeeAllPress('Ditolak', 'rejected')}
                                 />
                                 <TaskSection
                                     title="Ditunda"
-                                    tasks={tasks.postponed}
+                                    tasks={getCombinedTasks('postponed')}
                                     isLoading={isLoading}
                                     onProjectDetailPress={handleProjectDetailPress}
                                     onTaskDetailPress={handleTaskDetailPress}
-                                    onSeeAllPress={() => handleSeeAllPress('Ditunda', tasks.postponed)}
+                                    onSeeAllPress={() => handleSeeAllPress('Ditunda', 'postponed')}
                                 />
                                 <TaskSection
                                     title="Selesai"
-                                    tasks={tasks.completed}
+                                    tasks={getCombinedTasks('completed')}
                                     isLoading={isLoading}
                                     onProjectDetailPress={handleProjectDetailPress}
                                     onTaskDetailPress={handleTaskDetailPress}
-                                    onSeeAllPress={() => handleSeeAllPress('Selesai', tasks.completed)}
+                                    onSeeAllPress={() => handleSeeAllPress('Selesai', 'completed')}
                                 />
                             </>
                         )}

@@ -1,11 +1,24 @@
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 
-const TaskStatistics = ({ tasks }) => {
-    const totalTasks = Object.values(tasks).reduce((total, taskArray) => total + taskArray.length, 0);
-    const completedTasks = tasks.completed.length;
-    const inProgressTasks = tasks.inProgress.length;
-    const pendingReview = tasks.inReview.length;
+const TaskStatistics = ({ tasks, adhocTasks }) => {
+    // Calculate totals for regular tasks
+    const regularTotalTasks = Object.values(tasks).reduce((total, taskArray) => total + taskArray.length, 0);
+    const regularCompletedTasks = tasks.completed.length;
+    const regularInProgressTasks = tasks.inProgress.length;
+    const regularPendingReview = tasks.inReview.length;
+
+    // Calculate totals for adhoc tasks
+    const adhocTotalTasks = Object.values(adhocTasks || {}).reduce((total, taskArray) => total + taskArray.length, 0);
+    const adhocCompletedTasks = (adhocTasks?.completed || []).length;
+    const adhocInProgressTasks = (adhocTasks?.inProgress || []).length;
+    const adhocPendingReview = (adhocTasks?.inReview || []).length;
+
+    // Combined totals
+    const totalTasks = regularTotalTasks + adhocTotalTasks;
+    const completedTasks = regularCompletedTasks + adhocCompletedTasks;
+    const inProgressTasks = regularInProgressTasks + adhocInProgressTasks;
+    const pendingReview = regularPendingReview + adhocPendingReview;
 
     if (totalTasks === 0) return null;
 
