@@ -515,7 +515,8 @@ const styles = StyleSheet.create({
         borderBottomRightRadius: 30,
     },
     scrollContent: {
-        paddingBottom: 100,
+        paddingTop: 20,
+        paddingBottom: 120,
     },
     header: {
         flexDirection: 'row',
@@ -534,8 +535,8 @@ const styles = StyleSheet.create({
         marginHorizontal: 40,
     },
     backButton: {
-        width: 40,
-        height: 40,
+        width: 35,
+        height: 35,
         borderRadius: 20,
         backgroundColor: 'rgba(255, 255, 255, 0.2)',
         justifyContent: 'center',
@@ -544,8 +545,8 @@ const styles = StyleSheet.create({
         borderColor: 'rgba(255, 255, 255, 0.3)',
     },
     logoutButton: {
-        width: 40,
-        height: 40,
+        width: 35,
+        height: 35,
         borderRadius: 20,
         backgroundColor: 'rgba(239, 68, 68, 0.2)',
         justifyContent: 'center',

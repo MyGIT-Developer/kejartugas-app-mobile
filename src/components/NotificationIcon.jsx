@@ -1,6 +1,13 @@
 import React from 'react';
 import { TouchableOpacity, View, Text, StyleSheet } from 'react-native';
 import { Feather } from '@expo/vector-icons';
+import Shimmer from './Shimmer';
+
+const NotificationIconSkeleton = () => (
+    <View style={styles.notificationButton}>
+        <Shimmer width={40} height={40} style={styles.shimmerTitle} />
+    </View>
+);
 
 const NotificationIcon = ({ unreadCount, onPress }) => (
     <TouchableOpacity style={styles.notificationButton} onPress={onPress} activeOpacity={0.7}>
@@ -55,6 +62,9 @@ const styles = StyleSheet.create({
         fontFamily: 'Poppins-Bold',
         textAlign: 'center',
     },
+    shimmerTitle: {
+        borderRadius: 40,
+    },
 });
 
-export default NotificationIcon;
+export { NotificationIcon, NotificationIconSkeleton };

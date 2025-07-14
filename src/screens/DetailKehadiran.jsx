@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import {
     View,
     Text,
@@ -45,15 +45,11 @@ const DetailKehadiran = () => {
     const [toast, setToast] = useState({ show: false, message: '' });
     const [reasonInput, setReasonInput] = useState('');
     const [isUploading, setIsUploading] = useState(false);
-    const [fadeAnim] = useState(new Animated.Value(0));
-    const [slideAnim] = useState(new Animated.Value(50));
-    const [pulseAnim] = useState(new Animated.Value(1));
-    const [headerAnim] = useState(new Animated.Value(0));
     const [backButtonScale] = useState(new Animated.Value(1));
 
     // Client-related states
     const [clients, setClients] = useState([]);
-    const [selectedClient, setSelectedClient] = useState(null);
+    const [selectedClient, setSelectedClient] = useState([]);
     const [isLoadingClients, setIsLoadingClients] = useState(false);
     const [showClientDropdown, setShowClientDropdown] = useState(false);
     const [isClientEnabled, setIsClientEnabled] = useState(false);
@@ -61,6 +57,17 @@ const DetailKehadiran = () => {
     const [originalLocationName, setOriginalLocationName] = useState(null);
     const [currentLocation, setCurrentLocation] = useState(null);
     const [currentLocationName, setCurrentLocationName] = useState('');
+
+    // Animation refs for better performance
+    const scrollY = useRef(new Animated.Value(0)).current;
+    const fadeAnim = useRef(new Animated.Value(0)).current;
+    const slideAnim = useRef(new Animated.Value(50)).current;
+    const scaleAnim = useRef(new Animated.Value(0.8)).current;
+    const pulseAnim = useRef(new Animated.Value(1)).current;
+    const statsSlideAnim = useRef(new Animated.Value(-100)).current;
+    const historySlideAnim = useRef(new Animated.Value(-100)).current;
+    const headerAnim = useRef(new Animated.Value(0)).current;
+    const headerScaleAnim = useRef(new Animated.Value(0.9)).current;
 
     const [latitude, longitude] = (currentLocation || location)
         ?.split(',')
@@ -221,6 +228,7 @@ const DetailKehadiran = () => {
     // Handle client selection and location switching
     const handleClientSelection = (client) => {
         setSelectedClient(client);
+        console.log('Selected client:', client);
         setShowClientDropdown(false);
 
         // Switch to client location
@@ -253,8 +261,7 @@ const DetailKehadiran = () => {
             if (Platform.OS === 'ios') {
                 Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
             }
-
-            showAlert('🏢 Lokasi dikembalikan ke lokasi kantor', 'info');
+            showToast('🔄 Lokasi kembali ke lokasi awal');
         } else {
             // Client enabled - show dropdown if no client selected, refresh clients
             if (companyId) {
@@ -487,6 +494,19 @@ const DetailKehadiran = () => {
         navigation.goBack();
     };
 
+    // Header animation based on scroll
+    const headerOpacity = scrollY.interpolate({
+        inputRange: [0, 100],
+        outputRange: [1, 1],
+        extrapolate: 'clamp',
+    });
+
+    const headerScale = scrollY.interpolate({
+        inputRange: [0, 100],
+        outputRange: [1, 1],
+        extrapolate: 'clamp',
+    });
+
     return (
         <View style={styles.container}>
             <StatusBar barStyle="light-content" backgroundColor="transparent" translucent={true} />
@@ -494,42 +514,143 @@ const DetailKehadiran = () => {
             {/* Enhanced Header */}
             <Animated.View
                 style={[
-                    styles.headerWrapper,
+                    styles.backgroundBox,
                     {
-                        opacity: headerAnim,
-                        transform: [
-                            {
-                                translateY: Animated.multiply(
-                                    headerAnim.interpolate({
-                                        inputRange: [0, 1],
-                                        outputRange: [-50, 0],
-                                    }),
-                                    1,
-                                ),
-                            },
-                        ],
+                        opacity: headerOpacity,
+                        transform: [{ scale: headerScale }],
                     },
                 ]}
             >
                 <LinearGradient
                     colors={['#4A90E2', '#357ABD', '#2E5984']}
-                    style={styles.headerGradient}
+                    style={styles.linearGradient}
                     start={{ x: 0, y: 0 }}
                     end={{ x: 1, y: 1 }}
+                />
+
+                {/* Header decorative elements */}
+                <View style={styles.headerDecorations}>
+                    <Animated.View
+                        style={[
+                            styles.decorativeCircle1,
+                            {
+                                opacity: headerAnim.interpolate({
+                                    inputRange: [0, 1],
+                                    outputRange: [0, 0.6],
+                                }),
+                                transform: [
+                                    {
+                                        scale: headerAnim.interpolate({
+                                            inputRange: [0, 1],
+                                            outputRange: [0.5, 1],
+                                        }),
+                                    },
+                                ],
+                            },
+                        ]}
+                    />
+                    <Animated.View
+                        style={[
+                            styles.decorativeCircle2,
+                            {
+                                opacity: headerAnim.interpolate({
+                                    inputRange: [0, 1],
+                                    outputRange: [0, 0.4],
+                                }),
+                                transform: [
+                                    {
+                                        scale: headerAnim.interpolate({
+                                            inputRange: [0, 1],
+                                            outputRange: [0.3, 1],
+                                        }),
+                                    },
+                                ],
+                            },
+                        ]}
+                    />
+                    <Animated.View
+                        style={[
+                            styles.decorativeCircle3,
+                            {
+                                opacity: headerAnim.interpolate({
+                                    inputRange: [0, 1],
+                                    outputRange: [0, 0.5],
+                                }),
+                                transform: [
+                                    {
+                                        scale: headerAnim.interpolate({
+                                            inputRange: [0, 1],
+                                            outputRange: [0.7, 1],
+                                        }),
+                                    },
+                                ],
+                            },
+                        ]}
+                    />
+                    <Animated.View
+                        style={[
+                            styles.decorativeCircle4,
+                            {
+                                opacity: headerAnim.interpolate({
+                                    inputRange: [0, 1],
+                                    outputRange: [0, 0.5],
+                                }),
+                                transform: [
+                                    {
+                                        scale: headerAnim.interpolate({
+                                            inputRange: [0, 1],
+                                            outputRange: [0.7, 1],
+                                        }),
+                                    },
+                                ],
+                            },
+                        ]}
+                    />
+                    <Animated.View
+                        style={[
+                            styles.decorativeCircle5,
+                            {
+                                opacity: headerAnim.interpolate({
+                                    inputRange: [0, 1],
+                                    outputRange: [0, 0.5],
+                                }),
+                                transform: [
+                                    {
+                                        scale: headerAnim.interpolate({
+                                            inputRange: [0, 1],
+                                            outputRange: [0.7, 1],
+                                        }),
+                                    },
+                                ],
+                            },
+                        ]}
+                    />
+                </View>
+            </Animated.View>
+
+            <KeyboardAvoidingView
+                style={styles.keyboardAvoidingView}
+                behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+                keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 0}
+            >
+                <ScrollView
+                    style={styles.scrollView}
+                    contentContainerStyle={styles.scrollContent}
+                    showsVerticalScrollIndicator={false}
+                    keyboardShouldPersistTaps="handled"
                 >
                     <View style={styles.headerContainer}>
-                        <Animated.View
-                            style={[
-                                styles.backButtonWrapper,
-                                {
-                                    transform: [{ scale: backButtonScale }],
-                                },
-                            ]}
+                        <TouchableOpacity style={[
+                            styles.backButton,
+                            {
+                                transform: [{ scale: backButtonScale }],
+                            },
+                        ]}
+                            onPress={handleGoBack}
+                            activeOpacity={0.7}
                         >
-                            <TouchableOpacity style={styles.backButton} onPress={handleGoBack} activeOpacity={0.7}>
-                                <Ionicons name="chevron-back" size={24} color="white" />
-                            </TouchableOpacity>
-                        </Animated.View>
+                            <Ionicons name="chevron-back" size={24} color="white" />
+                        </TouchableOpacity>
 
                         <Animated.Text
                             style={[
@@ -553,26 +674,6 @@ const DetailKehadiran = () => {
                         <View style={styles.placeholderView} />
                     </View>
 
-                    {/* Subtle decorative elements */}
-                    <View style={styles.headerDecorations}>
-                        <View style={styles.decorationDot} />
-                        <View style={[styles.decorationDot, styles.decorationDotLarge]} />
-                        <View style={styles.decorationDot} />
-                    </View>
-                </LinearGradient>
-            </Animated.View>
-
-            <KeyboardAvoidingView
-                style={styles.keyboardAvoidingView}
-                behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-                keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 0}
-            >
-                <ScrollView
-                    style={styles.scrollView}
-                    contentContainerStyle={styles.scrollContent}
-                    showsVerticalScrollIndicator={false}
-                    keyboardShouldPersistTaps="handled"
-                >
                     <Animated.View
                         style={[
                             styles.content,
@@ -582,57 +683,107 @@ const DetailKehadiran = () => {
                             },
                         ]}
                     >
-                        {/* Time and Status Card */}
-                        <View style={styles.timeCard}>
-                            <View style={styles.timeContainer}>
-                                <Ionicons name="time" size={24} color="#4A90E2" />
-                                <Text style={styles.timeText}>{currentTime}</Text>
+                        {/* Camera Section */}
+                        <View style={styles.cameraCard}>
+                            <View style={styles.timeLocationHeader}>
+                                <View style={styles.timeStatusContainer}>
+                                    <Text style={styles.timeText}>{currentTime}</Text>
+                                    {isUserLate && (
+                                        <Animated.View
+                                            style={[
+                                                styles.lateStatusContainer,
+                                                {
+                                                    transform: [{ scale: pulseAnim }],
+                                                },
+                                            ]}
+                                        >
+                                            <View style={styles.lateStatusDot} />
+                                            <Text style={styles.lateStatusText}>Terlambat</Text>
+                                        </Animated.View>
+                                    )}
+                                </View>
+                                <View style={[styles.locationContainer, isClientEnabled && styles.clientModeCard]}>
+                                    <View style={styles.locationHeader}>
+                                        <Ionicons
+                                            name={isClientEnabled && selectedClient ? 'business' : 'location'}
+                                            size={20}
+                                            color={isClientEnabled ? '#10B981' : '#4A90E2'}
+                                        />
+                                        <Text style={styles.locationTitle}>
+                                            {isClientEnabled && selectedClient ? 'Lokasi Client' : 'Lokasi Saat Ini'}
+                                        </Text>
+                                        {isClientEnabled && selectedClient && (
+                                            <View style={styles.clientIndicator}>
+                                                <Text style={styles.clientIndicatorText}>CLIENT</Text>
+                                            </View>
+                                        )}
+                                        {isClientEnabled && !selectedClient && (
+                                            <View style={styles.clientModeIndicator}>
+                                                <Text style={styles.clientModeText}>MODE CLIENT</Text>
+                                            </View>
+                                        )}
+                                    </View>
+
+                                    <View style={styles.locationDetails}>
+                                        <Text style={styles.locationName}>{currentLocationName || 'Memuat lokasi...'}</Text>
+                                        {currentLocation && <Text style={styles.coordinatesText}>{currentLocation}</Text>}
+                                    </View>
+
+                                </View>
                             </View>
-                            {isUserLate && (
+
+                            <View style={styles.cameraHeader}>
+                                <Ionicons name="camera" size={20} color="#4A90E2" />
+                                <Text style={styles.cameraTitle}>Foto Kehadiran</Text>
+                            </View>
+
+                            {!capturedImage ? (
                                 <Animated.View
-                                    style={[
-                                        styles.lateStatusContainer,
-                                        {
-                                            transform: [{ scale: pulseAnim }],
-                                        },
-                                    ]}
+                                    style={{
+                                        opacity: fadeAnim,
+                                        transform: [{ translateY: slideAnim }],
+                                    }}
                                 >
-                                    <View style={styles.lateStatusDot} />
-                                    <Text style={styles.lateStatusText}>Terlambat</Text>
+                                    <TouchableOpacity
+                                        style={styles.cameraButton}
+                                        onPress={triggerCamera}
+                                        activeOpacity={0.8}
+                                    >
+                                        <View style={styles.cameraIconContainer}>
+                                            <Ionicons name="camera" size={32} color="white" />
+                                        </View>
+                                        <Text style={styles.cameraButtonText}>Ambil Foto</Text>
+                                        <Text style={styles.cameraSubtext}>Tap untuk mengambil foto</Text>
+                                    </TouchableOpacity>
+                                </Animated.View>
+                            ) : (
+                                <Animated.View
+                                    style={{
+                                        opacity: fadeAnim,
+                                        transform: [{ scale: fadeAnim }],
+                                    }}
+                                >
+                                    <View style={styles.imagePreviewContainer}>
+                                        <Image source={{ uri: capturedImage }} style={styles.previewImage} />
+                                        <TouchableOpacity
+                                            style={styles.retakeButton}
+                                            onPress={triggerCamera}
+                                            activeOpacity={0.8}
+                                        >
+                                            <Ionicons name="camera" size={16} color="white" />
+                                            <Text style={styles.retakeButtonText}>Ambil Ulang</Text>
+                                        </TouchableOpacity>
+                                    </View>
                                 </Animated.View>
                             )}
                         </View>
 
                         {/* Location Card */}
                         <View style={[styles.locationCard, isClientEnabled && styles.clientModeCard]}>
-                            <View style={styles.locationHeader}>
-                                <Ionicons
-                                    name={isClientEnabled && selectedClient ? 'business' : 'location'}
-                                    size={20}
-                                    color={isClientEnabled ? '#10B981' : '#4A90E2'}
-                                />
-                                <Text style={styles.locationTitle}>
-                                    {isClientEnabled && selectedClient ? 'Lokasi Client' : 'Lokasi Saat Ini'}
-                                </Text>
-                                {isClientEnabled && selectedClient && (
-                                    <View style={styles.clientIndicator}>
-                                        <Text style={styles.clientIndicatorText}>CLIENT</Text>
-                                    </View>
-                                )}
-                                {isClientEnabled && !selectedClient && (
-                                    <View style={styles.clientModeIndicator}>
-                                        <Text style={styles.clientModeText}>MODE CLIENT</Text>
-                                    </View>
-                                )}
-                            </View>
-
-                            <View style={styles.locationDetails}>
-                                <Text style={styles.locationName}>{currentLocationName || 'Memuat lokasi...'}</Text>
-                                {currentLocation && <Text style={styles.coordinatesText}>{currentLocation}</Text>}
-                            </View>
-
                             <View style={styles.checkboxContainer}>
-                                {/* WFH Checkbox */}
+                                <Text style={styles.checkboxTitle}>
+                                    Pilih jika Anda bekerja dari rumah (WFH) atau absen di lokasi klien
+                                </Text>
                                 <View style={styles.checkboxItem}>
                                     <CheckBox
                                         onPress={() => setIsWFH(!isWFH)}
@@ -676,58 +827,53 @@ const DetailKehadiran = () => {
                                         </View>
                                     ) : selectedClient ? (
                                         /* Selected Client Card - Replaces Dropdown */
-                                        <Animated.View
-                                            style={[
-                                                styles.selectedClientCard,
-                                                {
-                                                    opacity: fadeAnim,
-                                                    transform: [{ scale: fadeAnim }],
-                                                },
-                                            ]}
+                                        <TouchableOpacity
+                                            onPress={() => {
+                                                if (Platform.OS === 'ios') {
+                                                    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                                                }
+                                                setShowClientDropdown(true);
+                                            }}
+                                            activeOpacity={0.3}
                                         >
-                                            <View style={styles.selectedClientHeader}>
-                                                <View style={styles.clientIconWrapper}>
-                                                    <Ionicons name="business" size={18} color="#FFFFFF" />
-                                                </View>
-                                                <View style={styles.clientInfoWrapper}>
-                                                    <Text style={styles.selectedClientLabel}>
-                                                        Klien yang kamu pilih
-                                                    </Text>
-                                                    <Text style={styles.selectedClientName}>{selectedClient.name}</Text>
-                                                </View>
-                                                <TouchableOpacity
-                                                    style={styles.changeClientButton}
-                                                    onPress={() => {
-                                                        if (Platform.OS === 'ios') {
-                                                            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                                                        }
-                                                        setShowClientDropdown(true);
-                                                    }}
-                                                    activeOpacity={0.7}
-                                                >
-                                                    <Ionicons name="pencil" size={16} color="#10B981" />
-                                                    <Text style={styles.changeClientText}>Ubah</Text>
-                                                </TouchableOpacity>
-                                            </View>
-
-                                            {selectedClient.address && (
-                                                <View style={styles.selectedClientAddress}>
-                                                    <View style={styles.addressIconWrapper}>
-                                                        <Ionicons name="location" size={16} color="#10B981" />
+                                            <Animated.View
+                                                style={[
+                                                    styles.selectedClientCard,
+                                                    {
+                                                        opacity: fadeAnim,
+                                                        transform: [{ scale: fadeAnim }],
+                                                    },
+                                                ]}
+                                            >
+                                                <View style={styles.selectedClientHeader}>
+                                                    <View style={styles.clientIconWrapper}>
+                                                        <Ionicons name="business" size={18} color="#FFFFFF" />
                                                     </View>
-                                                    <Text style={styles.selectedClientAddressText}>
-                                                        {selectedClient.address}
-                                                    </Text>
+                                                    <View style={styles.clientInfoWrapper}>
+                                                        <Text style={styles.selectedClientLabel}>
+                                                            Klien yang kamu pilih
+                                                        </Text>
+                                                        <Text style={styles.selectedClientName}>{selectedClient.name}</Text>
+                                                    </View>
                                                 </View>
-                                            )}
 
-                                            <View style={styles.selectedClientFooter}>
-                                                <View style={styles.statusIndicator}>
-                                                    <View style={styles.statusDot} />
-                                                    <Text style={styles.statusText}>Lokasi Aktif</Text>
-                                                </View>
-                                            </View>
-                                        </Animated.View>
+                                                {selectedClient.address && (
+                                                    <View style={styles.selectedClientAddress}>
+
+                                                        <Text style={styles.selectedClientAddressText}>
+                                                            {selectedClient.address}
+                                                        </Text>
+                                                    </View>
+                                                )}
+
+                                                {/* <View style={styles.selectedClientFooter}>
+                                                    <View style={styles.statusIndicator}>
+                                                        <View style={styles.statusDot} />
+                                                        <Text style={styles.statusText}>Lokasi Aktif</Text>
+                                                    </View>
+                                                </View> */}
+                                            </Animated.View>
+                                        </TouchableOpacity>
                                     ) : (
                                         /* Client Dropdown - Only shown when no client selected */
                                         <ClientDropdown
@@ -763,54 +909,6 @@ const DetailKehadiran = () => {
                                             />
                                         </Animated.View>
                                     )}
-                                </Animated.View>
-                            )}
-                        </View>
-
-                        {/* Camera Section */}
-                        <View style={styles.cameraCard}>
-                            <View style={styles.cameraHeader}>
-                                <Ionicons name="camera" size={20} color="#4A90E2" />
-                                <Text style={styles.cameraTitle}>Foto Kehadiran</Text>
-                            </View>
-
-                            {!capturedImage ? (
-                                <Animated.View
-                                    style={{
-                                        opacity: fadeAnim,
-                                        transform: [{ translateY: slideAnim }],
-                                    }}
-                                >
-                                    <TouchableOpacity
-                                        style={styles.cameraButton}
-                                        onPress={triggerCamera}
-                                        activeOpacity={0.8}
-                                    >
-                                        <View style={styles.cameraIconContainer}>
-                                            <Ionicons name="camera" size={32} color="white" />
-                                        </View>
-                                        <Text style={styles.cameraButtonText}>Ambil Foto</Text>
-                                        <Text style={styles.cameraSubtext}>Tap untuk mengambil foto</Text>
-                                    </TouchableOpacity>
-                                </Animated.View>
-                            ) : (
-                                <Animated.View
-                                    style={{
-                                        opacity: fadeAnim,
-                                        transform: [{ scale: fadeAnim }],
-                                    }}
-                                >
-                                    <View style={styles.imagePreviewContainer}>
-                                        <Image source={{ uri: capturedImage }} style={styles.previewImage} />
-                                        <TouchableOpacity
-                                            style={styles.retakeButton}
-                                            onPress={triggerCamera}
-                                            activeOpacity={0.8}
-                                        >
-                                            <Ionicons name="camera" size={16} color="white" />
-                                            <Text style={styles.retakeButtonText}>Ambil Ulang</Text>
-                                        </TouchableOpacity>
-                                    </View>
                                 </Animated.View>
                             )}
                         </View>
@@ -886,7 +984,7 @@ const DetailKehadiran = () => {
                                     !reasonValidation.isValid ||
                                     reasonValidation.hasPunctuation)) ||
                             (isClientEnabled && !selectedClient)) &&
-                            styles.disabledButton,
+                        styles.disabledButton,
                     ]}
                     onPress={handleClockIn}
                     disabled={
@@ -912,13 +1010,15 @@ const DetailKehadiran = () => {
             </View>
 
             {/* Custom Toast for iOS */}
-            {Platform.OS === 'ios' && toast.show && (
-                <Animated.View style={styles.toastContainer}>
-                    <View style={styles.toastContent}>
-                        <Text style={styles.toastText}>{toast.message}</Text>
-                    </View>
-                </Animated.View>
-            )}
+            {
+                Platform.OS === 'ios' && toast.show && (
+                    <Animated.View style={styles.toastContainer}>
+                        <View style={styles.toastContent}>
+                            <Text style={styles.toastText}>{toast.message}</Text>
+                        </View>
+                    </Animated.View>
+                )
+            }
 
             <ReusableBottomPopUp
                 show={alert.show}
@@ -926,7 +1026,7 @@ const DetailKehadiran = () => {
                 message={alert.message}
                 onConfirm={() => setAlert((prev) => ({ ...prev, show: false }))}
             />
-        </View>
+        </View >
     );
 };
 
@@ -937,78 +1037,155 @@ const styles = StyleSheet.create({
     },
 
     // Enhanced Header Styles
-    headerWrapper: {
-        position: 'relative',
-        zIndex: 1000,
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 8 },
-        shadowOpacity: 0.15,
-        shadowRadius: 16,
-        elevation: 12,
-    },
-    headerGradient: {
-        paddingTop: Platform.OS === 'ios' ? 50 : 35,
-        paddingBottom: 25,
-        borderBottomLeftRadius: 28,
-        borderBottomRightRadius: 28,
-        position: 'relative',
+    backgroundBox: {
+        height: 325,
+        width: '100%',
+        position: 'absolute',
+        top: 0,
+        left: 0,
         overflow: 'hidden',
+    },
+    linearGradient: {
+        flex: 1,
+        borderBottomLeftRadius: 24,
+        borderBottomRightRadius: 24,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 20 },
+        shadowOpacity: 0.5,
+        shadowRadius: 12,
+        elevation: 8,
+        marginBottom: 30,
     },
     headerContainer: {
         flexDirection: 'row',
-        alignItems: 'center',
         justifyContent: 'space-between',
-        paddingHorizontal: 20,
-        paddingTop: 15,
-        position: 'relative',
-    },
-    backButtonWrapper: {
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.2,
-        shadowRadius: 4,
-        elevation: 3,
+        gap: 16,
+        alignItems: 'center',
+        paddingHorizontal: 24,
+        paddingTop: Platform.OS === 'ios' ? 0 : 40,
+        paddingBottom: 20,
     },
     backButton: {
-        width: 44,
-        height: 44,
-        borderRadius: 22,
-        backgroundColor: 'rgba(255, 255, 255, 0.25)',
-        alignItems: 'center',
+        width: 35,
+        height: 35,
+        borderRadius: 20,
+        backgroundColor: 'rgba(255, 255, 255, 0.2)',
         justifyContent: 'center',
+        alignItems: 'center',
         borderWidth: 1,
         borderColor: 'rgba(255, 255, 255, 0.3)',
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.1,
-        shadowRadius: 3,
-        elevation: 2,
     },
     headerText: {
-        fontSize: FONTS.size['3xl'],
-        fontWeight: '800',
+        fontSize: FONTS.size['4xl'],
         fontFamily: FONTS.family.bold,
         color: 'white',
-        flex: 1,
         textAlign: 'center',
-        letterSpacing: 0.5,
-        textShadowColor: 'rgba(0, 0, 0, 0.3)',
-        textShadowOffset: { width: 0, height: 2 },
-        textShadowRadius: 4,
+        letterSpacing: -0.8,
+        textShadowColor: 'rgba(0, 0, 0, 0.15)',
+        textShadowOffset: { width: 0, height: 1 },
+        textShadowRadius: 3,
     },
     placeholderView: {
         width: 44,
     },
 
-    // Header decorative elements
-    headerDecorations: {
-        position: 'absolute',
-        bottom: 10,
-        right: 30,
+    // Enhanced Header Styles
+    headerContent: {
+        alignItems: 'center',
+        justifyContent: 'center',
+        width: '100%',
+        paddingHorizontal: 20,
+    },
+    headerTitleWrapper: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+        gap: 12,
+        marginBottom: 8,
+    },
+    headerIconContainer: {
+        width: 40,
+        height: 40,
+        borderRadius: 20,
+        backgroundColor: 'rgba(255, 255, 255, 0.15)',
+        alignItems: 'center',
+        justifyContent: 'center',
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.1,
+        shadowRadius: 4,
+        elevation: 3,
+    },
+    statusIndicatorContent: {
         flexDirection: 'row',
         alignItems: 'center',
         gap: 8,
-        opacity: 0.3,
+    },
+    statusIndicatorBadge: {
+        width: 18,
+        height: 18,
+        borderRadius: 9,
+        backgroundColor: 'rgba(255, 255, 255, 0.2)',
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
+    headerDecorations: {
+        position: 'absolute',
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0,
+        overflow: 'hidden',
+    },
+    decorativeCircle1: {
+        position: 'absolute',
+        width: 120,
+        height: 120,
+        borderRadius: 60,
+        backgroundColor: 'rgba(255, 255, 255, 0.08)',
+        top: -30,
+        right: -20,
+    },
+    decorativeCircle2: {
+        position: 'absolute',
+        width: 80,
+        height: 80,
+        borderRadius: 40,
+        backgroundColor: 'rgba(255, 255, 255, 0.06)',
+        top: 40,
+        left: -25,
+    },
+    decorativeCircle3: {
+        position: 'absolute',
+        width: 60,
+        height: 60,
+        borderRadius: 30,
+        backgroundColor: 'rgba(255, 255, 255, 0.1)',
+        top: 80,
+        right: 30,
+    },
+    decorativeCircle4: {
+        position: 'absolute',
+        width: 60,
+        height: 60,
+        borderRadius: 30,
+        backgroundColor: 'rgba(255, 255, 255, 0.1)',
+        top: 150,
+        Left: -10,
+    },
+    decorativeCircle5: {
+        position: 'absolute',
+        width: 120,
+        height: 120,
+        borderRadius: 60,
+        backgroundColor: 'rgba(255, 255, 255, 0.08)',
+        top: 120,
+        left: 30,
+    },
+    mainContainer: {
+        flex: 1,
+        paddingHorizontal: 20,
+        gap: 24,
     },
     decorationDot: {
         width: 6,
@@ -1031,7 +1208,9 @@ const styles = StyleSheet.create({
         flex: 1,
     },
     scrollContent: {
-        paddingBottom: 100,
+        flexGrow: 1,
+        paddingTop: 20,
+        paddingBottom: 120,
     },
     content: {
         padding: 20,
@@ -1039,7 +1218,7 @@ const styles = StyleSheet.create({
     },
 
     // Time Card Styles
-    timeCard: {
+    timeLocationCard: {
         backgroundColor: 'white',
         borderRadius: 16,
         padding: 20,
@@ -1052,21 +1231,29 @@ const styles = StyleSheet.create({
         shadowRadius: 8,
         elevation: 4,
     },
+    timeLocationHeader: {
+        flexDirection: 'column',
+        gap: 16,
+    },
+    timeStatusContainer: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+    },
     timeContainer: {
         flexDirection: 'row',
         alignItems: 'center',
-        gap: 12,
+        gap: 8,
     },
     timeText: {
-        fontSize: FONTS.size['4xl'],
-        fontWeight: '700',
+        fontSize: FONTS.size['3xl'],
         fontFamily: FONTS.family.bold,
         color: '#1F2937',
     },
     lateStatusContainer: {
         flexDirection: 'row',
         alignItems: 'center',
-        backgroundColor: '#FEF2F2',
+        backgroundColor: '#ffddddff',
         paddingVertical: 6,
         paddingHorizontal: 12,
         borderRadius: 20,
@@ -1082,13 +1269,13 @@ const styles = StyleSheet.create({
         color: '#EF4444',
         fontWeight: '600',
         fontFamily: FONTS.family.semiBold,
-        fontSize: FONTS.size.sm,
+        fontSize: FONTS.size.xs,
     },
 
     // Location Card Styles
     locationCard: {
         backgroundColor: 'white',
-        borderRadius: 16,
+        borderRadius: 12,
         padding: 20,
         shadowColor: '#000',
         shadowOffset: { width: 0, height: 2 },
@@ -1101,6 +1288,11 @@ const styles = StyleSheet.create({
         borderLeftWidth: 4,
         borderLeftColor: '#10B981',
         backgroundColor: '#F0FDF4',
+        padding: 20,
+        borderRadius: 12,
+    },
+    locationContainer: {
+        flexDirection: 'column',
     },
     locationHeader: {
         flexDirection: 'row',
@@ -1136,8 +1328,7 @@ const styles = StyleSheet.create({
         letterSpacing: 0.5,
     },
     locationTitle: {
-        fontSize: FONTS.size.lg,
-        fontWeight: '600',
+        fontSize: FONTS.size.md,
         fontFamily: FONTS.family.semiBold,
         color: '#1F2937',
         flex: 1,
@@ -1147,10 +1338,9 @@ const styles = StyleSheet.create({
         gap: 4,
     },
     locationName: {
-        fontSize: FONTS.size.base,
+        fontSize: FONTS.size.sm,
         fontFamily: FONTS.family.medium,
         color: '#1F2937',
-        fontWeight: '500',
         lineHeight: 20,
     },
     coordinatesText: {
@@ -1160,7 +1350,12 @@ const styles = StyleSheet.create({
     },
     checkboxContainer: {
         gap: 8,
-        marginTop: 12,
+    },
+    checkboxTitle: {
+        fontSize: FONTS.size.md,
+        fontFamily: FONTS.family.semiBold,
+        color: '#1F2937',
+        marginBottom: 8,
     },
     checkboxItem: {
         backgroundColor: '#F8FAFC',
@@ -1233,14 +1428,13 @@ const styles = StyleSheet.create({
     },
     selectedClientLabel: {
         fontSize: FONTS.size.sm,
-        fontWeight: '600',
         fontFamily: FONTS.family.semiBold,
         color: '#10B981',
         textTransform: 'uppercase',
         letterSpacing: 0.8,
     },
     selectedClientName: {
-        fontSize: FONTS.size.xl,
+        fontSize: FONTS.size.md,
         fontWeight: '700',
         fontFamily: FONTS.family.bold,
         color: '#1F2937',
@@ -1293,7 +1487,7 @@ const styles = StyleSheet.create({
         marginTop: 2,
     },
     selectedClientAddressText: {
-        fontSize: FONTS.size.base,
+        fontSize: FONTS.size.sm,
         fontFamily: FONTS.family.medium,
         color: '#374151',
         flex: 1,
@@ -1321,7 +1515,6 @@ const styles = StyleSheet.create({
     },
     statusText: {
         fontSize: FONTS.size.sm,
-        fontWeight: '600',
         fontFamily: FONTS.family.semiBold,
         color: '#10B981',
     },
@@ -1422,11 +1615,9 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         alignItems: 'center',
         gap: 8,
-        marginBottom: 8,
     },
     cameraTitle: {
-        fontSize: FONTS.size.lg,
-        fontWeight: '600',
+        fontSize: FONTS.size.md,
         fontFamily: FONTS.family.semiBold,
         color: '#1F2937',
     },
@@ -1456,14 +1647,14 @@ const styles = StyleSheet.create({
         elevation: 6,
     },
     cameraButtonText: {
-        fontSize: FONTS.size.xl,
+        fontSize: FONTS.size.lg,
         fontWeight: '700',
         fontFamily: FONTS.family.bold,
         color: '#1F2937',
         marginTop: 4,
     },
     cameraSubtext: {
-        fontSize: FONTS.size.base,
+        fontSize: FONTS.size.sm,
         fontFamily: FONTS.family.medium,
         color: '#6B7280',
         fontWeight: '500',
@@ -1519,7 +1710,7 @@ const styles = StyleSheet.create({
         shadowOpacity: 0.1,
         shadowRadius: 8,
         elevation: 4,
-        gap: 16,
+        gap: 8,
         borderLeftWidth: 4,
         borderLeftColor: '#EF4444',
         borderWidth: 1,
@@ -1532,7 +1723,7 @@ const styles = StyleSheet.create({
         marginBottom: 4,
     },
     reasonTitle: {
-        fontSize: FONTS.size.lg,
+        fontSize: FONTS.size.md,
         fontWeight: '700',
         fontFamily: FONTS.family.bold,
         color: '#DC2626',
@@ -1542,7 +1733,8 @@ const styles = StyleSheet.create({
         borderWidth: 2,
         borderColor: '#FECACA',
         borderRadius: 12,
-        padding: 16,
+        paddingVertical: 8,
+        paddingHorizontal: 12,
         fontSize: FONTS.size.base,
         fontFamily: FONTS.family.regular,
         color: '#1F2937',
@@ -1594,10 +1786,6 @@ const styles = StyleSheet.create({
         fontWeight: '600',
         fontStyle: 'italic',
     },
-    validationContainer: {
-        marginTop: 8,
-    },
-
     // Bottom Button Styles
     bottomContainer: {
         position: 'absolute',

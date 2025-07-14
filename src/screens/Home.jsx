@@ -24,7 +24,7 @@ import { useEmployeeData, useDashboardData, useTasksData, useNotifications } fro
 // Components
 import { StatisticCard, StatisticSkeleton } from '../components/StatisticCard';
 import TaskCard from '../components/TaskCard';
-import NotificationIcon from '../components/NotificationIcon';
+import { NotificationIcon, NotificationIconSkeleton } from '../components/NotificationIcon';
 import ReusableBottomPopUp from '../components/ReusableBottomPopUp';
 import Shimmer from '../components/Shimmer';
 
@@ -164,6 +164,7 @@ const Home = () => {
 
     const navigation = useNavigation();
     const isLoading = dashboardLoading || tasksLoading;
+    // const isLoading = true;
 
     // Check access permissions
     const checkAccessPermission = useCallback(async () => {
@@ -364,31 +365,31 @@ const Home = () => {
 
     const statistics = dashboardData
         ? [
-              {
-                  description: 'Dalam Pengerjaan',
-                  value: `${dashboardData.total_projects_working_on_it} Projek`,
-                  color: '#FAA1A7',
-                  icon: 'monitor',
-              },
-              {
-                  description: 'Selesai',
-                  value: `${dashboardData.total_projects_complete} Projek`,
-                  color: '#3E84CF',
-                  icon: 'check-circle',
-              },
-              {
-                  description: 'Dalam Pengerjaan',
-                  value: `${dashboardData.total_tasks_working_on_it} Tugas`,
-                  color: '#DD9968',
-                  icon: 'rotate-cw',
-              },
-              {
-                  description: 'Selesai',
-                  value: `${dashboardData.total_tasks_completed} Tugas`,
-                  color: '#3AD665',
-                  icon: 'check-square',
-              },
-          ]
+            {
+                description: 'Dalam Pengerjaan',
+                value: `${dashboardData.total_projects_working_on_it} Projek`,
+                color: '#FAA1A7',
+                icon: 'monitor',
+            },
+            {
+                description: 'Selesai',
+                value: `${dashboardData.total_projects_complete} Projek`,
+                color: '#3E84CF',
+                icon: 'check-circle',
+            },
+            {
+                description: 'Dalam Pengerjaan',
+                value: `${dashboardData.total_tasks_working_on_it} Tugas`,
+                color: '#DD9968',
+                icon: 'rotate-cw',
+            },
+            {
+                description: 'Selesai',
+                value: `${dashboardData.total_tasks_completed} Tugas`,
+                color: '#3AD665',
+                icon: 'check-square',
+            },
+        ]
         : [];
 
     // Notification navigation handler with haptic feedback
@@ -429,7 +430,7 @@ const Home = () => {
                 ]}
             >
                 <LinearGradient
-                    colors={['#0E509E', '#5FA0DC', '#9FD2FF']}
+                    colors={['#4A90E2', '#357ABD', '#2E5984']}
                     style={styles.headerGradient}
                     start={{ x: 0, y: 0 }}
                     end={{ x: 1, y: 1 }}
@@ -477,7 +478,15 @@ const Home = () => {
                         </Text>
                     </Animated.View>
                     <View style={styles.headerRight}>
-                        <NotificationIcon unreadCount={unreadCount} onPress={handleNotificationPress} />
+                        {isLoading ? (
+                            <>
+                                <NotificationIconSkeleton />
+                            </>
+                        ) : (
+                            <>
+                                <NotificationIcon unreadCount={unreadCount} onPress={handleNotificationPress} />
+                            </>
+                        )}
                         <TouchableOpacity
                             style={{
                                 alignItems: 'center',
@@ -686,14 +695,16 @@ const styles = StyleSheet.create({
     },
     scrollViewContent: {
         flexGrow: 1,
+        paddingTop: 20,
         paddingBottom: 120,
     },
     headerWrapper: {
         position: 'absolute',
         top: 0,
         left: 0,
-        right: 0,
+        width: '100%',
         height: HEADER_HEIGHT,
+        overflow: 'hidden',
     },
     headerGradient: {
         flex: 1,
@@ -705,19 +716,6 @@ const styles = StyleSheet.create({
         shadowRadius: 12,
         elevation: 8,
         marginBottom: 30,
-    },
-    headerDecorativeElements: {
-        position: 'absolute',
-        top: 0,
-        left: 0,
-        right: 0,
-        bottom: 0,
-        overflow: 'hidden',
-    },
-    decorativeCircle: {
-        position: 'absolute',
-        borderRadius: 50,
-        backgroundColor: 'rgba(255, 255, 255, 0.08)',
     },
     headerDecorations: {
         position: 'absolute',
@@ -734,14 +732,14 @@ const styles = StyleSheet.create({
         borderRadius: 60,
         backgroundColor: 'rgba(255, 255, 255, 0.08)',
         top: -30,
-        right: -20,
+        right: -50,
     },
     decorativeCircle2: {
         position: 'absolute',
         width: 80,
         height: 80,
         borderRadius: 40,
-        backgroundColor: 'rgba(255, 255, 255, 0.06)',
+        backgroundColor: 'rgba(255, 255, 255, 0.02)',
         top: 40,
         left: -25,
     },
@@ -751,7 +749,7 @@ const styles = StyleSheet.create({
         height: 60,
         borderRadius: 30,
         backgroundColor: 'rgba(255, 255, 255, 0.1)',
-        top: 80,
+        top: 100,
         right: 30,
     },
     decorativeCircle4: {
@@ -865,7 +863,6 @@ const styles = StyleSheet.create({
         letterSpacing: -0.5,
     },
     lowerContainer: {
-        marginTop: 8,
         paddingHorizontal: 16,
     },
     sectionHeader: {

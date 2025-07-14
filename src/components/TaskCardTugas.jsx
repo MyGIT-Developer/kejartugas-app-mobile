@@ -1,6 +1,7 @@
 import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { getStatusBadgeColor } from '../utils/taskUtils';
+import { FONTS } from '../constants/fonts';
 
 const TaskCard = React.memo(({ task, onProjectDetailPress = () => {}, onTaskDetailPress = () => {} }) => {
     const {
@@ -63,7 +64,7 @@ const styles = StyleSheet.create({
         flex: 1,
     },
     taskTitle: {
-        fontSize: 16,
+        fontSize: FONTS.size.md,
         color: '#000',
         marginBottom: 5,
         lineHeight: 22,
@@ -103,7 +104,7 @@ const styles = StyleSheet.create({
     detailButtonText: {
         color: '#444444',
         marginTop: 20,
-        fontSize: 14,
+        fontSize: FONTS.size.sm,
         fontFamily: 'Poppins-Regular',
     },
     projectButton: {
@@ -114,7 +115,7 @@ const styles = StyleSheet.create({
     },
     projectButtonText: {
         color: 'white',
-        fontSize: 14,
+        fontSize: FONTS.size.sm,
         fontFamily: 'Poppins-Regular',
     },
 });

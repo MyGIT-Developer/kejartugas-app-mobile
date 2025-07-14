@@ -18,7 +18,7 @@ const SCREEN_OPTIONS = {
     Home: { component: Home, icon: HomeIcon },
     Kehadiran: { component: Kehadiran, icon: KehadiranIcon },
     Tugas: { component: Tugas, icon: TugasIcon },
-    Project: { component: ProjectDashboard, icon: ProjectIcon },
+    // Project: { component: ProjectDashboard, icon: ProjectIcon },
     // Profile: { component: Profile, icon: ProfileIcon },
 };
 

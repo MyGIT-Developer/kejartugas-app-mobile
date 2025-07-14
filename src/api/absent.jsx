@@ -26,14 +26,19 @@ export const markAbsent = async (companyId, employeeId, note, attendance_image, 
 };
 
 // Function to get attendance details for an employee
-export const getAttendance = async (employeeId) => {
+export const getAttendance = async (employeeId, page = 1, limit = 10) => {
     try {
+        const token = await AsyncStorage.getItem('token');
         const response = await apiService.get(`/attendance/${employeeId}`, {
             headers: {
-                Authorization: `Bearer ${await AsyncStorage.getItem('token')}`,
+                Authorization: `Bearer ${token}`,
+            },
+            params: {
+                page,
+                limit,
             },
         });
-        return response.data;
+        return response.data; // Should return { data: [...], pagination: {...} }
     } catch (error) {
         throw new Error(error.response?.data?.message || 'Fetching attendance failed');
     }
