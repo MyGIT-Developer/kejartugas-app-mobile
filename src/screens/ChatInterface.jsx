@@ -910,11 +910,7 @@ FORMAT RESPONS YANG BAIK (untuk pertanyaan terkait tugas):
                             onPress={handleSend}
                             disabled={!canSendMessage}
                         >
-                            <Ionicons
-                                name={sending ? 'hourglass-outline' : 'send'}
-                                size={20}
-                                color={isGeminiMode ? '#4285F4' : '#FFFFFF'}
-                            />
+                            <Ionicons name={sending ? 'hourglass-outline' : 'send'} size={20} color="#FFFFFF" />
                         </TouchableOpacity>
                     </View>
 
@@ -1168,6 +1164,8 @@ const styles = StyleSheet.create({
         paddingVertical: 12,
         borderTopWidth: 1,
         borderTopColor: '#E5E7EB',
+        borderTopLeftRadius: 20,
+        borderTopRightRadius: 20,
         elevation: 8,
         shadowColor: '#000',
         shadowOffset: { width: 0, height: -2 },
@@ -1175,16 +1173,18 @@ const styles = StyleSheet.create({
         shadowRadius: 4,
     },
     geminiInputContainer: {
-        backgroundColor: '#E8F0FE',
-        borderTopColor: '#4285F4',
-        borderTopWidth: 3,
-        elevation: 12,
-        shadowColor: '#4285F4',
-        shadowOpacity: 0.2,
+        backgroundColor: '#FFFFFF',
+        borderTopColor: '#E5E7EB',
+        borderTopWidth: 1,
+        borderTopLeftRadius: 20,
+        borderTopRightRadius: 20,
+        elevation: 8,
+        shadowColor: '#000',
+        shadowOpacity: 0.1,
     },
     inputWrapper: {
         flexDirection: 'row',
-        alignItems: 'flex-end',
+        alignItems: 'center',
         gap: 12,
         justifyContent: 'space-between',
     },
@@ -1203,14 +1203,14 @@ const styles = StyleSheet.create({
         minHeight: 44,
     },
     geminiInput: {
-        borderColor: '#4285F4',
+        borderColor: '#D1D5DB',
         backgroundColor: '#FFFFFF',
-        borderWidth: 2,
-        shadowColor: '#4285F4',
-        shadowOffset: { width: 0, height: 2 },
+        borderWidth: 1,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 1 },
         shadowOpacity: 0.1,
-        shadowRadius: 4,
-        elevation: 3,
+        shadowRadius: 2,
+        elevation: 1,
     },
     sendButton: {
         backgroundColor: '#4A90E2',
@@ -1224,15 +1224,12 @@ const styles = StyleSheet.create({
         shadowOffset: { width: 0, height: 1 },
         shadowOpacity: 0.2,
         shadowRadius: 2,
-        alignSelf: 'flex-end',
     },
     geminiSendButton: {
-        backgroundColor: '#4285F4',
-        elevation: 6,
-        shadowColor: '#4285F4',
-        shadowOpacity: 0.35,
-        transform: [{ scale: 1.05 }],
-        alignSelf: 'flex-end',
+        backgroundColor: '#4A90E2',
+        elevation: 2,
+        shadowColor: '#000',
+        shadowOpacity: 0.2,
     },
     characterCount: {
         fontSize: 12,
