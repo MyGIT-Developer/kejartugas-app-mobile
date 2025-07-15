@@ -830,32 +830,6 @@ FORMAT RESPONS YANG BAIK (untuk pertanyaan terkait tugas):
             {/* Enhanced Header */}
             <View style={[styles.header, isGeminiMode && styles.geminiHeader]}>{renderHeader}</View>
 
-            {/* Gemini Mode Indicator */}
-            {isGeminiMode && (
-                <Animated.View
-                    style={[
-                        styles.geminiModeIndicator,
-                        {
-                            opacity: geminiModeAnim,
-                            transform: [
-                                {
-                                    translateY: geminiModeAnim.interpolate({
-                                        inputRange: [0, 1],
-                                        outputRange: [-40, 0],
-                                    }),
-                                },
-                            ],
-                        },
-                    ]}
-                >
-                    <Ionicons name="bulb" size={16} color="#4285F4" />
-                    <Text style={styles.geminiModeText}>Mode Gemini AI Aktif</Text>
-                    <TouchableOpacity onPress={toggleGeminiMode} style={styles.geminiModeCloseButton}>
-                        <Ionicons name="close-circle" size={18} color="#6B7280" />
-                    </TouchableOpacity>
-                </Animated.View>
-            )}
-
             {/* Messages List */}
             <KeyboardAvoidingView
                 style={[styles.messagesContainer, isGeminiMode && styles.geminiMessagesContainer]}
@@ -1062,34 +1036,6 @@ const styles = StyleSheet.create({
         borderWidth: 1,
         borderColor: 'rgba(255, 255, 255, 0.3)',
     },
-    geminiModeIndicator: {
-        backgroundColor: '#E8F0FE',
-        borderBottomWidth: 2,
-        borderBottomColor: '#4285F4',
-        paddingHorizontal: 16,
-        paddingVertical: 10,
-        flexDirection: 'row',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        shadowColor: '#4285F4',
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.1,
-        shadowRadius: 4,
-        elevation: 3,
-    },
-    geminiModeText: {
-        fontSize: 13,
-        fontFamily: FONTS.semiBold,
-        color: '#4285F4',
-        flex: 1,
-        textAlign: 'center',
-        marginLeft: 20,
-    },
-    geminiModeCloseButton: {
-        padding: 6,
-        borderRadius: 12,
-        backgroundColor: 'rgba(107, 114, 128, 0.1)',
-    },
     messagesContainer: {
         flex: 1,
     },
@@ -1240,6 +1186,7 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         alignItems: 'flex-end',
         gap: 12,
+        justifyContent: 'space-between',
     },
     input: {
         flex: 1,
@@ -1277,6 +1224,7 @@ const styles = StyleSheet.create({
         shadowOffset: { width: 0, height: 1 },
         shadowOpacity: 0.2,
         shadowRadius: 2,
+        alignSelf: 'flex-end',
     },
     geminiSendButton: {
         backgroundColor: '#4285F4',
@@ -1284,6 +1232,7 @@ const styles = StyleSheet.create({
         shadowColor: '#4285F4',
         shadowOpacity: 0.35,
         transform: [{ scale: 1.05 }],
+        alignSelf: 'flex-end',
     },
     characterCount: {
         fontSize: 12,
