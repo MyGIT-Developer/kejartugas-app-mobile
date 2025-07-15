@@ -26,7 +26,7 @@ export const markAbsent = async (companyId, employeeId, note, attendance_image, 
 };
 
 // Function to get attendance details for an employee
-export const getAttendance = async (employeeId, page = 1, limit = 10) => {
+export const getAttendance = async (employeeId, page = 1, limit = 50) => {
     try {
         const token = await AsyncStorage.getItem('token');
         const response = await apiService.get(`/attendance/${employeeId}`, {

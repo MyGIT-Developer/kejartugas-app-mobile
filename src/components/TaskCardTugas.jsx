@@ -3,38 +3,37 @@ import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { getStatusBadgeColor } from '../utils/taskUtils';
 import { FONTS } from '../constants/fonts';
 
-const TaskCard = React.memo(({ task, onProjectDetailPress = () => {}, onTaskDetailPress = () => {} }) => {
+const TaskCard = React.memo(({ task, onProjectDetailPress = () => { }, onTaskDetailPress = () => { } }) => {
     const {
         color: badgeColor,
         textColor: badgeTextColor,
         label: displayStatus,
     } = getStatusBadgeColor(task.task_status, task.end_date);
 
-    const renderStatusOrDays = () => {
-        return (
+    return (
+        <View style={styles.taskCard}>
+            <View style={styles.header}>
+                <View style={styles.taskInfo}>
+                    <Text style={styles.taskTitle} numberOfLines={2}>
+                        {task.task_name}
+                    </Text>
+                    <Text style={styles.taskSubtitle} numberOfLines={1}>
+                        {task.project_name}
+                    </Text>
+                </View>
+            </View>
+
             <View style={[styles.badge, { backgroundColor: badgeColor }]}>
-                <Text style={[styles.badgeText, { color: badgeTextColor }]} numberOfLines={1} ellipsizeMode="tail">
+                <Text style={[styles.badgeText, { color: badgeTextColor }]}>
                     {displayStatus}
                 </Text>
             </View>
-        );
-    };
 
-    return (
-        <View style={styles.taskCard}>
-            <View style={styles.taskContent}>
-                <Text style={styles.taskTitle} numberOfLines={2} ellipsizeMode="tail">
-                    {task.task_name}
-                </Text>
-                <Text style={styles.taskSubtitle} numberOfLines={1} ellipsizeMode="tail">
-                    {task.project_name}
-                </Text>
-            </View>
-            {renderStatusOrDays()}
             <View style={styles.buttonContainer}>
-                <TouchableOpacity style={styles.detailButton} onPress={() => onTaskDetailPress(task)}>
-                    <Text style={styles.detailButtonText}>Lihat detail {'>'}</Text>
+                <TouchableOpacity onPress={() => onTaskDetailPress(task)}>
+                    <Text style={styles.detailButtonText}>Lihat Detail &gt;</Text>
                 </TouchableOpacity>
+
                 <TouchableOpacity style={styles.projectButton} onPress={() => onProjectDetailPress(task)}>
                     <Text style={styles.projectButtonText}>Detail Proyek</Text>
                 </TouchableOpacity>
@@ -59,63 +58,62 @@ const styles = StyleSheet.create({
         elevation: 5,
         marginHorizontal: 10
     },
-    taskContent: {
+    header: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'flex-start',
+        marginBottom: 12,
+    },
+    taskInfo: {
         flex: 1,
+        paddingRight: 12,
     },
     taskTitle: {
         fontSize: FONTS.size.md,
-        color: '#000',
-        marginBottom: 5,
-        lineHeight: 22,
+        color: '#111',
         fontFamily: 'Poppins-Bold',
+        marginBottom: 4,
     },
     taskSubtitle: {
         fontSize: 14,
         color: '#666',
-        marginBottom: 5,
         fontFamily: 'Poppins-Regular',
     },
     badge: {
-        paddingHorizontal: 8,
+        alignSelf: 'flex-start',
+        paddingHorizontal: 10,
         paddingVertical: 4,
         borderRadius: 12,
-        position: 'absolute',
-        bottom: 50,
-        left: 10,
     },
     badgeText: {
-        color: '#333',
         fontSize: 12,
-        fontFamily: 'Poppins-Regular',
+        fontFamily: 'Poppins-Medium',
+        letterSpacing: -0.5,
     },
     buttonContainer: {
         flexDirection: 'row',
         justifyContent: 'space-between',
+        width: '100%',
         alignItems: 'center',
-        position: 'absolute',
-        bottom: 15,
-        left: 15,
-        right: 15,
-    },
-    detailButton: {
-        // No additional styles needed
+        marginTop: 4,
     },
     detailButtonText: {
-        color: '#444444',
-        marginTop: 20,
+        color: '#444',
         fontSize: FONTS.size.sm,
         fontFamily: 'Poppins-Regular',
+        letterSpacing: -0.5,
     },
     projectButton: {
-        backgroundColor: '#3498db',
+        backgroundColor: '#357ABD',
         paddingVertical: 6,
-        paddingHorizontal: 12,
-        borderRadius: 15,
+        paddingHorizontal: 14,
+        borderRadius: 20,
     },
     projectButtonText: {
-        color: 'white',
+        color: '#fff',
         fontSize: FONTS.size.sm,
         fontFamily: 'Poppins-Regular',
+        letterSpacing: -0.5,
     },
 });
 

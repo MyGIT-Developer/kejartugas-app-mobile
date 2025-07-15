@@ -114,6 +114,7 @@ export default function App() {
                 <NavigationContainer ref={navigationRef}>
                     <RootNavigator />
                 </NavigationContainer>
+                
             </PaperProvider>
         </ErrorBoundary>
     );

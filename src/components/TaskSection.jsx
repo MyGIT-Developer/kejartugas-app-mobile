@@ -24,9 +24,18 @@ const TaskSection = ({
         return 'inbox';
     };
 
+    const getIconColor = (sectionTitle) => {
+        const lowerTitle = sectionTitle.toLowerCase();
+        if (lowerTitle.includes('pengerjaan')) return '#FF9500'; // Orange
+        if (lowerTitle.includes('peninjauan')) return '#007AFF'; // Blue
+        if (lowerTitle.includes('ditolak')) return '#FF3B30'; // Red
+        if (lowerTitle.includes('ditunda')) return '#FFCC00'; // Yellow
+        if (lowerTitle.includes('selesai')) return '#34C759'; // Green
+        return '#8E8E93'; // Default gray
+    };
+
     return (
         <View style={styles.section}>
-            <Text style={styles.sectionTitle} onPress={onSeeAllPress}>lihat detail</Text>
             {isLoading ? (
                 <ScrollView
                     showsHorizontalScrollIndicator={false}
@@ -44,8 +53,11 @@ const TaskSection = ({
                 <ScrollView
                     showsHorizontalScrollIndicator={false}
                     contentContainerStyle={styles.scrollViewContent}
+                    style={{ marginBottom: 150, width: '100%' }}
                 >
-                    {tasks.map((task, index) => (
+                    {tasks
+                    .slice(0, 5)
+                    .map((task, index) => (
                         <View key={index} style={index === 0 ? styles.firstCardContainer : null}>
                             <TaskCardTugas
                                 task={task}
@@ -54,11 +66,17 @@ const TaskSection = ({
                             />
                         </View>
                     ))}
+
+                    <View style={styles.sectionHeader}>
+                    <TouchableOpacity onPress={onSeeAllPress} style={styles.seeAllTextButton}>
+                        <Text style={styles.seeAllText}>Lihat Semua Detail ({tasks.length})</Text>
+                    </TouchableOpacity>
+                    </View>
                 </ScrollView>
             ) : (
                 <View style={styles.noTasksBox}>
                     <View style={styles.noTasksIcon}>
-                        <Feather name={getIconForSection(title)} size={40} color="#8E8E93" />
+                        <Feather name={getIconForSection(title)} size={40} color={getIconColor(title)} />
                     </View>
                     <Text style={styles.noTasksText}>Tidak ada tugas {title.toLowerCase()}</Text>
                     <Text style={styles.noTasksSubtext}>
@@ -72,19 +90,15 @@ const TaskSection = ({
 
 const styles = StyleSheet.create({
     section: {
-        paddingBottom: 150,
         justifyContent: 'center',
         alignItems: 'center',
-        width: '100%',
+        gap: 8,
     },
     sectionHeader: {
-        flexDirection: 'row',
-        justifyContent: 'space-between',
+        paddingHorizontal: 16,
         alignItems: 'center',
-        paddingVertical: 6,
-        marginBottom: 10,
-        borderBottomWidth: 1,
-        borderBottomColor: '#F2F2F7',
+        justifyContent: 'center',
+        flexDirection: 'row',
     },
     sectionTitle: {
         fontSize: FONTS.size.md,
@@ -92,14 +106,25 @@ const styles = StyleSheet.create({
         color: '#1C1C1E',
         letterSpacing: 0.2,
     },
+    seeAllTextButton: {
+        justifyContent: 'center',
+        alignItems: 'center',
+        marginHorizontal:0,
+        paddingHorizontal: 20,
+        paddingVertical: 8,
+        borderRadius: 4,
+        backgroundColor: '#357ABD',
+        width: '100%',
+    },
     seeAllText: {
-        color: '#0E509E',
+        color: '#fff',
         fontFamily: 'Poppins-Medium',
-        fontSize: 14,
-        letterSpacing: 0.1,
+        fontSize: FONTS.size.md,
+        letterSpacing: -0.5,
     },
     scrollViewContent: {
-        width: '100%',
+        gap: 10,
+        paddingBottom: 75,
     },
     firstCardContainer: {
         paddingLeft: 0,

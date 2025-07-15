@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import {
     View,
     Text,
@@ -43,6 +43,8 @@ const GRADIENT_COLORS = ['#0E509E', '#5FA0DC', '#9FD2FF'];
 
 const Tugas = () => {
     const pagerRef = useRef(null);
+    const tabScrollRef = useRef(null);
+    const tabItemRefs = useRef([]);
 
     // State for modals and UI
     const [modalVisible, setModalVisible] = useState(false);
@@ -442,7 +444,9 @@ const Tugas = () => {
                                         ],
                                     },
                                 ]}
-                            >Tugas Saya</Animated.Text>
+                            >
+                                Tugas Saya
+                            </Animated.Text>
                         </View>
                         <Text style={styles.headerSubtitle}>Kelola dan pantau semua tugas Anda</Text>
                     </View>
@@ -471,10 +475,12 @@ const Tugas = () => {
                                     horizontal
                                     showsHorizontalScrollIndicator={false}
                                     contentContainerStyle={styles.tabHeader}
+                                    ref={tabScrollRef}
                                 >
                                     {taskTabs.map((tab, index) => (
                                         <Pressable
                                             key={tab.key}
+                                            ref={(ref) => (tabItemRefs.current[index] = ref)}
                                             style={[
                                                 styles.tabButton,
                                                 activeTab === tab.key && styles.activeTabButton,
@@ -497,27 +503,38 @@ const Tugas = () => {
                                 </ScrollView>
 
                                 {/* Swipeable Content */}
-                                <PagerView
-                                    style={{ flex: 1, height: 'auto' }}
+
+                                <PagerView style={{ minHeight: 500, }}
                                     initialPage={taskTabs.findIndex(t => t.key === activeTab)}
                                     onPageSelected={(e) => {
                                         const index = e.nativeEvent.position;
-                                        setActiveTab(taskTabs[index].key);
+                                        const key = taskTabs[index].key;
+                                        setActiveTab(key);
+
+                                        // Scroll tab header to active tab
+                                        tabItemRefs.current[index]?.measureLayout(
+                                            tabScrollRef.current,
+                                            (x) => {
+                                                tabScrollRef.current?.scrollTo({ x: x - 16, animated: true }); // adjust offset if needed
+                                            },
+                                            (error) => console.warn("measure error", error)
+                                        );
                                     }}
                                     ref={pagerRef}
                                 >
-                                    {taskTabs.map((tab) => (
-                                        <View key={tab.key} style={{ flex: 1, padding: 16 }}>
-                                            <TaskSection
-                                                title={tab.label}
-                                                tasks={getCombinedTasks(tab.key)}
-                                                isLoading={isLoading}
-                                                onProjectDetailPress={handleProjectDetailPress}
-                                                onTaskDetailPress={handleTaskDetailPress}
-                                                onSeeAllPress={() => handleSeeAllPress(tab.label, tab.key)}
-                                            />
-                                        </View>
-                                    ))}
+                                    {taskTabs
+                                        .map((tab) => (
+                                            <View key={tab.key} style={{}}>
+                                                <TaskSection
+                                                    title={tab.label}
+                                                    tasks={getCombinedTasks(tab.key)}
+                                                    isLoading={isLoading}
+                                                    onProjectDetailPress={handleProjectDetailPress}
+                                                    onTaskDetailPress={handleTaskDetailPress}
+                                                    onSeeAllPress={() => handleSeeAllPress(tab.label, tab.key)}
+                                                />
+                                            </View>
+                                        ))}
                                 </PagerView>
                             </>
                         )}
@@ -623,13 +640,13 @@ const styles = StyleSheet.create({
         textShadowRadius: 3,
     },
     headerSubtitle: {
-        fontSize: calculateFontSize(13),
-        fontFamily: 'Poppins-Regular',
+        fontSize: FONTS.size.md,
+        fontFamily: FONTS.family.regular,
         color: 'rgba(255, 255, 255, 0.85)',
         textAlign: 'center',
         marginTop: 4,
-        letterSpacing: 0.3,
-        lineHeight: calculateFontSize(18),
+        letterSpacing: 0.2,
+        lineHeight: 18,
     },
     headerTitleWrapper: {
         flexDirection: 'row',
@@ -726,16 +743,18 @@ const styles = StyleSheet.create({
         paddingHorizontal: 12,
     },
     activeTabButton: {
-        borderBottomColor: '#2563EB',
+        borderBottomColor: '#357ABD',
         borderBottomWidth: 2,
     },
     tabLabel: {
         fontSize: 14,
         color: '#64748B',
+        fontFamily: FONTS.family.medium,
+        letterSpacing: -0.5,
     },
     activeTabLabel: {
-        color: '#2563EB',
-        fontWeight: '600',
+        color: '#357ABD',
+        fontFamily: FONTS.family.semiBold,
     },
 
     // Loading state styles
