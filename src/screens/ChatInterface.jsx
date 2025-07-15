@@ -400,7 +400,9 @@ const ChatInterface = ({ route, navigation }) => {
                     input.toLowerCase().includes('yes')
                 ) {
                     setWaitingForYesNo(false);
-                    const prompt = `Kamu adalah asisten AI bernama Gemini yang KHUSUS membantu dengan tugas "${taskDetails.title}".
+                    const prompt = `Kamu adalah asisten AI bernama Gemini yang KHUSUS membantu dengan tugas "${
+                        taskDetails.title
+                    }".
 
 ${taskDetails.subtitle ? `Konteks tambahan: ${taskDetails.subtitle}` : ''}
 
@@ -489,7 +491,9 @@ Pastikan semua poin di atas spesifik untuk tugas "${taskDetails.title}" dan buka
                 console.log('Trying to call Gemini API for regular conversation...');
 
                 // Create a more contextual prompt for better AI responses
-                const contextualPrompt = `Kamu adalah asisten AI bernama Gemini yang KHUSUS membantu dalam tugas "${taskDetails.title}" ${taskDetails.subtitle ? `dengan konteks: ${taskDetails.subtitle}` : ''}.
+                const contextualPrompt = `Kamu adalah asisten AI bernama Gemini yang KHUSUS membantu dalam tugas "${
+                    taskDetails.title
+                }" ${taskDetails.subtitle ? `dengan konteks: ${taskDetails.subtitle}` : ''}.
 
 Pertanyaan user: "${input}"
 
@@ -800,7 +804,6 @@ FORMAT RESPONS YANG BAIK (untuk pertanyaan terkait tugas):
                 </TouchableOpacity>
                 <View style={styles.headerTextContainer}>
                     <Text style={styles.headerTitle}>{headerTitle}</Text>
-                    <Text style={styles.headerSubtitle}>{headerSubtitle}</Text>
                 </View>
                 <TouchableOpacity
                     onPress={toggleGeminiMode}
@@ -814,7 +817,7 @@ FORMAT RESPONS YANG BAIK (untuk pertanyaan terkait tugas):
                 </TouchableOpacity>
             </LinearGradient>
         );
-    }, [isGeminiMode, headerTitle, headerSubtitle, handleBackPress, toggleGeminiMode]);
+    }, [isGeminiMode, headerTitle, handleBackPress, toggleGeminiMode]);
 
     return (
         <SafeAreaView style={[styles.container, isGeminiMode && styles.geminiContainer]}>
@@ -1012,17 +1015,22 @@ const styles = StyleSheet.create({
         shadowOffset: { width: 0, height: 2 },
         shadowOpacity: 0.1,
         shadowRadius: 4,
+        borderBottomLeftRadius: 20,
+        borderBottomRightRadius: 20,
+        overflow: 'hidden',
     },
     geminiHeader: {
         backgroundColor: '#4285F4',
         elevation: 6,
         shadowOpacity: 0.15,
+        borderBottomLeftRadius: 25,
+        borderBottomRightRadius: 25,
     },
     headerContent: {
         flexDirection: 'row',
         alignItems: 'center',
         paddingHorizontal: 16,
-        paddingVertical: 12,
+        paddingVertical: 16,
         minHeight: 60,
     },
     backButton: {
@@ -1033,17 +1041,13 @@ const styles = StyleSheet.create({
     },
     headerTextContainer: {
         flex: 1,
+        justifyContent: 'center',
     },
     headerTitle: {
         fontSize: 18,
         fontFamily: FONTS.semiBold,
         color: '#FFFFFF',
-        marginBottom: 2,
-    },
-    headerSubtitle: {
-        fontSize: 14,
-        fontFamily: FONTS.regular,
-        color: 'rgba(255, 255, 255, 0.8)',
+        textAlign: 'center',
     },
     geminiButton: {
         marginLeft: 16,
