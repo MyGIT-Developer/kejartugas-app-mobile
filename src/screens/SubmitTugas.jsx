@@ -318,8 +318,8 @@ const styles = StyleSheet.create({
         fontFamily: 'Poppins-Medium',
     },
     header: {
-        paddingTop: Platform.OS === 'ios' ? 50 : 40,
-        paddingBottom: 20,
+        paddingTop: Platform.OS === 'ios' ? 50 : 30,
+        paddingBottom: 30,
         paddingHorizontal: 20,
         shadowColor: '#000',
         shadowOffset: { width: 0, height: 4 },

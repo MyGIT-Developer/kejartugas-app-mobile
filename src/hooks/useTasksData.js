@@ -25,7 +25,7 @@ export const useTasksData = () => {
     const fetchTasks = useCallback(async () => {
         setRefreshing(true);
         setError(null);
-
+        setIsLoading(true);
         try {
             const employeeId = await AsyncStorage.getItem('employeeId');
             if (!employeeId) {

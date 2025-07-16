@@ -166,7 +166,7 @@ const TaskCard = ({ projectName, tasks, onTaskPress }) => {
     };
 
     const getProjectProgress = () => {
-        const completedTasks = tasks.filter(task => task.task_status === 'completed').length;
+        const completedTasks = tasks.filter((task) => task.task_status === 'completed').length;
         return tasks.length > 0 ? (completedTasks / tasks.length) * 100 : 0;
     };
 
@@ -175,7 +175,7 @@ const TaskCard = ({ projectName, tasks, onTaskPress }) => {
             {/* Project Header with improved layout */}
             <View style={styles.projectHeader}>
                 <View style={styles.projectTitleSection}>
-                    <TouchableOpacity onPress={() => setIsExpanded(prev => !prev)}>
+                    <TouchableOpacity onPress={() => setIsExpanded((prev) => !prev)}>
                         <Text style={styles.projectTitle} numberOfLines={2} ellipsizeMode="tail">
                             {projectName}
                         </Text>
@@ -190,9 +190,7 @@ const TaskCard = ({ projectName, tasks, onTaskPress }) => {
                     </LinearGradient>
                 </View>
                 <View style={styles.taskCountBadge}>
-                    <Text style={styles.taskCountText}>
-                        {tasks.length}
-                    </Text>
+                    <Text style={styles.taskCountText}>{tasks.length}</Text>
                     <Text style={styles.taskCountLabel}>Tugas</Text>
                 </View>
             </View>
@@ -239,9 +237,7 @@ const TaskCard = ({ projectName, tasks, onTaskPress }) => {
                         onPress={() => setIsExpanded(false)}
                         activeOpacity={0.7}
                     >
-                        <Text style={styles.showMoreButtonText}>
-                            Tutup Detail Proyek
-                        </Text>
+                        <Text style={styles.showMoreButtonText}>Tutup Detail Proyek</Text>
                         <Ionicons name="chevron-up" size={18} color="#4A90E2" />
                     </TouchableOpacity>
                 </View>
@@ -270,16 +266,24 @@ const TaskCard = ({ projectName, tasks, onTaskPress }) => {
             </View>
 
             {/* Show more tasks button */}
-            <TouchableOpacity
-                style={styles.showMoreButton}
-                onPress={() => setShowAllTasks(prev => !prev)}
-                activeOpacity={0.7}
-            >
-                <Text style={styles.showMoreButtonText}>
-                    { showAllTasks === true ?  `Tutup Detail`: `Lihat ${tasks.length - 3} tugas lainnya`}
-                </Text>
-                <Ionicons name={showAllTasks === true ? "chevron-up" : "chevron-down"} size={18} color="#4A90E2" />
-            </TouchableOpacity>
+            {tasks.length > 3 && (
+                <TouchableOpacity
+                    style={styles.showMoreButton}
+                    onPress={() => setShowAllTasks((prev) => !prev)}
+                    activeOpacity={0.7}
+                >
+                    <Text style={styles.showMoreButtonText}>
+                        {tasks.length > 3
+                            ? showAllTasks
+                                ? 'Tutup Detail'
+                                : `Lihat ${tasks.length - 3} tugas lainnya`
+                            : ''}
+                    </Text>
+                    {tasks.length > 3 && (
+                        <Ionicons name={showAllTasks ? 'chevron-up' : 'chevron-down'} size={18} color="#4A90E2" />
+                    )}
+                </TouchableOpacity>
+            )}
         </View>
     );
 };
@@ -788,7 +792,7 @@ const styles = StyleSheet.create({
         letterSpacing: -0.5,
     },
     tasksList: {
-        paddingTop: 16,
+        paddingVertical: 16,
         paddingHorizontal: 24,
     },
     taskItem: {
@@ -866,14 +870,13 @@ const styles = StyleSheet.create({
         fontWeight: '700',
         letterSpacing: -0.5,
     },
-
     showMoreButton: {
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'center',
         marginHorizontal: 24,
-        marginBottom: 12,
         paddingVertical: 12,
+        marginBottom: 24,
         backgroundColor: '#F0F9FF',
         borderRadius: 16,
         borderWidth: 1,
@@ -938,24 +941,6 @@ const styles = StyleSheet.create({
         shadowRadius: 12,
         elevation: 8,
         zIndex: 1000,
-    },
-    showMoreButton: {
-        backgroundColor: '#F8FAFC',
-        borderWidth: 1,
-        borderColor: '#E2E8F0',
-        paddingVertical: 8,
-        paddingHorizontal: 12,
-        borderRadius: 8,
-        marginTop: 6,
-        marginBottom: 6,
-        flexDirection: 'row',
-        alignItems: 'center',
-        justifyContent: 'center',
-        elevation: 1,
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 1 },
-        shadowOpacity: 0.04,
-        shadowRadius: 1,
     },
     showMoreButtonText: {
         fontSize: FONTS.size.xs,

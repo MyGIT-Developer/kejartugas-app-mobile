@@ -21,7 +21,7 @@ import { MaterialIcons, Ionicons, Feather } from '@expo/vector-icons';
 import ReusableAlert from '../components/ReusableAlert';
 import AccessDenied from '../components/AccessDenied';
 import TaskSection from '../components/TaskSection';
-import TaskStatistics from '../components/TaskStatistics';
+import { TaskStatistics, TaskStatisticsSkeleton } from '../components/TaskStatistics';
 import { useNavigation } from '@react-navigation/native';
 import { useFonts } from '../utils/UseFonts';
 import { useTasksData } from '../hooks/useTasksData';
@@ -66,6 +66,8 @@ const Tugas = () => {
     const fontsLoaded = useFonts();
     const hasAccess = useAccessPermission('access_tasks');
     const { tasks, adhocTasks, isLoading, refreshing, error, fetchTasks, setError } = useTasksData();
+
+    console.log('is loading:', isLoading);
 
     // Tabs
     const taskTabs = [
@@ -228,7 +230,7 @@ const Tugas = () => {
         setSelectedTask(taskDetails);
 
         if (taskStatus === 'Completed') {
-            setModalType('success');
+            setModalType('default');
         } else {
             setModalType('default');
         }
@@ -389,9 +391,7 @@ const Tugas = () => {
             <StatusBar barStyle="light-content" backgroundColor="#0E509E" />
             {renderHeader()}
 
-            <View
-                style={styles.scrollViewContent}
-            >
+            <View style={styles.scrollViewContent}>
                 <Animated.View
                     style={[
                         styles.headerContainer,
@@ -453,7 +453,11 @@ const Tugas = () => {
                 </Animated.View>
 
                 <View style={styles.statisticsContainer}>
-                    <TaskStatistics tasks={tasks} adhocTasks={adhocTasks} isLoading={isLoading} />
+                    {isLoading && hasAnyTasks ? (
+                        <TaskStatisticsSkeleton />
+                    ) : (
+                        <TaskStatistics tasks={tasks} adhocTasks={adhocTasks} isLoading={isLoading} />
+                    )}
                 </View>
 
                 <View>
@@ -465,7 +469,7 @@ const Tugas = () => {
                                 </View>
                                 <Text style={styles.emptyStateTitle}>Belum Ada Tugas</Text>
                                 <Text style={styles.emptyStateSubtitle}>
-                                    Anda belum memiliki tugas yang diberikan.{"\n"}
+                                    Anda belum memiliki tugas yang diberikan.{'\n'}
                                     Tugas baru akan muncul di sini ketika tersedia.
                                 </Text>
                             </View>
@@ -481,10 +485,7 @@ const Tugas = () => {
                                         <Pressable
                                             key={tab.key}
                                             ref={(ref) => (tabItemRefs.current[index] = ref)}
-                                            style={[
-                                                styles.tabButton,
-                                                activeTab === tab.key && styles.activeTabButton,
-                                            ]}
+                                            style={[styles.tabButton, activeTab === tab.key && styles.activeTabButton]}
                                             onPress={() => {
                                                 setActiveTab(tab.key);
                                                 pagerRef.current?.setPage(index);
@@ -504,8 +505,9 @@ const Tugas = () => {
 
                                 {/* Swipeable Content */}
 
-                                <PagerView style={{ minHeight: 500, }}
-                                    initialPage={taskTabs.findIndex(t => t.key === activeTab)}
+                                <PagerView
+                                    style={{ minHeight: 500 }}
+                                    initialPage={taskTabs.findIndex((t) => t.key === activeTab)}
                                     onPageSelected={(e) => {
                                         const index = e.nativeEvent.position;
                                         const key = taskTabs[index].key;
@@ -517,24 +519,25 @@ const Tugas = () => {
                                             (x) => {
                                                 tabScrollRef.current?.scrollTo({ x: x - 16, animated: true }); // adjust offset if needed
                                             },
-                                            (error) => console.warn("measure error", error)
+                                            (error) => console.warn('measure error', error),
                                         );
                                     }}
                                     ref={pagerRef}
                                 >
-                                    {taskTabs
-                                        .map((tab) => (
-                                            <View key={tab.key} style={{}}>
-                                                <TaskSection
-                                                    title={tab.label}
-                                                    tasks={getCombinedTasks(tab.key)}
-                                                    isLoading={isLoading}
-                                                    onProjectDetailPress={handleProjectDetailPress}
-                                                    onTaskDetailPress={handleTaskDetailPress}
-                                                    onSeeAllPress={() => handleSeeAllPress(tab.label, tab.key)}
-                                                />
-                                            </View>
-                                        ))}
+                                    {taskTabs.map((tab) => (
+                                        <View key={tab.key} style={{}}>
+                                            <TaskSection
+                                                title={tab.label}
+                                                tasks={getCombinedTasks(tab.key)}
+                                                isLoading={isLoading}
+                                                onProjectDetailPress={handleProjectDetailPress}
+                                                onTaskDetailPress={handleTaskDetailPress}
+                                                onSeeAllPress={() => handleSeeAllPress(tab.label, tab.key)}
+                                                refreshing={refreshing}
+                                                onRefresh={handleRefresh}
+                                            />
+                                        </View>
+                                    ))}
                                 </PagerView>
                             </>
                         )}
@@ -542,24 +545,22 @@ const Tugas = () => {
                 </View>
             </View>
 
-            {
-                modalType === 'default' ? (
-                    <DraggableModalTask
-                        visible={draggableModalVisible}
-                        onClose={() => {
-                            setDraggableModalVisible(false);
-                            setSelectedTask(null);
-                        }}
-                        taskDetails={selectedTask || {}}
-                    />
-                ) : (
-                    <ReusableModalSuccess
-                        visible={draggableModalVisible}
-                        onClose={() => setDraggableModalVisible(false)}
-                        taskDetails={selectedTask || {}}
-                    />
-                )
-            }
+            {modalType === 'default' ? (
+                <DraggableModalTask
+                    visible={draggableModalVisible}
+                    onClose={() => {
+                        setDraggableModalVisible(false);
+                        setSelectedTask(null);
+                    }}
+                    taskDetails={selectedTask || {}}
+                />
+            ) : (
+                <ReusableModalSuccess
+                    visible={draggableModalVisible}
+                    onClose={() => setDraggableModalVisible(false)}
+                    taskDetails={selectedTask || {}}
+                />
+            )}
 
             <DetailProyekModal
                 visible={modalVisible}
@@ -576,7 +577,7 @@ const Tugas = () => {
                     setError(null);
                 }}
             />
-        </View >
+        </View>
     );
 };
 

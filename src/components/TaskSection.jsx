@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, TouchableOpacity, ScrollView, StyleSheet } from 'react-native';
+import { View, Text, TouchableOpacity, ScrollView, StyleSheet, RefreshControl } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import TaskCardTugas from './TaskCardTugas';
 import ShimmerTaskCard from './ShimmerTaskCard';
@@ -9,9 +9,11 @@ const TaskSection = ({
     title = '',
     tasks = [],
     isLoading = false,
-    onProjectDetailPress = () => { },
-    onTaskDetailPress = () => { },
-    onSeeAllPress = () => { },
+    onProjectDetailPress = () => {},
+    onTaskDetailPress = () => {},
+    onSeeAllPress = () => {},
+    refreshing = false,
+    onRefresh = () => {},
 }) => {
     // Icon mapping for different task types
     const getIconForSection = (sectionTitle) => {
@@ -37,10 +39,7 @@ const TaskSection = ({
     return (
         <View style={styles.section}>
             {isLoading ? (
-                <ScrollView
-                    showsHorizontalScrollIndicator={false}
-                    contentContainerStyle={styles.scrollViewContent}
-                >
+                <ScrollView showsHorizontalScrollIndicator={false} contentContainerStyle={styles.scrollViewContent}>
                     {Array(3)
                         .fill()
                         .map((_, index) => (
@@ -54,10 +53,17 @@ const TaskSection = ({
                     showsHorizontalScrollIndicator={false}
                     contentContainerStyle={styles.scrollViewContent}
                     style={{ marginBottom: 150, width: '100%' }}
+                    refreshControl={
+                        <RefreshControl
+                            refreshing={refreshing}
+                            onRefresh={onRefresh}
+                            colors={['#4A90E2']}
+                            tintColor="#4A90E2"
+                            progressBackgroundColor="#ffffff"
+                        />
+                    }
                 >
-                    {tasks
-                    .slice(0, 5)
-                    .map((task, index) => (
+                    {tasks.slice(0, 5).map((task, index) => (
                         <View key={index} style={index === 0 ? styles.firstCardContainer : null}>
                             <TaskCardTugas
                                 task={task}
@@ -68,9 +74,9 @@ const TaskSection = ({
                     ))}
 
                     <View style={styles.sectionHeader}>
-                    <TouchableOpacity onPress={onSeeAllPress} style={styles.seeAllTextButton}>
-                        <Text style={styles.seeAllText}>Lihat Semua Detail ({tasks.length})</Text>
-                    </TouchableOpacity>
+                        <TouchableOpacity onPress={onSeeAllPress} style={styles.seeAllTextButton}>
+                            <Text style={styles.seeAllText}>Lihat Semua Detail ({tasks.length})</Text>
+                        </TouchableOpacity>
                     </View>
                 </ScrollView>
             ) : (
@@ -109,7 +115,7 @@ const styles = StyleSheet.create({
     seeAllTextButton: {
         justifyContent: 'center',
         alignItems: 'center',
-        marginHorizontal:0,
+        marginHorizontal: 0,
         paddingHorizontal: 20,
         paddingVertical: 8,
         borderRadius: 4,
@@ -142,7 +148,7 @@ const styles = StyleSheet.create({
         shadowOpacity: 0.25,
         shadowRadius: 3.84,
         elevation: 5,
-        marginHorizontal: 10
+        marginHorizontal: 10,
     },
     noTasksIcon: {
         marginBottom: 16,

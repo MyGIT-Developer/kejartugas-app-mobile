@@ -19,6 +19,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Feather, MaterialIcons, Ionicons } from '@expo/vector-icons';
 import { approveTask, rejectTask } from '../api/task';
 import { LinearGradient } from 'expo-linear-gradient';
+import { FONTS } from '../constants/fonts';
 const { height: SCREEN_HEIGHT, width: SCREEN_WIDTH } = Dimensions.get('window');
 
 const getStatusBadgeColor = (status) => {
@@ -134,11 +135,6 @@ const DraggableModalTask = ({ visible, onClose, taskDetails }) => {
     const [isRejectModalVisible, setIsRejectModalVisible] = useState(false);
 
     const isWorkingOnIt = taskDetails.status === 'workingOnIt';
-    const isOnHold = taskDetails.status === 'onHold';
-
-    const startButtonStyle = [styles.submitButton, isWorkingOnIt ? styles.grayButton : styles.greenButton];
-
-    const pauseButtonStyle = [styles.submitButton, isWorkingOnIt ? styles.redButton : styles.grayButton];
 
     const getData = async () => {
         try {
@@ -292,22 +288,24 @@ const DraggableModalTask = ({ visible, onClose, taskDetails }) => {
                             <View style={styles.handle} />
                         </View>
 
-                        {/* Header */}
-                        <View style={styles.header}>
-                            <View style={styles.headerContent}>
-                                <MaterialIcons name="assignment" size={24} color="#27A0CF" />
-                                <Text style={styles.title}>Detail Tugas</Text>
-                            </View>
-                            <TouchableOpacity onPress={handleClose} style={styles.closeButton}>
-                                <Ionicons name="close" size={24} color="#666" />
-                            </TouchableOpacity>
-                        </View>
-
                         <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
-                            {/* Task Header with Status */}
-                            <View style={styles.taskHeaderSection}>
-                                <View style={styles.taskTitleContainer}>
-                                    <Text style={styles.taskTitle}>{taskDetails.title}</Text>
+                            {/* Header */}
+                            {/* <View style={styles.header}>
+                                <TouchableOpacity onPress={handleClose} style={styles.closeButton}>
+                                    <Ionicons name="close" size={24} color="#666" />
+                                </TouchableOpacity>
+                            </View> */}
+
+                            <View style={styles.taskTitleContainer}>
+                                <View style={styles.headerContent}>
+                                    <View style={styles.headerContent}>
+                                        <MaterialIcons name="assignment" size={14} color="#27A0CF" />
+                                        <Text style={styles.title}>Detail Tugas</Text>
+                                    </View>
+                                </View>
+
+                                <Text style={styles.taskTitle}>{taskDetails.title}</Text>
+                                <View style={styles.headerContent}>
                                     <LinearGradient
                                         colors={badgeColor}
                                         style={styles.statusBadge}
@@ -317,9 +315,38 @@ const DraggableModalTask = ({ visible, onClose, taskDetails }) => {
                                         <MaterialIcons name={icon} size={16} color={textColor} />
                                         <Text style={[styles.statusText, { color: textColor }]}>{displayStatus}</Text>
                                     </LinearGradient>
+                                    {taskDetails.collectionStatusColor ? (
+                                        <View
+                                            style={[
+                                                styles.statusBadge,
+                                                { backgroundColor: taskDetails.collectionStatusColor },
+                                            ]}
+                                        >
+                                            <Text
+                                                style={[
+                                                    styles.statusText,
+                                                    { color: taskDetails.collectionStatusTextColor },
+                                                ]}
+                                            >
+                                                {taskDetails.collectionStatus}
+                                            </Text>
+                                        </View>
+                                    ) : (
+                                        <LinearGradient
+                                            colors={['#E8F5E9', '#C8E6C9']}
+                                            style={styles.statusBadge}
+                                            start={{ x: 0, y: 0 }}
+                                            end={{ x: 1, y: 1 }}
+                                        >
+                                            <MaterialIcons name="check-circle" size={16} color="#2E7D32" />
+                                            <Text style={[styles.statusText, { color: '#2E7D32' }]}>Dikumpulkan</Text>
+                                        </LinearGradient>
+                                    )}
                                 </View>
+                            </View>
 
-                                {/* Progress Circle */}
+                            {/* Task Header with Status */}
+                            {/* <View style={styles.taskHeaderSection}>
                                 <View style={styles.progressContainer}>
                                     <View style={styles.progressWrapper}>
                                         <Progress.Circle
@@ -355,7 +382,7 @@ const DraggableModalTask = ({ visible, onClose, taskDetails }) => {
                                         )}
                                     </View>
                                 </View>
-                            </View>
+                            </View> */}
 
                             {/* General Information Section */}
                             <View style={styles.section}>
@@ -390,21 +417,20 @@ const DraggableModalTask = ({ visible, onClose, taskDetails }) => {
                                                 {taskDetails.assignedByName || taskDetails.assignedBy || 'N/A'}
                                             </Text>
                                         </View>
-                                        <View style={styles.infoColumn}>
-                                            <View style={styles.infoItem}>
-                                                <Ionicons name="document-text-outline" size={16} color="#666" />
-                                                <Text style={styles.infoLabel}>Keterangan</Text>
-                                            </View>
-                                            <ScrollView style={styles.descriptionScrollView}>
-                                                <Text style={styles.infoValue}>
-                                                    {taskDetails.description || 'Tidak ada keterangan tersedia'}
-                                                </Text>
-                                            </ScrollView>
+                                    </View>
+                                    <View style={styles.infoColumn}>
+                                        <View style={styles.infoItem}>
+                                            <Ionicons name="document-text-outline" size={16} color="#666" />
+                                            <Text style={styles.infoLabel}>Keterangan</Text>
                                         </View>
+                                        <ScrollView style={styles.descriptionScrollView}>
+                                            <Text style={styles.infoValue}>
+                                                {taskDetails.description || 'Tidak ada keterangan tersedia'}
+                                            </Text>
+                                        </ScrollView>
                                     </View>
                                 </View>
                             </View>
-                            {/* Collection Information */}
                             {(taskDetails.status === 'onReview' ||
                                 taskDetails.status === 'Completed' ||
                                 taskDetails.status === 'onHold') &&
@@ -424,49 +450,6 @@ const DraggableModalTask = ({ visible, onClose, taskDetails }) => {
                                                     <Text style={styles.infoValue}>
                                                         {formatDate(taskDetails.collectionDate)}
                                                     </Text>
-                                                </View>
-                                                <View style={styles.infoColumn}>
-                                                    <View style={styles.infoItem}>
-                                                        <Ionicons
-                                                            name="checkmark-circle-outline"
-                                                            size={16}
-                                                            color="#666"
-                                                        />
-                                                        <Text style={styles.infoLabel}>Status Pengumpulan</Text>
-                                                    </View>
-                                                    {taskDetails.collectionStatusColor ? (
-                                                        <View
-                                                            style={[
-                                                                styles.statusBadge,
-                                                                { backgroundColor: taskDetails.collectionStatusColor },
-                                                            ]}
-                                                        >
-                                                            <Text
-                                                                style={[
-                                                                    styles.statusText,
-                                                                    { color: taskDetails.collectionStatusTextColor },
-                                                                ]}
-                                                            >
-                                                                {taskDetails.collectionStatus}
-                                                            </Text>
-                                                        </View>
-                                                    ) : (
-                                                        <LinearGradient
-                                                            colors={['#E8F5E9', '#C8E6C9']}
-                                                            style={styles.statusBadge}
-                                                            start={{ x: 0, y: 0 }}
-                                                            end={{ x: 1, y: 1 }}
-                                                        >
-                                                            <MaterialIcons
-                                                                name="check-circle"
-                                                                size={16}
-                                                                color="#2E7D32"
-                                                            />
-                                                            <Text style={[styles.statusText, { color: '#2E7D32' }]}>
-                                                                Dikumpulkan
-                                                            </Text>
-                                                        </LinearGradient>
-                                                    )}
                                                 </View>
                                             </View>
                                             <View style={styles.infoRow}>
@@ -490,22 +473,24 @@ const DraggableModalTask = ({ visible, onClose, taskDetails }) => {
                                                         </View>
                                                     )}
                                                 </View>
-                                                <View style={styles.infoColumn}>
-                                                    <View style={styles.infoItem}>
-                                                        <Ionicons name="document-text-outline" size={16} color="#666" />
-                                                        <Text style={styles.infoLabel}>Keterangan Pengumpulan</Text>
-                                                    </View>
-                                                    <ScrollView style={styles.descriptionScrollView}>
-                                                        <Text style={styles.infoValue}>
-                                                            {taskDetails.collectionDescription ||
-                                                                'Tidak ada keterangan pengumpulan'}
-                                                        </Text>
-                                                    </ScrollView>
+                                            </View>
+                                            <View style={styles.infoColumn}>
+                                                <View style={styles.infoItem}>
+                                                    <Ionicons name="document-text-outline" size={16} color="#666" />
+                                                    <Text style={styles.infoLabel}>Keterangan Pengumpulan</Text>
                                                 </View>
+                                                <ScrollView style={styles.descriptionScrollView}>
+                                                    <Text style={styles.infoValue}>
+                                                        {taskDetails.collectionDescription &&
+                                                        taskDetails.collectionDescription.trim().toLowerCase() !== 'n/a'
+                                                            ? taskDetails.collectionDescription
+                                                            : 'Tidak ada keterangan pengumpulan'}
+                                                    </Text>
+                                                </ScrollView>
                                             </View>
 
                                             {/* Additional info for completed tasks */}
-                                            {taskDetails.status === 'Completed' && (
+                                            {/* {taskDetails.status === 'Completed' && (
                                                 <View style={styles.completedTaskInfo}>
                                                     <View style={styles.completionBadge}>
                                                         <LinearGradient
@@ -534,43 +519,77 @@ const DraggableModalTask = ({ visible, onClose, taskDetails }) => {
                                                         </View>
                                                     )}
                                                 </View>
-                                            )}
+                                            )} */}
                                         </View>
                                     </View>
                                 )}
+                        </ScrollView>
+                        {/* Action Buttons */}
+                        <View style={styles.actionContainer}>
+                            <TouchableOpacity
+                                style={styles.commentButton}
+                                onPress={handleCommentPress}
+                                activeOpacity={0.8}
+                            >
+                                <LinearGradient
+                                    colors={['#27A0CF', '#1976D2']}
+                                    style={styles.gradientButton}
+                                    start={{ x: 0, y: 0 }}
+                                    end={{ x: 1, y: 1 }}
+                                >
+                                    <Feather name="message-square" size={18} color="white" />
+                                    <Text style={styles.commentButtonText}>Komentar</Text>
+                                </LinearGradient>
+                            </TouchableOpacity>
 
-                            {/* Action Buttons */}
-                            <View style={styles.actionContainer}>
+                            {/* Submit button for working/rejected tasks */}
+                            {console.log('Debug Submit Button:', {
+                                status: taskDetails.status,
+                                isWorkingOnIt: taskDetails.status === 'workingOnIt',
+                                isRejected: taskDetails.status === 'rejected',
+                                shouldShow: taskDetails.status === 'workingOnIt' || taskDetails.status === 'rejected',
+                                assignedEmployees: taskDetails.assignedEmployees,
+                                employeeId: employeeId,
+                            })}
+                            {(taskDetails.status === 'workingOnIt' || taskDetails.status === 'rejected') && (
                                 <TouchableOpacity
-                                    style={styles.commentButton}
-                                    onPress={handleCommentPress}
+                                    style={styles.submitTaskButton}
+                                    onPress={handleSubmit}
                                     activeOpacity={0.8}
                                 >
                                     <LinearGradient
-                                        colors={['#27A0CF', '#1976D2']}
+                                        colors={['#4CAF50', '#2E7D32']}
                                         style={styles.gradientButton}
                                         start={{ x: 0, y: 0 }}
                                         end={{ x: 1, y: 1 }}
                                     >
-                                        <Feather name="message-square" size={18} color="white" />
-                                        <Text style={styles.commentButtonText}>Komentar</Text>
+                                        <MaterialIcons name="upload" size={18} color="white" />
+                                        <Text style={styles.submitButtonText}>Submit Tugas</Text>
                                     </LinearGradient>
                                 </TouchableOpacity>
+                            )}
 
-                                {/* Submit button for working/rejected tasks */}
-                                {console.log('Debug Submit Button:', {
-                                    status: taskDetails.status,
-                                    isWorkingOnIt: taskDetails.status === 'workingOnIt',
-                                    isRejected: taskDetails.status === 'rejected',
-                                    shouldShow:
-                                        taskDetails.status === 'workingOnIt' || taskDetails.status === 'rejected',
-                                    assignedEmployees: taskDetails.assignedEmployees,
-                                    employeeId: employeeId,
-                                })}
-                                {(taskDetails.status === 'workingOnIt' || taskDetails.status === 'rejected') && (
+                            {/* Review buttons for pending review */}
+                            {taskDetails.status === 'onReview' && taskDetails.assignedById == employeeId && (
+                                <View style={styles.reviewButtonContainer}>
                                     <TouchableOpacity
-                                        style={styles.submitTaskButton}
-                                        onPress={handleSubmit}
+                                        style={styles.reviewButton}
+                                        onPress={() => setIsRejectModalVisible(true)}
+                                        activeOpacity={0.8}
+                                    >
+                                        <LinearGradient
+                                            colors={['#FF6B6B', '#D32F2F']}
+                                            style={styles.gradientButton}
+                                            start={{ x: 0, y: 0 }}
+                                            end={{ x: 1, y: 1 }}
+                                        >
+                                            <MaterialIcons name="close" size={18} color="white" />
+                                            <Text style={styles.submitButtonText}>Tolak</Text>
+                                        </LinearGradient>
+                                    </TouchableOpacity>
+                                    <TouchableOpacity
+                                        style={styles.reviewButton}
+                                        onPress={handleApprove}
                                         activeOpacity={0.8}
                                     >
                                         <LinearGradient
@@ -579,73 +598,35 @@ const DraggableModalTask = ({ visible, onClose, taskDetails }) => {
                                             start={{ x: 0, y: 0 }}
                                             end={{ x: 1, y: 1 }}
                                         >
-                                            <MaterialIcons name="upload" size={18} color="white" />
-                                            <Text style={styles.submitButtonText}>Submit Tugas</Text>
+                                            <MaterialIcons name="check" size={18} color="white" />
+                                            <Text style={styles.submitButtonText}>Setujui</Text>
                                         </LinearGradient>
                                     </TouchableOpacity>
-                                )}
+                                </View>
+                            )}
 
-                                {/* Review buttons for pending review */}
-                                {taskDetails.status === 'onReview' && taskDetails.assignedById == employeeId && (
-                                    <View style={styles.reviewButtonContainer}>
-                                        <TouchableOpacity
-                                            style={styles.reviewButton}
-                                            onPress={() => setIsRejectModalVisible(true)}
-                                            activeOpacity={0.8}
-                                        >
-                                            <LinearGradient
-                                                colors={['#FF6B6B', '#D32F2F']}
-                                                style={styles.gradientButton}
-                                                start={{ x: 0, y: 0 }}
-                                                end={{ x: 1, y: 1 }}
-                                            >
-                                                <MaterialIcons name="close" size={18} color="white" />
-                                                <Text style={styles.submitButtonText}>Tolak</Text>
-                                            </LinearGradient>
-                                        </TouchableOpacity>
-                                        <TouchableOpacity
-                                            style={styles.reviewButton}
-                                            onPress={handleApprove}
-                                            activeOpacity={0.8}
-                                        >
-                                            <LinearGradient
-                                                colors={['#4CAF50', '#2E7D32']}
-                                                style={styles.gradientButton}
-                                                start={{ x: 0, y: 0 }}
-                                                end={{ x: 1, y: 1 }}
-                                            >
-                                                <MaterialIcons name="check" size={18} color="white" />
-                                                <Text style={styles.submitButtonText}>Setujui</Text>
-                                            </LinearGradient>
-                                        </TouchableOpacity>
-                                    </View>
-                                )}
-
-                                {/* Additional actions for completed tasks */}
-                                {taskDetails.status === 'Completed' && taskDetails.task_image && (
-                                    <TouchableOpacity
-                                        style={styles.viewEvidenceButton}
-                                        onPress={() => {
-                                            // Handle view evidence - could open full screen image viewer
-                                            console.log('View evidence:', taskDetails.task_image);
-                                        }}
-                                        activeOpacity={0.8}
+                            {/* Additional actions for completed tasks */}
+                            {taskDetails.status === 'Completed' && taskDetails.task_image && (
+                                <TouchableOpacity
+                                    style={styles.viewEvidenceButton}
+                                    onPress={() => {
+                                        // Handle view evidence - could open full screen image viewer
+                                        console.log('View evidence:', taskDetails.task_image);
+                                    }}
+                                    activeOpacity={0.8}
+                                >
+                                    <LinearGradient
+                                        colors={['#9C27B0', '#7B1FA2']}
+                                        style={styles.gradientButton}
+                                        start={{ x: 0, y: 0 }}
+                                        end={{ x: 1, y: 1 }}
                                     >
-                                        <LinearGradient
-                                            colors={['#9C27B0', '#7B1FA2']}
-                                            style={styles.gradientButton}
-                                            start={{ x: 0, y: 0 }}
-                                            end={{ x: 1, y: 1 }}
-                                        >
-                                            <MaterialIcons name="visibility" size={18} color="white" />
-                                            <Text style={styles.submitButtonText}>Lihat Bukti Lengkap</Text>
-                                        </LinearGradient>
-                                    </TouchableOpacity>
-                                )}
-                            </View>
-
-                            <View style={styles.bottomSpacer} />
-                        </ScrollView>
+                                        <MaterialIcons name="visibility" size={18} color="white" />
+                                        <Text style={styles.submitButtonText}>Lihat Bukti</Text>
+                                    </LinearGradient>
+                                </TouchableOpacity>
+                            )}
+                        </View>
                     </View>
                 </Animated.View>
             </View>
@@ -706,11 +687,7 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         paddingHorizontal: 24,
         paddingVertical: 20,
-        borderBottomWidth: 1,
-        borderBottomColor: '#F3F4F6',
-        backgroundColor: '#FAFBFC',
         marginHorizontal: 20,
-        borderRadius: 16,
         marginBottom: 8,
     },
     headerContent: {
@@ -719,10 +696,10 @@ const styles = StyleSheet.create({
         gap: 12,
     },
     title: {
-        fontFamily: 'Poppins-Bold',
-        fontSize: 22,
-        color: '#111827',
-        letterSpacing: 0.3,
+        fontFamily: FONTS.family.semiBold,
+        fontSize: FONTS.size.md,
+        color: '#6e6e6eff',
+        letterSpacing: -0.5,
     },
     closeButton: {
         padding: 10,
@@ -748,22 +725,27 @@ const styles = StyleSheet.create({
     },
     taskTitleContainer: {
         marginBottom: 20,
+        paddingBottom: 12,
+        borderBottomWidth: 1,
+        borderBottomColor: '#E5E7EB',
+        alignItems: 'center',
+        justifyContent: 'center',
     },
     taskTitle: {
-        fontFamily: 'Poppins-Bold',
-        fontSize: 24,
+        fontFamily: FONTS.family.bold,
+        fontSize: FONTS.size['2xl'],
         color: '#111827',
         marginBottom: 12,
         lineHeight: 32,
-        letterSpacing: 0.3,
+        letterSpacing: -0.5,
+        textAlign: 'center',
     },
     statusBadge: {
         flexDirection: 'row',
         alignItems: 'center',
         paddingHorizontal: 16,
-        paddingVertical: 8,
+        paddingVertical: 4,
         borderRadius: 24,
-        alignSelf: 'flex-start',
         gap: 6,
         shadowColor: '#000',
         shadowOffset: { width: 0, height: 2 },
@@ -772,9 +754,9 @@ const styles = StyleSheet.create({
         elevation: 3,
     },
     statusText: {
-        fontFamily: 'Poppins-SemiBold',
-        fontSize: 14,
-        letterSpacing: 0.2,
+        fontFamily: FONTS.family.semiBold,
+        fontSize: FONTS.size.sm,
+        letterSpacing: -0.5,
     },
     progressContainer: {
         alignItems: 'center',
@@ -840,10 +822,10 @@ const styles = StyleSheet.create({
         paddingHorizontal: 4,
     },
     sectionTitle: {
-        fontFamily: 'Poppins-Bold',
+        fontFamily: FONTS.family.semiBold,
         fontSize: 18,
         color: '#111827',
-        letterSpacing: 0.2,
+        letterSpacing: -0.5,
     },
     infoCard: {
         backgroundColor: 'white',
@@ -864,7 +846,6 @@ const styles = StyleSheet.create({
     },
     infoColumn: {
         flex: 1,
-        marginRight: 16,
     },
     infoItem: {
         flexDirection: 'row',
@@ -873,68 +854,75 @@ const styles = StyleSheet.create({
         marginBottom: 6,
     },
     infoLabel: {
-        fontFamily: 'Poppins-Medium',
+        fontFamily: FONTS.family.medium,
         color: '#6B7280',
-        fontSize: 13,
-        textTransform: 'uppercase',
-        letterSpacing: 0.5,
+        fontSize: FONTS.size.md,
+        // textTransform: 'uppercase',
+        letterSpacing: -0.5,
     },
     infoValue: {
-        fontFamily: 'Poppins-Regular',
+        fontFamily: FONTS.family.medium,
         color: '#111827',
-        fontSize: 15,
+        fontSize: FONTS.size.md,
         lineHeight: 22,
+        letterSpacing: -0.5,
     },
     descriptionScrollView: {
         maxHeight: 100,
     },
     actionContainer: {
         paddingVertical: 24,
-        paddingHorizontal: 4,
+        paddingHorizontal: 20,
         borderTopWidth: 1,
         borderTopColor: '#F3F4F6',
-        gap: 16,
+        gap: 18,
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
     },
     commentButton: {
-        borderRadius: 20,
+        borderRadius: 6,
         overflow: 'hidden',
         shadowColor: '#000',
         shadowOffset: { width: 0, height: 4 },
         shadowOpacity: 0.15,
         shadowRadius: 8,
         elevation: 6,
+        width: '48%',
     },
     gradientButton: {
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'center',
-        paddingVertical: 16,
-        paddingHorizontal: 24,
+        width: '100%',
+        paddingVertical: 12,
         gap: 10,
     },
     commentButtonText: {
-        fontFamily: 'Poppins-SemiBold',
+        fontFamily: FONTS.family.semiBold,
         color: 'white',
-        fontSize: 16,
-        letterSpacing: 0.3,
+        fontSize: FONTS.size.md,
+        letterSpacing: -0.5,
     },
     submitTaskButton: {
-        borderRadius: 20,
+        borderRadius: 6,
         overflow: 'hidden',
         shadowColor: '#000',
         shadowOffset: { width: 0, height: 4 },
         shadowOpacity: 0.15,
         shadowRadius: 8,
         elevation: 6,
+        width: '48%',
     },
     viewEvidenceButton: {
-        borderRadius: 20,
+        borderRadius: 6,
         overflow: 'hidden',
         shadowColor: '#000',
         shadowOffset: { width: 0, height: 4 },
         shadowOpacity: 0.15,
         shadowRadius: 8,
         elevation: 6,
+        width: '48%',
     },
     reviewButtonContainer: {
         flexDirection: 'row',
@@ -942,19 +930,20 @@ const styles = StyleSheet.create({
     },
     reviewButton: {
         flex: 1,
-        borderRadius: 20,
+        borderRadius: 6,
         overflow: 'hidden',
         shadowColor: '#000',
         shadowOffset: { width: 0, height: 4 },
         shadowOpacity: 0.15,
         shadowRadius: 8,
         elevation: 6,
+        width: '48%',
     },
     submitButtonText: {
-        fontFamily: 'Poppins-SemiBold',
+        fontFamily: FONTS.family.semiBold,
         color: 'white',
-        fontSize: 16,
-        letterSpacing: 0.3,
+        fontSize: FONTS.size.md,
+        letterSpacing: -0.5,
     },
     evidenceImage: {
         width: '100%',

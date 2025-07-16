@@ -1015,7 +1015,7 @@ const styles = StyleSheet.create({
     },
     headerTitle: {
         fontSize: 18,
-        fontFamily: FONTS.semiBold,
+        fontFamily: FONTS.family.semiBold,
         color: '#FFFFFF',
         textAlign: 'center',
     },

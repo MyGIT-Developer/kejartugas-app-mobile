@@ -5,22 +5,22 @@ import Shimmer from './Shimmer';
 const TaskStatisticsSkeleton = () => (
     <View style={styles.container}>
         <View style={styles.statItem}>
-            <Shimmer width={40} height={28} style={styles.shimmerNumber} />
+            <Shimmer width={50} height={50} style={styles.shimmerNumber} />
             <Shimmer width={35} height={14} style={styles.shimmerLabel} />
         </View>
         <View style={styles.separator} />
         <View style={styles.statItem}>
-            <Shimmer width={40} height={28} style={styles.shimmerNumber} />
+            <Shimmer width={50} height={50} style={styles.shimmerNumber} />
             <Shimmer width={60} height={14} style={styles.shimmerLabel} />
         </View>
         <View style={styles.separator} />
         <View style={styles.statItem}>
-            <Shimmer width={40} height={28} style={styles.shimmerNumber} />
+            <Shimmer width={50} height={50} style={styles.shimmerNumber} />
             <Shimmer width={45} height={14} style={styles.shimmerLabel} />
         </View>
         <View style={styles.separator} />
         <View style={styles.statItem}>
-            <Shimmer width={40} height={28} style={styles.shimmerNumber} />
+            <Shimmer width={50} height={50} style={styles.shimmerNumber} />
             <Shimmer width={40} height={14} style={styles.shimmerLabel} />
         </View>
     </View>
@@ -120,4 +120,4 @@ const styles = StyleSheet.create({
     },
 });
 
-export default TaskStatistics;
+export {TaskStatistics, TaskStatisticsSkeleton};
