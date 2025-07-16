@@ -1,18 +1,27 @@
 import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
-import { useNavigation } from '@react-navigation/native';
+import { View, Text, StyleSheet, Image, TouchableOpacity, Dimensions } from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
 
-const AccessDenied = () => {
-    const navigation = useNavigation();
+const { width } = Dimensions.get('window');
 
+const AccessDeniedScreen = ({ onBack }) => {
     return (
-        <View style={styles.container}>
-            <Text style={styles.title}>Access Denied</Text>
-            <Text style={styles.message}>You don't have permission to access this feature.</Text>
-            <TouchableOpacity style={styles.button} onPress={() => navigation.navigate('App')}>
-                <Text style={styles.buttonText}>Go Back</Text>
-            </TouchableOpacity>
-        </View>
+        <LinearGradient colors={['#EFF6FF', '#F2F6FC']} style={styles.container}>
+            <View style={styles.card}>
+                <Text style={styles.errorCode}>403</Text>
+                <Text style={styles.title}>Access Denied</Text>
+                <Text style={styles.subtitle}>Sorry, you don’t have permission to access this page.</Text>
+                <TouchableOpacity onPress={onBack}>
+                    <Text style={styles.link}>Go back to previous page</Text>
+                </TouchableOpacity>
+
+                {/* <Image
+                    source={require('../assets/403-illustration.png')} // Replace with your image path
+                    style={styles.image}
+                    resizeMode="contain"
+                /> */}
+            </View>
+        </LinearGradient>
     );
 };
 
@@ -21,29 +30,48 @@ const styles = StyleSheet.create({
         flex: 1,
         justifyContent: 'center',
         alignItems: 'center',
-        padding: 20,
+    },
+    card: {
+        alignItems: 'center',
+        backgroundColor: 'white',
+        padding: 30,
+        borderRadius: 20,
+        width: width * 0.85,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.1,
+        shadowRadius: 8,
+        elevation: 5,
+    },
+    errorCode: {
+        fontSize: 60,
+        fontWeight: 'bold',
+        color: '#4A90E2',
+        marginBottom: 10,
     },
     title: {
-        fontSize: 24,
-        fontWeight: 'bold',
+        fontSize: 22,
+        fontWeight: '600',
+        color: '#2E5984',
+        marginBottom: 6,
+    },
+    subtitle: {
+        fontSize: 14,
+        color: '#777',
+        textAlign: 'center',
+        marginBottom: 12,
+    },
+    link: {
+        fontSize: 14,
+        color: '#4A90E2',
+        textDecorationLine: 'underline',
         marginBottom: 20,
     },
-    message: {
-        fontSize: 16,
-        textAlign: 'center',
-        marginBottom: 30,
-    },
-    button: {
-        backgroundColor: '#0E509E',
-        paddingHorizontal: 20,
-        paddingVertical: 10,
-        borderRadius: 5,
-    },
-    buttonText: {
-        color: 'white',
-        fontSize: 16,
-        fontWeight: 'bold',
+    image: {
+        width: 180,
+        height: 180,
+        marginTop: 10,
     },
 });
 
-export default AccessDenied;
+export default AccessDeniedScreen;

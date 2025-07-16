@@ -94,19 +94,6 @@ const formatLocationName = (reverseGeocodeResult) => {
     return `${reverseGeocodeResult.street}, ${reverseGeocodeResult.city}, ${reverseGeocodeResult.region}, ${reverseGeocodeResult.country}`;
 };
 
-// Memoized AccessDenied Component for better performance
-const AccessDenied = memo(() => {
-    return (
-        <View style={styles.accessDeniedContainer}>
-            <View style={styles.iconContainer}>
-                <MaterialIcons name="block" size={50} color="white" />
-            </View>
-            <Text style={styles.message}>Anda tidak mempunyai akses.</Text>
-        </View>
-    );
-});
-AccessDenied.displayName = 'AccessDenied';
-
 // Memoized EmptyState Component with enhanced styling
 const EmptyState = memo(() => (
     <View style={styles.emptyStateContainer}>
@@ -2394,31 +2381,6 @@ const styles = StyleSheet.create({
         textAlign: 'center',
         lineHeight: 20,
         maxWidth: 280,
-    },
-
-    // Access Denied
-    accessDeniedContainer: {
-        flex: 1,
-        justifyContent: 'center',
-        alignItems: 'center',
-        padding: 20,
-        backgroundColor: '#F8FAFC',
-    },
-    iconContainer: {
-        width: 100,
-        height: 100,
-        borderRadius: 50,
-        backgroundColor: '#EF4444',
-        justifyContent: 'center',
-        alignItems: 'center',
-        marginBottom: 20,
-    },
-    message: {
-        fontSize: 18,
-        fontWeight: '600',
-        color: '#374151',
-        textAlign: 'center',
-        marginTop: 20,
     },
 
     // Empty State

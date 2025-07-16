@@ -20,6 +20,7 @@ import { TouchableOpacity } from 'react-native';
 import { Feather, MaterialIcons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import ProjectScrollView from '../components/ProjectScrollView';
+import AccessDenied from '../components/AccessDenied';
 
 const { height, width: SCREEN_WIDTH } = Dimensions.get('window');
 
@@ -32,15 +33,6 @@ const SkeletonCard = () => (
             <View style={[styles.skeletonText, { width: '100%', height: 10, marginBottom: 10 }]} />
             <View style={[styles.skeletonText, { width: '40%', height: 20 }]} />
         </View>
-    </View>
-);
-
-const AccessDenied = () => (
-    <View style={styles.accessDeniedContainer}>
-        <View style={styles.iconContainer}>
-            <MaterialIcons name="block" size={50} color="white" />
-        </View>
-        <Text style={styles.message}>Anda tidak mempunyai akses.</Text>
     </View>
 );
 
@@ -115,7 +107,7 @@ const ProjectSection = ({ title, projects, status, handleGoTo, handleGoToDetail 
                 )}
             </ScrollView>
         ) : (
-            <ProjectScrollView projects={projects} status={status}/>
+            <ProjectScrollView projects={projects} status={status} />
         )}
     </View>
 );
@@ -293,7 +285,7 @@ const ProjectDashboard = () => {
                         {/* Render Content */}
                         {renderContent()}
                     </ScrollView>
-                    <FloatingButton bottom={100}/>
+                    <FloatingButton bottom={100} />
                 </>
             )}
             {!hasAccess && <AccessDenied />}
