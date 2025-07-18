@@ -1920,7 +1920,6 @@ const styles = StyleSheet.create({
         flex: 1,
         backgroundColor: '#F8FAFC',
     },
-    // Header styles from Kehadiran
     backgroundBox: {
         height: 335,
         width: '100%',
