@@ -1088,7 +1088,21 @@ const AdhocDashboard = ({ navigation }) => {
                         </View>
                         <View style={styles.historySectionTitleGroup}>
                             <Text style={styles.historySectionTitle}>{section.title}</Text>
-                            <Text style={styles.historySectionSubtitle}>{section.items.length} tugas selesai</Text>
+                            {section.title === 'Tugas Dibuat' && (
+                                <Text style={styles.historySectionSubtitle}>
+                                    {section.items.length} tugas yang kamu buat
+                                </Text>
+                            )}
+                            {section.title === 'Tugas Persetujuan' && (
+                                <Text style={styles.historySectionSubtitle}>
+                                    {section.items.length} tugas yang membutuhkan persetujuan kamu
+                                </Text>
+                            )}
+                            {section.title === 'Tugas Saya' && (
+                                <Text style={styles.historySectionSubtitle}>
+                                    {section.items.length} tugas yang kamu kerjakan
+                                </Text>
+                            )}
                         </View>
                         <View style={[styles.historySectionBadge, { backgroundColor: config.color }]}>
                             <Text style={styles.historySectionBadgeText}>{section.items.length}</Text>
@@ -1178,14 +1192,41 @@ const AdhocDashboard = ({ navigation }) => {
                                                 </Text>
                                             </View>
 
+                                            {/* Ditugaskan kepada Information */}
                                             {item.employee_tasks && item.employee_tasks.length > 0 && (
                                                 <View style={styles.historyMetaItem}>
-                                                    <Feather name="users" size={12} color="#64748B" />
+                                                    <Feather name="users" size={12} color="#10B981" />
                                                     <Text style={styles.historyMetaText}>
-                                                        {item.employee_tasks.length} assignee
+                                                        Ditugaskan kepada:{' '}
+                                                        {item.employee_tasks[0]?.employee?.employee_name?.split(
+                                                            ' ',
+                                                        )[0] || 'Unknown'}
+                                                        {item.employee_tasks.length > 1 &&
+                                                            ` +${item.employee_tasks.length - 1}`}
                                                     </Text>
                                                 </View>
                                             )}
+
+                                            {/* Assigned By Information */}
+                                            {item.task_approvals && item.task_approvals.length > 0 && (
+                                                <View style={styles.historyMetaItem}>
+                                                    <Feather name="user-plus" size={12} color="#6366F1" />
+                                                    <Text style={styles.historyMetaText}>
+                                                        Ditugaskan oleh:{' '}
+                                                        {item.task_approvals[0]?.employee?.employee_name?.split(
+                                                            ' ',
+                                                        )[0] || 'Unknown'}
+                                                    </Text>
+                                                </View>
+                                            )}
+
+                                            {/* Level Information */}
+                                            <View style={styles.historyMetaItem}>
+                                                <Feather name="layers" size={12} color="#F59E0B" />
+                                                <Text style={styles.historyMetaText}>
+                                                    Level {item.adhoc_current_level || 1}/{item.adhoc_last_level || 1}
+                                                </Text>
+                                            </View>
                                         </View>
                                     </View>
 
@@ -3462,13 +3503,14 @@ const styles = StyleSheet.create({
     },
     historyTimelineLine: {
         width: 2,
-        height: 32,
+        height: 40,
         backgroundColor: '#E2E8F0',
         marginTop: 8,
     },
     historyTaskContent: {
         flex: 1,
-        gap: 8,
+        gap: 6,
+        paddingRight: 8,
     },
     historyTaskHeader: {
         flexDirection: 'row',
@@ -3501,12 +3543,15 @@ const styles = StyleSheet.create({
         letterSpacing: -0.5,
     },
     historyTaskMeta: {
-        gap: 6,
+        gap: 8,
+        marginTop: 8,
+        paddingLeft: 4,
     },
     historyMetaItem: {
         flexDirection: 'row',
         alignItems: 'center',
         gap: 6,
+        paddingVertical: 2,
     },
     historyPreviewDate: {
         fontSize: calculateFontSize(12),
@@ -3515,103 +3560,981 @@ const styles = StyleSheet.create({
         letterSpacing: -0.5,
     },
     historyMetaText: {
+        fontSize: calculateFontSize(11),
+        color: '#475569',
+        fontWeight: '500',
+        letterSpacing: -0.5,
+        flex: 1,
+    },
+    // New Approval Task Card Styles
+    approvalTaskCard: {
+        backgroundColor: '#FFFFFF',
+        borderRadius: 20,
+        marginBottom: 20,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 6 },
+        shadowOpacity: 0.15,
+        shadowRadius: 12,
+        elevation: 8,
+        borderWidth: 1,
+        borderColor: '#E8F2FF',
+        overflow: 'hidden',
+    },
+    approvalCardHeader: {
+        backgroundColor: '#F8FBFF',
+        borderBottomWidth: 1,
+        borderBottomColor: '#E8F2FF',
+        paddingHorizontal: 20,
+        paddingVertical: 16,
+    },
+    approvalHeaderContent: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+    },
+    approvalTitleContainer: {
+        flex: 1,
+    },
+    approvalCardTitle: {
+        fontSize: calculateFontSize(17),
+        fontWeight: '700',
+        color: '#1E293B',
+        marginBottom: 8,
+        lineHeight: 24,
+        letterSpacing: -0.5,
+    },
+    approvalStatusContainer: {
+        alignItems: 'flex-start',
+    },
+    approvalStatusBadge: {
+        backgroundColor: '#E3F2FD',
+        paddingHorizontal: 12,
+        paddingVertical: 6,
+        borderRadius: 16,
+        shadowColor: '#2196F3',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.1,
+        shadowRadius: 4,
+        elevation: 2,
+    },
+    approvalStatusText: {
+        fontSize: calculateFontSize(12),
+        fontWeight: '600',
+        color: '#2196F3',
+        textTransform: 'uppercase',
+        letterSpacing: -0.5,
+    },
+    approvalCardContent: {
+        paddingHorizontal: 20,
+        paddingVertical: 16,
+    },
+    approvalInfoSection: {
+        marginBottom: 16,
+        gap: 12,
+    },
+    approvalInfoRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 12,
+    },
+    approvalInfoIcon: {
+        width: 32,
+        height: 32,
+        borderRadius: 16,
+        backgroundColor: '#F0F7FF',
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
+    approvalInfoText: {
+        flex: 1,
+    },
+    approvalInfoLabel: {
+        fontSize: calculateFontSize(12),
+        color: '#64748B',
+        fontWeight: '500',
+        marginBottom: 2,
+        letterSpacing: -0.5,
+    },
+    approvalInfoValue: {
+        fontSize: calculateFontSize(14),
+        color: '#1E293B',
+        fontWeight: '600',
+        letterSpacing: -0.5,
+    },
+    approvalDetailButtonContainer: {
+        alignItems: 'center',
+        paddingTop: 8,
+        borderTopWidth: 1,
+        borderTopColor: '#F1F5F9',
+    },
+    approvalDetailButton: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 6,
+        paddingVertical: 8,
+        paddingHorizontal: 16,
+    },
+    approvalDetailButtonText: {
+        fontSize: calculateFontSize(14),
+        color: '#4A90E2',
+        fontWeight: '600',
+        letterSpacing: -0.5,
+    },
+    approvalActionButtons: {
+        flexDirection: 'row',
+        gap: 8,
+        paddingHorizontal: 20,
+        paddingBottom: 20,
+        justifyContent: 'center',
+        alignItems: 'center',
+    },
+    rejectButton: {
+        backgroundColor: '#EF4444',
+        borderRadius: 8,
+        paddingVertical: 10,
+        paddingHorizontal: 16,
+        alignItems: 'center',
+        justifyContent: 'center',
+        minWidth: 80,
+        shadowColor: '#EF4444',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.2,
+        shadowRadius: 4,
+        elevation: 3,
+    },
+    rejectButtonText: {
+        color: '#FFFFFF',
+        fontSize: calculateFontSize(13),
+        fontWeight: '600',
+        letterSpacing: -0.3,
+        textAlign: 'center',
+    },
+    approveButton: {
+        backgroundColor: '#10B981',
+        borderRadius: 8,
+        paddingVertical: 10,
+        paddingHorizontal: 16,
+        alignItems: 'center',
+        justifyContent: 'center',
+        minWidth: 80,
+        shadowColor: '#10B981',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.2,
+        shadowRadius: 4,
+        elevation: 3,
+    },
+    approveButtonText: {
+        color: '#FFFFFF',
+        fontSize: calculateFontSize(13),
+        fontWeight: '600',
+        letterSpacing: -0.3,
+        textAlign: 'center',
+    },
+    // Modal styles
+    modalContainer: {
+        flex: 1,
+        justifyContent: 'center',
+        alignItems: 'center',
+        backgroundColor: 'rgba(0, 0, 0, 0.7)',
+    },
+    modalContent: {
+        width: '90%',
+        maxHeight: '80%',
+        backgroundColor: '#FFFFFF',
+        borderRadius: 16,
+        padding: 20,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.1,
+        shadowRadius: 4,
+        elevation: 4,
+    },
+    modalTitle: {
+        fontSize: calculateFontSize(18),
+        fontWeight: '600',
+        color: '#333',
+        marginBottom: 16,
+        letterSpacing: -0.5,
+    },
+    modalInput: {
+        backgroundColor: '#F8FAFC',
+        borderRadius: 12,
+        padding: 12,
+        fontSize: calculateFontSize(14),
+        color: '#333',
+        marginBottom: 16,
+        borderWidth: 1,
+        borderColor: '#E2E8F0',
+        letterSpacing: -0.5,
+    },
+    sendButton: {
+        backgroundColor: '#4A90E2',
+        borderRadius: 12,
+        paddingVertical: 12,
+        alignItems: 'center',
+        marginBottom: 12,
+    },
+    sendButtonText: {
+        color: 'white',
+        fontSize: calculateFontSize(16),
+        fontWeight: '600',
+        letterSpacing: -0.5,
+    },
+    cancelButton: {
+        backgroundColor: '#E2E8F0',
+        borderRadius: 12,
+        paddingVertical: 12,
+        alignItems: 'center',
+    },
+    cancelButtonText: {
+        color: '#333',
+        fontSize: calculateFontSize(16),
+        fontWeight: '600',
+        letterSpacing: -0.5,
+    },
+    // Upload section styles
+    uploadSection: {
+        marginBottom: 20,
+    },
+    uploadLabel: {
+        fontSize: calculateFontSize(14),
+        fontWeight: '600',
+        color: '#333',
+        marginBottom: 12,
+        letterSpacing: -0.5,
+    },
+    uploadButton: {
+        alignItems: 'center',
+        justifyContent: 'center',
+        backgroundColor: '#F8FAFC',
+        borderRadius: 16,
+        padding: 24,
+        borderWidth: 2,
+        borderColor: '#E2E8F0',
+        borderStyle: 'dashed',
+        minHeight: 120,
+    },
+    uploadIconContainer: {
+        backgroundColor: '#EBF4FF',
+        borderRadius: 20,
+        padding: 12,
+        marginBottom: 8,
+    },
+    uploadButtonText: {
+        fontSize: calculateFontSize(16),
+        color: '#4A90E2',
+        fontWeight: '600',
+        letterSpacing: -0.5,
+        marginBottom: 4,
+    },
+    uploadSubText: {
+        fontSize: calculateFontSize(12),
+        color: '#64748B',
+        fontWeight: '400',
+        textAlign: 'center',
+    },
+    imagePreviewContainer: {
+        marginTop: 12,
+        position: 'relative',
+        borderRadius: 16,
+        overflow: 'hidden',
+        alignSelf: 'flex-start',
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.1,
+        shadowRadius: 8,
+        elevation: 4,
+    },
+    imagePreview: {
+        width: 200,
+        height: 150,
+        backgroundColor: '#F1F5F9',
+    },
+    imageOverlay: {
+        position: 'absolute',
+        bottom: 0,
+        left: 0,
+        right: 0,
+        backgroundColor: 'rgba(0, 0, 0, 0.7)',
+        flexDirection: 'row',
+        justifyContent: 'space-around',
+        paddingVertical: 8,
+    },
+    changeImageButton: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 4,
+        paddingHorizontal: 8,
+        paddingVertical: 4,
+    },
+    changeImageText: {
+        color: '#FFFFFF',
+        fontSize: calculateFontSize(12),
+        fontWeight: '500',
+    },
+    removeImageButton: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 4,
+        paddingHorizontal: 8,
+        paddingVertical: 4,
+    },
+    removeImageText: {
+        color: '#FFFFFF',
+        fontSize: calculateFontSize(12),
+        fontWeight: '500',
+    },
+    reasonSection: {
+        marginBottom: 16,
+    },
+    reasonLabel: {
+        fontSize: calculateFontSize(14),
+        fontWeight: '600',
+        color: '#333',
+        marginBottom: 8,
+        letterSpacing: -0.5,
+    },
+    // Detail modal styles
+    myTaskDetailContent: {
+        paddingHorizontal: 20,
+        paddingBottom: 24,
+    },
+    taskHeaderSection: {
+        marginBottom: 24,
+    },
+    taskTitleWrapper: {
+        flexDirection: 'row',
+        alignItems: 'flex-start',
+        justifyContent: 'space-between',
+        marginBottom: 12,
+    },
+    taskMainTitle: {
+        fontSize: calculateFontSize(18),
+        color: '#333',
+        fontFamily: 'Poppins-SemiBold',
+        flex: 1,
+        marginRight: 12,
+        letterSpacing: -0.5,
+    },
+    assignerInfo: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 8,
+    },
+    assignerText: {
+        fontSize: calculateFontSize(14),
+        color: '#666',
+        fontFamily: 'Poppins-Regular',
+        letterSpacing: -0.5,
+    },
+    sectionTitle: {
+        fontSize: calculateFontSize(16),
+        color: '#333',
+        fontFamily: 'Poppins-SemiBold',
+        marginBottom: 16,
+        letterSpacing: -0.5,
+    },
+    timelineSection: {
+        marginBottom: 24,
+    },
+    timelineContainer: {
+        backgroundColor: '#F8F9FA',
+        borderRadius: 12,
+        padding: 16,
+    },
+    timelineItem: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        height: 48,
+    },
+    timelineDotContainer: {
+        width: 24,
+        alignItems: 'center',
+    },
+    timelineDot: {
+        width: 12,
+        height: 12,
+        borderRadius: 6,
+        backgroundColor: '#4CAF50',
+    },
+    timelineConnector: {
+        width: 2,
+        height: 24,
+        backgroundColor: '#E0E0E0',
+        marginLeft: 11,
+    },
+    timelineContent: {
+        marginLeft: 12,
+    },
+    timelineLabel: {
+        fontSize: calculateFontSize(14),
+        color: '#333',
+        fontFamily: 'Poppins-Medium',
+        letterSpacing: -0.5,
+    },
+    timelineDate: {
+        fontSize: calculateFontSize(12),
+        color: '#666',
+        fontFamily: 'Poppins-Regular',
+        marginTop: 2,
+        letterSpacing: -0.5,
+    },
+    descriptionSection: {
+        marginBottom: 24,
+    },
+    descriptionCard: {
+        backgroundColor: '#F8F9FA',
+        borderRadius: 12,
+        padding: 16,
+    },
+    descriptionText: {
+        fontSize: calculateFontSize(14),
+        color: '#333',
+        fontFamily: 'Poppins-Regular',
+        lineHeight: 20,
+        letterSpacing: -0.5,
+    },
+    assigneeSection: {
+        marginBottom: 24,
+    },
+    assigneeList: {
+        gap: 12,
+        marginBottom: 16,
+    },
+    assigneeItem: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        backgroundColor: '#F8FAFC',
+        padding: 12,
+        borderRadius: 12,
+    },
+    assigneeAvatar: {
+        width: 36,
+        height: 36,
+        borderRadius: 18,
+        backgroundColor: '#4A90E2',
+        alignItems: 'center',
+        justifyContent: 'center',
+        marginRight: 12,
+    },
+    assigneeInitial: {
+        color: 'white',
+        fontSize: calculateFontSize(14),
+        fontWeight: '600',
+        letterSpacing: -0.5,
+    },
+    assigneeName: {
+        fontSize: calculateFontSize(14),
+        color: '#333',
+        fontWeight: '500',
+        letterSpacing: -0.5,
+    },
+    approvalLevelContainer: {
+        backgroundColor: '#EBF4FF',
+        padding: 12,
+        borderRadius: 12,
+        marginBottom: 8,
+    },
+    approvalLevelHeader: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+    },
+    approvalLevelText: {
+        fontSize: calculateFontSize(14),
+        color: '#4A90E2',
+        fontWeight: '600',
+        flex: 1,
+        letterSpacing: -0.5,
+    },
+    // New styles for approval dropdown
+    approvalDropdown: {
+        backgroundColor: '#F8FAFC',
+        borderRadius: 12,
+        marginTop: 8,
+        borderWidth: 1,
+        borderColor: '#E2E8F0',
+        overflow: 'hidden',
+    },
+    approvalLevelItem: {
+        padding: 16,
+        borderBottomWidth: 1,
+        borderBottomColor: '#E2E8F0',
+    },
+    approvalLevelInfo: {
+        gap: 8,
+    },
+    approvalLevelNumber: {
+        fontSize: calculateFontSize(14),
+        fontWeight: '600',
+        color: '#1E293B',
+        letterSpacing: -0.5,
+    },
+    approvalStatusBadge: {
+        paddingHorizontal: 8,
+        paddingVertical: 4,
+        borderRadius: 8,
+        alignSelf: 'flex-start',
+    },
+    approvalStatusText: {
+        fontSize: calculateFontSize(12),
+        fontWeight: '600',
+        letterSpacing: -0.5,
+    },
+    approverInfo: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 6,
+    },
+    approverName: {
+        fontSize: calculateFontSize(13),
+        color: '#64748B',
+        letterSpacing: -0.5,
+    },
+    approvalDateInfo: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 6,
+    },
+    approvalDate: {
+        fontSize: calculateFontSize(12),
+        color: '#64748B',
+        letterSpacing: -0.5,
+    },
+    approvalCommentContainer: {
+        backgroundColor: '#F1F5F9',
+        padding: 8,
+        borderRadius: 8,
+        marginTop: 4,
+    },
+    approvalCommentLabel: {
+        fontSize: calculateFontSize(12),
+        fontWeight: '600',
+        color: '#475569',
+        marginBottom: 4,
+        letterSpacing: -0.5,
+    },
+    approvalCommentText: {
+        fontSize: calculateFontSize(12),
+        color: '#64748B',
+        lineHeight: 16,
+        letterSpacing: -0.5,
+    },
+    // Submit Information Section Styles
+    submitInfoSection: {
+        marginBottom: 24,
+    },
+    submitReasonContainer: {
+        marginBottom: 16,
+    },
+    submitReasonHeader: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 8,
+        marginBottom: 8,
+    },
+    submitReasonLabel: {
+        fontSize: calculateFontSize(14),
+        fontWeight: '600',
+        color: '#4A90E2',
+        letterSpacing: -0.5,
+    },
+    submitReasonCard: {
+        backgroundColor: '#F0F7FF',
+        padding: 12,
+        borderRadius: 12,
+        borderLeftWidth: 4,
+        borderLeftColor: '#4A90E2',
+    },
+    submitReasonText: {
+        fontSize: calculateFontSize(14),
+        color: '#1E293B',
+        lineHeight: 20,
+        fontFamily: 'Poppins-Regular',
+        letterSpacing: -0.5,
+    },
+    submitDateContainer: {
+        marginBottom: 8,
+    },
+    submitDateHeader: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 8,
+        marginBottom: 8,
+    },
+    submitDateLabel: {
+        fontSize: calculateFontSize(14),
+        fontWeight: '600',
+        color: '#10B981',
+        letterSpacing: -0.5,
+    },
+    submitDateCard: {
+        backgroundColor: '#F0FDF4',
+        padding: 12,
+        borderRadius: 12,
+        borderLeftWidth: 4,
+        borderLeftColor: '#10B981',
+    },
+    submitInfoContent: {
+        flex: 1,
+        gap: 8,
+        marginBottom: 8,
+    },
+    submitterInfo: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 6,
+    },
+    submitterText: {
+        fontSize: calculateFontSize(13),
+        color: '#1E293B',
+        fontFamily: 'Poppins-Medium',
+        fontWeight: '600',
+    },
+    submitDateInfo: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 6,
+    },
+    submitDateText: {
+        fontSize: calculateFontSize(13),
+        color: '#64748B',
+        fontFamily: 'Poppins-Regular',
+        letterSpacing: -0.5,
+    },
+    submitStatusBadge: {
+        paddingHorizontal: 8,
+        paddingVertical: 4,
+        borderRadius: 8,
+        alignSelf: 'flex-start',
+        marginTop: 0,
+    },
+    submitStatusText: {
+        fontSize: calculateFontSize(11),
+        fontWeight: '600',
+        textTransform: 'uppercase',
+        letterSpacing: -0.5,
+    },
+    attachmentSection: {
+        marginBottom: 24,
+    },
+    attachmentImage: {
+        width: '100%',
+        height: 200,
+        borderRadius: 12,
+    },
+    chatButton: {
+        backgroundColor: '#FFF',
+        borderRadius: 12,
+        padding: 16,
+        alignItems: 'center',
+        marginBottom: 16,
+        borderWidth: 1.5,
+        borderColor: '#4A90E2',
+        flexDirection: 'row',
+        justifyContent: 'center',
+        gap: 8,
+    },
+    chatButtonText: {
+        color: '#4A90E2',
+        fontSize: calculateFontSize(16),
+        fontFamily: 'Poppins-SemiBold',
+        letterSpacing: -0.5,
+    },
+    // Approval buttons
+    approvalButtonsContainer: {
+        flexDirection: 'row',
+        gap: 12,
+        marginTop: 16,
+    },
+    approveButton: {
+        flex: 1,
+        backgroundColor: '#10B981',
+        borderRadius: 12,
+        padding: 16,
+        alignItems: 'center',
+    },
+    approveButtonText: {
+        color: 'white',
+        fontSize: calculateFontSize(16),
+        fontWeight: '600',
+        letterSpacing: -0.5,
+    },
+    rejectButton: {
+        flex: 1,
+        backgroundColor: '#EF4444',
+        borderRadius: 12,
+        padding: 16,
+        alignItems: 'center',
+    },
+    rejectButtonText: {
+        color: 'white',
+        fontSize: calculateFontSize(16),
+        fontWeight: '600',
+        letterSpacing: -0.5,
+    },
+    submitButton: {
+        backgroundColor: '#4A90E2',
+        borderRadius: 12,
+        padding: 16,
+        alignItems: 'center',
+        marginTop: 16,
+    },
+    submitButtonText: {
+        color: '#FFF',
+        fontSize: calculateFontSize(16),
+        fontFamily: 'Poppins-SemiBold',
+        letterSpacing: -0.5,
+    },
+    // History section styles
+    historySection: {
+        marginBottom: 24,
+    },
+    historySectionHeader: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        marginBottom: 12,
+        paddingHorizontal: 16,
+        paddingVertical: 12,
+        borderRadius: 16,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.05,
+        shadowRadius: 8,
+        elevation: 2,
+    },
+    historySectionTitleContainer: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 12,
+        flex: 1,
+    },
+    historySectionIcon: {
+        width: 36,
+        height: 36,
+        borderRadius: 18,
+        alignItems: 'center',
+        justifyContent: 'center',
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.1,
+        shadowRadius: 4,
+        elevation: 3,
+    },
+    historySectionTitleGroup: {
+        flex: 1,
+    },
+    historySectionTitle: {
+        fontSize: calculateFontSize(16),
+        fontWeight: '700',
+        color: '#1E293B',
+        letterSpacing: -0.5,
+        marginBottom: 2,
+    },
+    historySectionSubtitle: {
         fontSize: calculateFontSize(12),
         color: '#64748B',
         fontWeight: '500',
         letterSpacing: -0.5,
     },
-    historyArrowContainer: {
+    historySectionBadge: {
+        paddingHorizontal: 8,
+        paddingVertical: 4,
+        borderRadius: 12,
+        minWidth: 24,
+        alignItems: 'center',
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 1 },
+        shadowOpacity: 0.1,
+        shadowRadius: 2,
+        elevation: 2,
+    },
+    historySectionBadgeText: {
+        color: 'white',
+        fontSize: calculateFontSize(12),
+        fontWeight: '700',
+        letterSpacing: -0.5,
+    },
+    expandButton: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 4,
+        paddingVertical: 6,
+        paddingHorizontal: 12,
+        borderRadius: 20,
+    },
+    expandButtonText: {
+        fontSize: calculateFontSize(13),
+        fontWeight: '600',
+        letterSpacing: -0.5,
+    },
+    historyPreviewContainer: {
+        backgroundColor: 'white',
+        borderRadius: 16,
+        overflow: 'hidden',
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.08,
+        shadowRadius: 12,
+        elevation: 4,
+        borderWidth: 1,
+        borderColor: '#F1F5F9',
+    },
+    historyPreviewItem: {
+        paddingHorizontal: 16,
+        paddingVertical: 16,
+    },
+    historyItemBorder: {
+        borderBottomWidth: 1,
+        borderBottomColor: '#F1F5F9',
+    },
+    historyPreviewContent: {
+        flexDirection: 'row',
+        alignItems: 'flex-start',
+        gap: 12,
+    },
+    historyTimelineContainer: {
+        alignItems: 'center',
         paddingTop: 4,
     },
-    historyEmptyState: {
-        alignItems: 'center',
-        paddingVertical: 32,
-        gap: 8,
+    historyTimelineDot: {
+        width: 12,
+        height: 12,
+        borderRadius: 6,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 1 },
+        shadowOpacity: 0.2,
+        shadowRadius: 2,
+        elevation: 2,
     },
-
-    // Styles for created task assignee and approval lists
-    createdTaskAssigneeList: {
-        marginTop: 6,
+    historyTimelineLine: {
+        width: 2,
+        height: 40,
+        backgroundColor: '#E2E8F0',
+        marginTop: 8,
     },
-    createdTaskTagContainer: {
+    historyTaskContent: {
+        flex: 1,
+        gap: 6,
+        paddingRight: 8,
+    },
+    historyTaskHeader: {
         flexDirection: 'row',
-        flexWrap: 'wrap',
-        gap: 4,
-        marginTop: 2,
+        justifyContent: 'space-between',
+        alignItems: 'flex-start',
+        gap: 12,
     },
-    createdTaskAssigneeTag: {
-        backgroundColor: '#F1F5F9',
-        paddingHorizontal: 8,
-        paddingVertical: 3,
-        borderRadius: 10,
-        borderWidth: 1,
-        borderColor: '#E2E8F0',
-    },
-    createdTaskAssigneeName: {
-        fontSize: calculateFontSize(10),
-        color: '#475569',
-        fontWeight: '500',
-        textAlign: 'center',
-    },
-    createdTaskApprovalList: {
-        marginTop: 6,
-    },
-    createdTaskApprovalStatus: {
-        fontSize: calculateFontSize(9),
-        color: '#F59E0B',
+    historyPreviewTitle: {
+        fontSize: calculateFontSize(15),
+        color: '#1E293B',
         fontWeight: '600',
-        fontStyle: 'italic',
-        marginTop: 4,
-        paddingHorizontal: 4,
+        letterSpacing: -0.5,
+        flex: 1,
+        lineHeight: calculateFontSize(20),
     },
-    createdTaskApprovalTag: {
-        backgroundColor: '#EEF2FF',
+    historyStatusBadge: {
         paddingHorizontal: 8,
-        paddingVertical: 3,
-        borderRadius: 10,
-        borderWidth: 1,
-        borderColor: '#DDD6FE',
+        paddingVertical: 4,
+        borderRadius: 12,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 1 },
+        shadowOpacity: 0.1,
+        shadowRadius: 2,
+        elevation: 2,
     },
-    createdTaskCurrentApprovalTag: {
-        backgroundColor: '#FEF3C7',
-        borderColor: '#F59E0B',
-        borderWidth: 1.5,
-    },
-    createdTaskApprovalName: {
+    historyStatusText: {
         fontSize: calculateFontSize(10),
-        color: '#5B21B6',
-        fontWeight: '500',
-        textAlign: 'center',
-    },
-    createdTaskCurrentApprovalName: {
-        color: '#D97706',
         fontWeight: '600',
+        textTransform: 'uppercase',
+        letterSpacing: -0.5,
     },
-    historyEmptyText: {
-        fontSize: calculateFontSize(14),
+    historyTaskMeta: {
+        gap: 8,
+        marginTop: 8,
+        paddingLeft: 4,
+    },
+    historyMetaItem: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 6,
+        paddingVertical: 2,
+    },
+    historyPreviewDate: {
+        fontSize: calculateFontSize(12),
         color: '#64748B',
         fontWeight: '500',
         letterSpacing: -0.5,
+    },
+    historyMetaText: {
+        fontSize: calculateFontSize(11),
+        color: '#475569',
+        fontWeight: '500',
+        letterSpacing: -0.5,
+        flex: 1,
+    },
+    // New Approval Task Card Styles
+    approvalTaskCard: {
+        backgroundColor: '#FFFFFF',
+        borderRadius: 20,
+        marginBottom: 20,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 6 },
+        shadowOpacity: 0.15,
+        shadowRadius: 12,
+        elevation: 8,
+        borderWidth: 1,
+        borderColor: '#E8F2FF',
+        overflow: 'hidden',
+    },
+    approvalCardHeader: {
+        backgroundColor: '#F8FBFF',
+        borderBottomWidth: 1,
+        borderBottomColor: '#E8F2FF',
+        paddingHorizontal: 20,
+        paddingVertical: 16,
+    },
+    approvalHeaderContent: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+    },
+    approvalTitleContainer: {
+        flex: 1,
+    },
+    approvalCardTitle: {
+        fontSize: calculateFontSize(17),
+        fontWeight: '700',
+        color: '#1E293B',
+        marginBottom: 8,
+        lineHeight: 24,
+        letterSpacing: -0.5,
+    },
+    approvalStatusContainer: {
+        alignItems: 'flex-start',
+    },
+    approvalStatusBadge: {
+        backgroundColor: '#E3F2FD',
+        paddingHorizontal: 12,
+        paddingVertical: 6,
     },
     historyShowMoreButton: {
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'center',
-        gap: 6,
         paddingVertical: 12,
-        borderTopWidth: 1,
-        borderTopColor: '#F1F5F9',
-        backgroundColor: '#FAFBFC',
+        paddingHorizontal: 16,
+        marginTop: 8,
+        backgroundColor: '#F8FAFC',
+        borderRadius: 12,
+        borderWidth: 1,
+        borderColor: '#E2E8F0',
+        gap: 6,
     },
     historyShowMoreText: {
-        fontSize: calculateFontSize(13),
+        fontSize: calculateFontSize(12),
         fontWeight: '600',
         letterSpacing: -0.5,
-    },
-    historySeparator: {
-        height: 1,
-        backgroundColor: '#E2E8F0',
-        marginVertical: 16,
     },
 });
 
