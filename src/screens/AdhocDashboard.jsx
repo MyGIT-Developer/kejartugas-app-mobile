@@ -680,10 +680,30 @@ const AdhocDashboard = ({ navigation }) => {
                                 <Feather name="users" size={16} color="#10B981" />
                             </View>
                             <View style={styles.createdTaskInfoText}>
-                                <Text style={styles.createdTaskInfoLabel}>Assignee</Text>
+                                <Text style={styles.createdTaskInfoLabel}>Ditugaskan kepada</Text>
                                 <Text style={styles.createdTaskInfoValue}>
                                     {task.employee_tasks?.length || 0} orang
                                 </Text>
+                                {task.employee_tasks && task.employee_tasks.length > 0 && (
+                                    <View style={styles.createdTaskAssigneeList}>
+                                        <View style={styles.createdTaskTagContainer}>
+                                            {task.employee_tasks.slice(0, 2).map((et, idx) => (
+                                                <View key={idx} style={styles.createdTaskAssigneeTag}>
+                                                    <Text style={styles.createdTaskAssigneeName}>
+                                                        {et.employee?.employee_name?.split(' ')[0] || 'Unknown'}
+                                                    </Text>
+                                                </View>
+                                            ))}
+                                            {task.employee_tasks.length > 2 && (
+                                                <View style={styles.createdTaskAssigneeTag}>
+                                                    <Text style={styles.createdTaskAssigneeName}>
+                                                        +{task.employee_tasks.length - 2}
+                                                    </Text>
+                                                </View>
+                                            )}
+                                        </View>
+                                    </View>
+                                )}
                             </View>
                         </View>
 
@@ -692,10 +712,57 @@ const AdhocDashboard = ({ navigation }) => {
                                 <Feather name="check-circle" size={16} color="#6366F1" />
                             </View>
                             <View style={styles.createdTaskInfoText}>
-                                <Text style={styles.createdTaskInfoLabel}>Approval Level</Text>
+                                <Text style={styles.createdTaskInfoLabel}>Level Persetujuan</Text>
                                 <Text style={styles.createdTaskInfoValue}>
                                     {task.adhoc_current_level || 1}/{task.adhoc_last_level || 1}
                                 </Text>
+                                {(() => {
+                                    const currentApprover = task.task_approvals?.find(
+                                        (approval) => approval.approval_level === task.adhoc_current_level,
+                                    );
+                                    return (
+                                        currentApprover && (
+                                            <Text style={styles.createdTaskApprovalStatus}>
+                                                Menunggu persetujuan dari Level {task.adhoc_current_level}:{' '}
+                                                {currentApprover.employee?.employee_name?.split(' ')[0]}
+                                            </Text>
+                                        )
+                                    );
+                                })()}
+                                {task.task_approvals && task.task_approvals.length > 0 && (
+                                    <View style={styles.createdTaskApprovalList}>
+                                        <View style={styles.createdTaskTagContainer}>
+                                            {task.task_approvals.slice(0, 2).map((ta, idx) => (
+                                                <View
+                                                    key={idx}
+                                                    style={[
+                                                        styles.createdTaskApprovalTag,
+                                                        ta.approval_level === task.adhoc_current_level &&
+                                                            styles.createdTaskCurrentApprovalTag,
+                                                    ]}
+                                                >
+                                                    <Text
+                                                        style={[
+                                                            styles.createdTaskApprovalName,
+                                                            ta.approval_level === task.adhoc_current_level &&
+                                                                styles.createdTaskCurrentApprovalName,
+                                                        ]}
+                                                    >
+                                                        L{ta.approval_level}:{' '}
+                                                        {ta.employee?.employee_name?.split(' ')[0] || 'Unknown'}
+                                                    </Text>
+                                                </View>
+                                            ))}
+                                            {task.task_approvals.length > 2 && (
+                                                <View style={styles.createdTaskApprovalTag}>
+                                                    <Text style={styles.createdTaskApprovalName}>
+                                                        +{task.task_approvals.length - 2}
+                                                    </Text>
+                                                </View>
+                                            )}
+                                        </View>
+                                    </View>
+                                )}
                             </View>
                         </View>
 
@@ -782,7 +849,15 @@ const AdhocDashboard = ({ navigation }) => {
                                 <Text
                                     style={[styles.myTaskStatusText, { color: getStatusTextColor(task.adhoc_status) }]}
                                 >
-                                    {getStatusText(task.adhoc_status)}
+                                    {getStatusText(task.adhoc_status) === 'completed'
+                                        ? 'Selesai'
+                                        : getStatusText(task.adhoc_status) === 'working_on_it'
+                                        ? 'Sedang Dikerjakan'
+                                        : getStatusText(task.adhoc_status) === 'cancelled'
+                                        ? 'Dibatalkan'
+                                        : getStatusText(task.adhoc_status) === 'rejected'
+                                        ? 'Ditolak'
+                                        : getStatusText(task.adhoc_status)}
                                 </Text>
                             </View>
                         </View>
@@ -835,9 +910,12 @@ const AdhocDashboard = ({ navigation }) => {
                                 <Feather name="user" size={14} color="#6366F1" />
                             </View>
                             <View style={styles.myTaskInfoText}>
-                                <Text style={styles.myTaskInfoLabel}>Assigner</Text>
+                                <Text style={styles.myTaskInfoLabel}>Ditugaskan oleh</Text>
                                 <Text style={styles.myTaskInfoValue}>
-                                    {truncateText(task.task_approvals[0]?.employee?.employee_name || 'Unknown', 15)}
+                                    {truncateText(
+                                        task.task_approvals[0]?.employee?.employee_name || 'Tidak diketahui',
+                                        15,
+                                    )}
                                 </Text>
                             </View>
                         </View>
@@ -848,12 +926,14 @@ const AdhocDashboard = ({ navigation }) => {
                         <View style={styles.myTaskMetaItem}>
                             <Feather name="target" size={12} color="#8B5CF6" />
                             <Text style={styles.myTaskMetaText}>
-                                Level {task.adhoc_current_level || 1}/{task.adhoc_last_level || 1}
+                                Level Persetujuan {task.adhoc_current_level || 1}/{task.adhoc_last_level || 1}
                             </Text>
                         </View>
                         <View style={styles.myTaskMetaItem}>
                             <Feather name="calendar" size={12} color="#EC4899" />
-                            <Text style={styles.myTaskMetaText}>{formatDateConcise(task.adhoc_start_date)}</Text>
+                            <Text style={styles.myTaskMetaText}>
+                                Dibuat: {formatDateConcise(task.adhoc_start_date)}
+                            </Text>
                         </View>
                     </View>
                 </View>
@@ -869,11 +949,11 @@ const AdhocDashboard = ({ navigation }) => {
                             }}
                         >
                             <Feather name="send" size={16} color="#FFFFFF" />
-                            <Text style={styles.myTaskSubmitButtonText}>Submit</Text>
+                            <Text style={styles.myTaskSubmitButtonText}>Submit Tugas</Text>
                         </TouchableOpacity>
                     )}
                     <TouchableOpacity style={styles.myTaskActionButton} onPress={() => fetchTaskDetail(task.id)}>
-                        <Text style={styles.myTaskActionButtonText}>Lihat Detail</Text>
+                        <Text style={styles.myTaskActionButtonText}>Detail Tugas</Text>
                         <Feather name="arrow-right" size={16} color="#4A90E2" />
                     </TouchableOpacity>
                 </View>
@@ -3447,6 +3527,65 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         paddingVertical: 32,
         gap: 8,
+    },
+
+    // Styles for created task assignee and approval lists
+    createdTaskAssigneeList: {
+        marginTop: 6,
+    },
+    createdTaskTagContainer: {
+        flexDirection: 'row',
+        flexWrap: 'wrap',
+        gap: 4,
+        marginTop: 2,
+    },
+    createdTaskAssigneeTag: {
+        backgroundColor: '#F1F5F9',
+        paddingHorizontal: 8,
+        paddingVertical: 3,
+        borderRadius: 10,
+        borderWidth: 1,
+        borderColor: '#E2E8F0',
+    },
+    createdTaskAssigneeName: {
+        fontSize: calculateFontSize(10),
+        color: '#475569',
+        fontWeight: '500',
+        textAlign: 'center',
+    },
+    createdTaskApprovalList: {
+        marginTop: 6,
+    },
+    createdTaskApprovalStatus: {
+        fontSize: calculateFontSize(9),
+        color: '#F59E0B',
+        fontWeight: '600',
+        fontStyle: 'italic',
+        marginTop: 4,
+        paddingHorizontal: 4,
+    },
+    createdTaskApprovalTag: {
+        backgroundColor: '#EEF2FF',
+        paddingHorizontal: 8,
+        paddingVertical: 3,
+        borderRadius: 10,
+        borderWidth: 1,
+        borderColor: '#DDD6FE',
+    },
+    createdTaskCurrentApprovalTag: {
+        backgroundColor: '#FEF3C7',
+        borderColor: '#F59E0B',
+        borderWidth: 1.5,
+    },
+    createdTaskApprovalName: {
+        fontSize: calculateFontSize(10),
+        color: '#5B21B6',
+        fontWeight: '500',
+        textAlign: 'center',
+    },
+    createdTaskCurrentApprovalName: {
+        color: '#D97706',
+        fontWeight: '600',
     },
     historyEmptyText: {
         fontSize: calculateFontSize(14),
