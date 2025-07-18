@@ -16,9 +16,9 @@ const ALERT_TYPES = {
 };
 
 const DEFAULT_MESSAGES = {
-    [ALERT_TYPES.SUCCESS]: 'Action completed successfully.',
-    [ALERT_TYPES.ERROR]: 'An error occurred.',
-    [ALERT_TYPES.DELETE]: 'Are you sure you want to delete this item?',
+    [ALERT_TYPES.SUCCESS]: 'Aksi berhasil dilakukan.',
+    [ALERT_TYPES.ERROR]: 'Terjadi kesalahan.',
+    [ALERT_TYPES.DELETE]: 'Apakah Anda yakin ingin menghapus item ini?',
 };
 
 const useSlideAnimation = (show) => {
@@ -70,21 +70,21 @@ const ReusableAlert = React.memo(({ show, alertType, message, onConfirm }) => {
                             style={styles.icon}
                         />
                     </View>
-                    <Text style={styles.title}>{isSuccess ? 'Success' : isDelete ? 'Delete Confirmation' : 'Error'}</Text>
+                    <Text style={styles.title}>{isSuccess ? 'Berhasil' : isDelete ? 'Konfirmasi Hapus' : 'Error'}</Text>
                     <Text style={styles.message}>{message || DEFAULT_MESSAGES[alertType]}</Text>
                     {isDelete ? (
                         <View style={styles.buttonContainer}>
                             <TouchableOpacity style={[styles.button, styles.confirmButton]} onPress={onConfirm}>
-                                <Text style={styles.buttonText}>Yes, Delete</Text>
+                                <Text style={styles.buttonText}>Ya, Hapus</Text>
                             </TouchableOpacity>
-                            <TouchableOpacity style={styles.button} onPress={onCancel}>
-                                <Text style={styles.buttonText}>Cancel</Text>
+                            <TouchableOpacity style={styles.button} onPress={() => {}}>
+                                <Text style={styles.buttonText}>Batal</Text>
                             </TouchableOpacity>
                         </View>
                     ) : (
                         !isSuccess && (
                             <TouchableOpacity style={styles.button} onPress={onConfirm}>
-                                <Text style={styles.buttonText}>Okay</Text>
+                                <Text style={styles.buttonText}>OK</Text>
                             </TouchableOpacity>
                         )
                     )}
@@ -106,54 +106,87 @@ const styles = StyleSheet.create({
         ...StyleSheet.absoluteFillObject,
         justifyContent: 'center',
         alignItems: 'center',
-        backgroundColor: 'rgba(0, 0, 0, 0.5)',
+        backgroundColor: 'rgba(0, 0, 0, 0.6)',
+        zIndex: 9999,
+        elevation: 9999,
     },
     alertWrapper: {
         width: width * 0.85,
         alignItems: 'center',
         justifyContent: 'center',
+        maxWidth: 340,
     },
     alertContent: {
         width: '100%',
-        backgroundColor: '#fff',
-        borderRadius: 20,
-        paddingVertical: 30,
-        paddingHorizontal: 20,
+        backgroundColor: '#ffffff',
+        borderRadius: 24,
+        paddingVertical: 32,
+        paddingHorizontal: 24,
         alignItems: 'center',
+        shadowColor: '#000',
+        shadowOffset: {
+            width: 0,
+            height: 12,
+        },
+        shadowOpacity: 0.25,
+        shadowRadius: 16,
+        elevation: 20,
     },
     iconContainer: {
-        width: 100,
-        height: 100,
-        marginBottom: 20,
+        width: 80,
+        height: 80,
+        marginBottom: 16,
     },
     icon: {
         width: '100%',
         height: '100%',
     },
     title: {
-        fontSize: 18,
-        fontWeight: 'bold',
-        color: '#333',
-        marginBottom: 10,
+        fontSize: 20,
+        fontWeight: '700',
+        color: '#1a1a1a',
+        marginBottom: 8,
         textAlign: 'center',
+        letterSpacing: -0.5,
     },
     message: {
-        fontSize: 14,
-        color: '#666',
+        fontSize: 15,
+        color: '#666666',
         textAlign: 'center',
-        marginBottom: 30,
+        marginBottom: 24,
+        lineHeight: 22,
+        paddingHorizontal: 8,
     },
     button: {
-        width: '80%',
-        backgroundColor: '#148FFF',
-        paddingVertical: 12,
-        borderRadius: 30,
+        width: '85%',
+        backgroundColor: '#4A90E2',
+        paddingVertical: 14,
+        borderRadius: 12,
         alignItems: 'center',
+        shadowColor: '#4A90E2',
+        shadowOffset: {
+            width: 0,
+            height: 4,
+        },
+        shadowOpacity: 0.2,
+        shadowRadius: 8,
+        elevation: 4,
     },
     buttonText: {
-        color: '#fff',
+        color: '#ffffff',
         fontSize: 16,
-        fontWeight: 'bold',
+        fontWeight: '600',
+        letterSpacing: -0.3,
+    },
+    buttonContainer: {
+        width: '100%',
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        gap: 12,
+    },
+    confirmButton: {
+        backgroundColor: '#EF4444',
+        flex: 1,
     },
 });
 

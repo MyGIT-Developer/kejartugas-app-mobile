@@ -347,6 +347,14 @@ const AdhocDashboard = ({ navigation }) => {
     };
 
     const handleApproveTask = async () => {
+        // Validate approval comment
+        const cleanComment = approvalComment.trim().replace(/[.,\s]/g, '');
+        if (!approvalComment || approvalComment.trim() === '' || cleanComment.length < 5) {
+            setErrorMessage('Komentar persetujuan minimal harus berisi 5 huruf yang bermakna.');
+            setShowErrorAlert(true);
+            return;
+        }
+
         setLoading(true); // Set loading state
         try {
             const companyId = await AsyncStorage.getItem('companyId'); // Fetch company ID from storage
@@ -371,9 +379,11 @@ const AdhocDashboard = ({ navigation }) => {
     };
 
     const handleRejectTask = async () => {
-        if (!approvalComment || approvalComment.trim() === '') {
-            setErrorMessage('Approval comment is required to reject the task.');
-            setShowErrorAlert(true); // Show error alert using ReusableAlert
+        // Validate rejection comment
+        const cleanComment = approvalComment.trim().replace(/[.,\s]/g, '');
+        if (!approvalComment || approvalComment.trim() === '' || cleanComment.length < 5) {
+            setErrorMessage('Alasan penolakan minimal harus berisi 5 huruf yang bermakna.');
+            setShowErrorAlert(true);
             return;
         }
 
@@ -401,8 +411,10 @@ const AdhocDashboard = ({ navigation }) => {
     };
 
     const handleSubmitTask = async () => {
-        if (!submitReason || submitReason.trim() === '') {
-            setErrorMessage('Alasan submit diperlukan untuk menyelesaikan tugas.');
+        // Validate submit reason
+        const cleanReason = submitReason.trim().replace(/[.,\s]/g, '');
+        if (!submitReason || submitReason.trim() === '' || cleanReason.length < 5) {
+            setErrorMessage('Alasan submit minimal harus berisi 5 huruf yang bermakna.');
             setShowErrorAlert(true);
             return;
         }
@@ -482,9 +494,8 @@ const AdhocDashboard = ({ navigation }) => {
         try {
             const result = await sourceType({
                 mediaTypes: ImagePicker.MediaTypeOptions.Images,
-                allowsEditing: true,
-                aspect: [4, 3],
-                quality: 0.7,
+                allowsEditing: false,
+                quality: 0.8,
             });
 
             if (!result.canceled && result.assets && result.assets.length > 0) {
@@ -492,7 +503,7 @@ const AdhocDashboard = ({ navigation }) => {
             }
         } catch (error) {
             console.error('Error picking image:', error);
-            setErrorMessage('Failed to pick image. Please try again.');
+            setErrorMessage('Gagal mengambil gambar. Silakan coba lagi.');
             setShowErrorAlert(true);
         }
     };
@@ -949,7 +960,6 @@ const AdhocDashboard = ({ navigation }) => {
                         }
                     }}
                 >
-                    <Feather name="x" size={16} color="#FFFFFF" />
                     <Text style={styles.rejectButtonText}>Tolak</Text>
                 </TouchableOpacity>
 
@@ -963,7 +973,6 @@ const AdhocDashboard = ({ navigation }) => {
                         }
                     }}
                 >
-                    <Feather name="check" size={16} color="#FFFFFF" />
                     <Text style={styles.approveButtonText}>Setujui</Text>
                 </TouchableOpacity>
             </View>
@@ -1578,18 +1587,20 @@ const AdhocDashboard = ({ navigation }) => {
             <Modal transparent={true} visible={isApproveModalVisible} animationType="slide">
                 <View style={styles.modalContainer}>
                     <View style={styles.modalContent}>
-                        <Text style={styles.modalTitle}>Approval Comment</Text>
+                        <Text style={styles.modalTitle}>Komentar Persetujuan</Text>
                         <TextInput
                             style={styles.modalInput}
-                            placeholder="Enter approval comment"
+                            placeholder="Masukkan komentar persetujuan (minimal 5 huruf)"
                             value={approvalComment}
                             onChangeText={setApprovalComment}
+                            multiline={true}
+                            numberOfLines={3}
                         />
                         <TouchableOpacity style={styles.sendButton} onPress={handleApproveTask} disabled={loading}>
-                            <Text style={styles.sendButtonText}>{loading ? 'Approving...' : 'Send'}</Text>
+                            <Text style={styles.sendButtonText}>{loading ? 'Menyetujui...' : 'Setujui'}</Text>
                         </TouchableOpacity>
                         <TouchableOpacity style={styles.cancelButton} onPress={() => setIsApproveModalVisible(false)}>
-                            <Text style={styles.cancelButtonText}>Cancel</Text>
+                            <Text style={styles.cancelButtonText}>Batal</Text>
                         </TouchableOpacity>
                     </View>
                 </View>
@@ -1599,18 +1610,20 @@ const AdhocDashboard = ({ navigation }) => {
             <Modal transparent={true} visible={isRejectModalVisible} animationType="slide">
                 <View style={styles.modalContainer}>
                     <View style={styles.modalContent}>
-                        <Text style={styles.modalTitle}>Rejection Reason</Text>
+                        <Text style={styles.modalTitle}>Alasan Penolakan</Text>
                         <TextInput
                             style={styles.modalInput}
-                            placeholder="Enter rejection reason"
+                            placeholder="Masukkan alasan penolakan (minimal 5 huruf)"
                             value={approvalComment}
                             onChangeText={setApprovalComment}
+                            multiline={true}
+                            numberOfLines={3}
                         />
                         <TouchableOpacity style={styles.sendButton} onPress={handleRejectTask} disabled={loading}>
-                            <Text style={styles.sendButtonText}>{loading ? 'Rejecting...' : 'Send'}</Text>
+                            <Text style={styles.sendButtonText}>{loading ? 'Menolak...' : 'Tolak'}</Text>
                         </TouchableOpacity>
                         <TouchableOpacity style={styles.cancelButton} onPress={() => setIsRejectModalVisible(false)}>
-                            <Text style={styles.cancelButtonText}>Cancel</Text>
+                            <Text style={styles.cancelButtonText}>Batal</Text>
                         </TouchableOpacity>
                     </View>
                 </View>
@@ -1626,22 +1639,36 @@ const AdhocDashboard = ({ navigation }) => {
                             {/* Upload Image Section */}
                             <View style={styles.uploadSection}>
                                 <Text style={styles.uploadLabel}>Gambar Bukti Submit *</Text>
-                                <TouchableOpacity style={styles.uploadButton} onPress={handleUploadPress}>
-                                    <Feather name="camera" size={20} color="#4A90E2" />
-                                    <Text style={styles.uploadButtonText}>
-                                        {submitImageUri ? 'Ganti Gambar' : 'Pilih Gambar'}
-                                    </Text>
-                                </TouchableOpacity>
 
-                                {submitImageUri && (
+                                {!submitImageUri ? (
+                                    <TouchableOpacity style={styles.uploadButton} onPress={handleUploadPress}>
+                                        <View style={styles.uploadIconContainer}>
+                                            <Feather name="camera" size={24} color="#4A90E2" />
+                                        </View>
+                                        <Text style={styles.uploadButtonText}>Pilih Gambar</Text>
+                                        <Text style={styles.uploadSubText}>
+                                            Tap untuk memilih dari kamera atau galeri
+                                        </Text>
+                                    </TouchableOpacity>
+                                ) : (
                                     <View style={styles.imagePreviewContainer}>
                                         <Image source={{ uri: submitImageUri }} style={styles.imagePreview} />
-                                        <TouchableOpacity
-                                            style={styles.removeImageButton}
-                                            onPress={() => setSubmitImageUri(null)}
-                                        >
-                                            <Feather name="x" size={16} color="#EF4444" />
-                                        </TouchableOpacity>
+                                        <View style={styles.imageOverlay}>
+                                            <TouchableOpacity
+                                                style={styles.changeImageButton}
+                                                onPress={handleUploadPress}
+                                            >
+                                                <Feather name="edit-2" size={16} color="#FFFFFF" />
+                                                <Text style={styles.changeImageText}>Ganti</Text>
+                                            </TouchableOpacity>
+                                            <TouchableOpacity
+                                                style={styles.removeImageButton}
+                                                onPress={() => setSubmitImageUri(null)}
+                                            >
+                                                <Feather name="trash-2" size={16} color="#FFFFFF" />
+                                                <Text style={styles.removeImageText}>Hapus</Text>
+                                            </TouchableOpacity>
+                                        </View>
                                     </View>
                                 )}
                             </View>
@@ -1660,7 +1687,7 @@ const AdhocDashboard = ({ navigation }) => {
                             </View>
 
                             <TouchableOpacity style={styles.sendButton} onPress={handleSubmitTask} disabled={loading}>
-                                <Text style={styles.sendButtonText}>{loading ? 'Submitting...' : 'Submit'}</Text>
+                                <Text style={styles.sendButtonText}>{loading ? 'Mengirim...' : 'Submit'}</Text>
                             </TouchableOpacity>
                             <TouchableOpacity
                                 style={styles.cancelButton}
@@ -1670,7 +1697,7 @@ const AdhocDashboard = ({ navigation }) => {
                                     setSubmitImageUri(null);
                                 }}
                             >
-                                <Text style={styles.cancelButtonText}>Cancel</Text>
+                                <Text style={styles.cancelButtonText}>Batal</Text>
                             </TouchableOpacity>
                         </ScrollView>
                     </View>
@@ -2627,57 +2654,53 @@ const styles = StyleSheet.create({
     },
     approvalActionButtons: {
         flexDirection: 'row',
-        gap: 12,
+        gap: 8,
         paddingHorizontal: 20,
         paddingBottom: 20,
+        justifyContent: 'center',
+        alignItems: 'center',
     },
     rejectButton: {
-        flex: 1,
         backgroundColor: '#EF4444',
-        borderRadius: 12,
-        paddingVertical: 14,
-        paddingHorizontal: 12,
-        flexDirection: 'row',
+        borderRadius: 8,
+        paddingVertical: 10,
+        paddingHorizontal: 16,
         alignItems: 'center',
         justifyContent: 'center',
-        gap: 6,
+        minWidth: 80,
         shadowColor: '#EF4444',
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.3,
-        shadowRadius: 8,
-        elevation: 6,
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.2,
+        shadowRadius: 4,
+        elevation: 3,
     },
     rejectButtonText: {
         color: '#FFFFFF',
-        fontSize: calculateFontSize(14),
-        fontWeight: '700',
-        letterSpacing: -0.5,
+        fontSize: calculateFontSize(13),
+        fontWeight: '600',
+        letterSpacing: -0.3,
         textAlign: 'center',
-        lineHeight: calculateFontSize(16),
     },
     approveButton: {
-        flex: 1,
         backgroundColor: '#10B981',
-        borderRadius: 12,
-        paddingVertical: 14,
-        paddingHorizontal: 12,
-        flexDirection: 'row',
+        borderRadius: 8,
+        paddingVertical: 10,
+        paddingHorizontal: 16,
         alignItems: 'center',
         justifyContent: 'center',
-        gap: 6,
+        minWidth: 80,
         shadowColor: '#10B981',
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.3,
-        shadowRadius: 8,
-        elevation: 6,
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.2,
+        shadowRadius: 4,
+        elevation: 3,
     },
     approveButtonText: {
         color: '#FFFFFF',
-        fontSize: calculateFontSize(14),
-        fontWeight: '700',
-        letterSpacing: -0.5,
+        fontSize: calculateFontSize(13),
+        fontWeight: '600',
+        letterSpacing: -0.3,
         textAlign: 'center',
-        lineHeight: calculateFontSize(16),
     },
     // Modal styles
     modalContainer: {
@@ -2743,62 +2766,95 @@ const styles = StyleSheet.create({
     },
     // Upload section styles
     uploadSection: {
-        marginBottom: 16,
+        marginBottom: 20,
     },
     uploadLabel: {
         fontSize: calculateFontSize(14),
         fontWeight: '600',
         color: '#333',
-        marginBottom: 8,
+        marginBottom: 12,
         letterSpacing: -0.5,
     },
     uploadButton: {
-        flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'center',
         backgroundColor: '#F8FAFC',
-        borderRadius: 12,
-        padding: 16,
+        borderRadius: 16,
+        padding: 24,
         borderWidth: 2,
         borderColor: '#E2E8F0',
         borderStyle: 'dashed',
-        gap: 8,
+        minHeight: 120,
+    },
+    uploadIconContainer: {
+        backgroundColor: '#EBF4FF',
+        borderRadius: 20,
+        padding: 12,
+        marginBottom: 8,
     },
     uploadButtonText: {
-        fontSize: calculateFontSize(14),
+        fontSize: calculateFontSize(16),
         color: '#4A90E2',
-        fontWeight: '500',
+        fontWeight: '600',
         letterSpacing: -0.5,
+        marginBottom: 4,
+    },
+    uploadSubText: {
+        fontSize: calculateFontSize(12),
+        color: '#64748B',
+        fontWeight: '400',
+        textAlign: 'center',
     },
     imagePreviewContainer: {
         marginTop: 12,
         position: 'relative',
-        alignItems: 'flex-start',
+        borderRadius: 16,
+        overflow: 'hidden',
         alignSelf: 'flex-start',
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.1,
+        shadowRadius: 8,
+        elevation: 4,
     },
     imagePreview: {
-        width: 120,
-        height: 120,
-        borderRadius: 12,
+        width: 200,
+        height: 150,
         backgroundColor: '#F1F5F9',
     },
-    removeImageButton: {
+    imageOverlay: {
         position: 'absolute',
-        top: -8,
-        right: -8,
-        backgroundColor: '#FFFFFF',
-        borderRadius: 12,
-        width: 24,
-        height: 24,
+        bottom: 0,
+        left: 0,
+        right: 0,
+        backgroundColor: 'rgba(0, 0, 0, 0.7)',
+        flexDirection: 'row',
+        justifyContent: 'space-around',
+        paddingVertical: 8,
+    },
+    changeImageButton: {
+        flexDirection: 'row',
         alignItems: 'center',
-        justifyContent: 'center',
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.1,
-        shadowRadius: 4,
-        elevation: 3,
-        borderWidth: 1,
-        borderColor: '#E2E8F0',
+        gap: 4,
+        paddingHorizontal: 8,
+        paddingVertical: 4,
+    },
+    changeImageText: {
+        color: '#FFFFFF',
+        fontSize: calculateFontSize(12),
+        fontWeight: '500',
+    },
+    removeImageButton: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 4,
+        paddingHorizontal: 8,
+        paddingVertical: 4,
+    },
+    removeImageText: {
+        color: '#FFFFFF',
+        fontSize: calculateFontSize(12),
+        fontWeight: '500',
     },
     reasonSection: {
         marginBottom: 16,
