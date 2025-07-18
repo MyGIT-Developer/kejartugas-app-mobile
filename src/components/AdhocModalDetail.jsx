@@ -1,5 +1,15 @@
 import React, { useRef, useEffect } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Modal, Dimensions, ScrollView, Animated } from 'react-native';
+import {
+    View,
+    Text,
+    StyleSheet,
+    TouchableOpacity,
+    Modal,
+    Dimensions,
+    ScrollView,
+    Animated,
+    PanResponder,
+} from 'react-native';
 import { useFonts } from '../utils/UseFonts'; // Import the useFonts hook
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
@@ -21,31 +31,93 @@ const AdhocModalDetail = ({
 }) => {
     const fontsLoaded = useFonts();
     const modalY = useRef(new Animated.Value(SCREEN_HEIGHT)).current;
+    const modalOpacity = useRef(new Animated.Value(0)).current;
 
-    // Animation for modal show/hide - mengikuti pattern DraggableModalTask
+    // Pan responder untuk drag gesture - hanya untuk handle area
+    const panResponder = useRef(
+        PanResponder.create({
+            onStartShouldSetPanResponder: (evt, gestureState) => {
+                // Hanya aktif jika gesture dimulai dari area handle (bagian atas modal)
+                return evt.nativeEvent.locationY < 60;
+            },
+            onMoveShouldSetPanResponder: (evt, gestureState) => {
+                // Hanya set responder jika:
+                // 1. Gesture dimulai dari area handle
+                // 2. Movement lebih besar dari threshold
+                return evt.nativeEvent.locationY < 60 && Math.abs(gestureState.dy) > 10;
+            },
+            onPanResponderMove: (evt, gestureState) => {
+                if (gestureState.dy > 0) {
+                    modalY.setValue(gestureState.dy);
+                }
+            },
+            onPanResponderRelease: (evt, gestureState) => {
+                if (gestureState.dy > 150 || gestureState.vy > 0.5) {
+                    handleClose();
+                } else {
+                    Animated.spring(modalY, {
+                        toValue: 0,
+                        useNativeDriver: true,
+                        bounciness: 8,
+                        speed: 12,
+                    }).start();
+                }
+            },
+        }),
+    ).current;
+
+    // Animation for modal show/hide - mengikuti pattern DraggableModalTask dengan easing yang smooth
     useEffect(() => {
         if (visible) {
-            Animated.spring(modalY, {
-                toValue: 0,
-                useNativeDriver: true,
-                tension: 50,
-                friction: 7,
-            }).start();
+            // Reset position
+            modalY.setValue(SCREEN_HEIGHT);
+            modalOpacity.setValue(0);
+
+            // Animate in dengan easing yang smooth seperti DraggableModalTask
+            Animated.parallel([
+                Animated.timing(modalOpacity, {
+                    toValue: 1,
+                    duration: 300,
+                    useNativeDriver: true,
+                }),
+                Animated.spring(modalY, {
+                    toValue: 0,
+                    useNativeDriver: true,
+                    bounciness: 8,
+                    speed: 12,
+                }),
+            ]).start();
         } else {
-            Animated.spring(modalY, {
-                toValue: SCREEN_HEIGHT,
-                useNativeDriver: true,
-            }).start();
+            // Animate out
+            Animated.parallel([
+                Animated.timing(modalOpacity, {
+                    toValue: 0,
+                    duration: 250,
+                    useNativeDriver: true,
+                }),
+                Animated.timing(modalY, {
+                    toValue: SCREEN_HEIGHT,
+                    duration: 250,
+                    useNativeDriver: true,
+                }),
+            ]).start();
         }
     }, [visible]);
 
-    // Enhanced close function with animation
+    // Enhanced close function with smooth animation seperti DraggableModalTask
     const handleClose = () => {
-        Animated.timing(modalY, {
-            toValue: SCREEN_HEIGHT,
-            duration: 300,
-            useNativeDriver: true,
-        }).start(({ finished }) => {
+        Animated.parallel([
+            Animated.timing(modalOpacity, {
+                toValue: 0,
+                duration: 250,
+                useNativeDriver: true,
+            }),
+            Animated.timing(modalY, {
+                toValue: SCREEN_HEIGHT,
+                duration: 250,
+                useNativeDriver: true,
+            }),
+        ]).start(({ finished }) => {
             if (finished) {
                 onClose();
             }
@@ -57,8 +129,15 @@ const AdhocModalDetail = ({
     }
 
     return (
-        <Modal transparent={true} visible={visible} onRequestClose={handleClose}>
-            <View style={styles.modalContainer}>
+        <Modal transparent={true} visible={visible} onRequestClose={handleClose} animationType="none">
+            <Animated.View
+                style={[
+                    styles.modalContainer,
+                    {
+                        opacity: modalOpacity,
+                    },
+                ]}
+            >
                 <TouchableOpacity style={styles.overlay} onPress={handleClose} activeOpacity={1} />
                 <Animated.View
                     style={[
@@ -69,8 +148,8 @@ const AdhocModalDetail = ({
                     ]}
                 >
                     <View style={styles.bottomSheet}>
-                        {/* Simple Handle bar */}
-                        <View style={styles.handleContainer}>
+                        {/* Handle bar yang lebih responsive untuk drag - Area khusus untuk gesture */}
+                        <View style={styles.handleContainer} {...panResponder.panHandlers}>
                             <View style={styles.handle} />
                         </View>
 
@@ -78,6 +157,8 @@ const AdhocModalDetail = ({
                             style={styles.content}
                             showsVerticalScrollIndicator={false}
                             keyboardShouldPersistTaps="handled"
+                            bounces={true}
+                            nestedScrollEnabled={true}
                         >
                             <Text style={styles.title}>{title}</Text>
                             <View style={styles.contentContainer}>{children}</View>
@@ -105,7 +186,7 @@ const AdhocModalDetail = ({
                         </View>
                     </View>
                 </Animated.View>
-            </View>
+            </Animated.View>
         </Modal>
     );
 };
@@ -143,19 +224,24 @@ const styles = StyleSheet.create({
     },
     handleContainer: {
         alignItems: 'center',
-        paddingTop: 16,
-        paddingBottom: 12,
+        paddingTop: 12,
+        paddingBottom: 8,
+        paddingHorizontal: 24,
+        cursor: 'grab',
+        minHeight: 40, // Ensure adequate touch area
     },
     handle: {
-        width: 48,
-        height: 5,
+        width: 40,
+        height: 4,
         backgroundColor: '#D1D5DB',
-        borderRadius: 3,
+        borderRadius: 2,
+        marginBottom: 4,
     },
     content: {
         paddingHorizontal: 24,
-        paddingTop: 16,
-        maxHeight: SCREEN_HEIGHT * 0.65,
+        paddingTop: 8,
+        flex: 1, // Allow flex growth
+        maxHeight: SCREEN_HEIGHT * 0.6, // Adjusted for better scrolling
     },
     contentContainer: {
         paddingBottom: 20,

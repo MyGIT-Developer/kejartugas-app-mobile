@@ -350,8 +350,13 @@ const AdhocDashboard = ({ navigation }) => {
         // Validate approval comment
         const cleanComment = approvalComment.trim().replace(/[.,\s]/g, '');
         if (!approvalComment || approvalComment.trim() === '' || cleanComment.length < 5) {
-            setErrorMessage('Komentar persetujuan minimal harus berisi 5 huruf yang bermakna.');
-            setShowErrorAlert(true);
+            // Close modal first, then show error
+            setIsApproveModalVisible(false);
+            setApprovalComment('');
+            setTimeout(() => {
+                setErrorMessage('Komentar persetujuan minimal harus berisi 5 huruf yang bermakna.');
+                setShowErrorAlert(true);
+            }, 300);
             return;
         }
 
@@ -363,18 +368,25 @@ const AdhocDashboard = ({ navigation }) => {
             // Call the approve API
             await approveAdhocTask(taskId, companyId, approvalComment);
 
+            // Close modal and reset state first
+            setIsApproveModalVisible(false);
+            setApprovalComment('');
+
             // Show success alert using ReusableAlert
             setShowApproveSuccessAlert(true);
 
             // Refresh the approval tasks list
             await fetchPendingApprovalTasks();
         } catch (error) {
-            setErrorMessage(`Failed to approve task: ${error.message}`);
-            setShowErrorAlert(true); // Show error alert using ReusableAlert
+            // Close modal first, then show error
+            setIsApproveModalVisible(false);
+            setApprovalComment('');
+            setTimeout(() => {
+                setErrorMessage(`Failed to approve task: ${error.message}`);
+                setShowErrorAlert(true);
+            }, 300);
         } finally {
             setLoading(false); // Reset loading state
-            setIsApproveModalVisible(false); // Close modal if necessary
-            setApprovalComment(''); // Reset comment
         }
     };
 
@@ -382,8 +394,13 @@ const AdhocDashboard = ({ navigation }) => {
         // Validate rejection comment
         const cleanComment = approvalComment.trim().replace(/[.,\s]/g, '');
         if (!approvalComment || approvalComment.trim() === '' || cleanComment.length < 5) {
-            setErrorMessage('Alasan penolakan minimal harus berisi 5 huruf yang bermakna.');
-            setShowErrorAlert(true);
+            // Close modal first, then show error
+            setIsRejectModalVisible(false);
+            setApprovalComment('');
+            setTimeout(() => {
+                setErrorMessage('Alasan penolakan minimal harus berisi 5 huruf yang bermakna.');
+                setShowErrorAlert(true);
+            }, 300);
             return;
         }
 
@@ -395,18 +412,25 @@ const AdhocDashboard = ({ navigation }) => {
             // Call the reject API
             await rejectAdhocTask(taskId, companyId, approvalComment);
 
+            // Close modal and reset state first
+            setIsRejectModalVisible(false);
+            setApprovalComment('');
+
             // Show success alert using ReusableAlert
             setShowRejectSuccessAlert(true);
 
             // Refresh the approval tasks list
             await fetchPendingApprovalTasks();
         } catch (error) {
-            setErrorMessage(`Failed to reject task: ${error.message}`);
-            setShowErrorAlert(true); // Show error alert using ReusableAlert
+            // Close modal first, then show error
+            setIsRejectModalVisible(false);
+            setApprovalComment('');
+            setTimeout(() => {
+                setErrorMessage(`Failed to reject task: ${error.message}`);
+                setShowErrorAlert(true);
+            }, 300);
         } finally {
             setLoading(false); // Reset loading state
-            setIsRejectModalVisible(false); // Close modal if necessary
-            setApprovalComment(''); // Reset comment
         }
     };
 
@@ -414,14 +438,28 @@ const AdhocDashboard = ({ navigation }) => {
         // Validate submit reason
         const cleanReason = submitReason.trim().replace(/[.,\s]/g, '');
         if (!submitReason || submitReason.trim() === '' || cleanReason.length < 5) {
-            setErrorMessage('Alasan submit minimal harus berisi 5 huruf yang bermakna.');
-            setShowErrorAlert(true);
+            // Close modal first, then show error
+            setIsSubmitModalVisible(false);
+            setSubmitReason('');
+            setSubmitImageUri(null);
+            setSelectedTaskId(null);
+            setTimeout(() => {
+                setErrorMessage('Alasan submit minimal harus berisi 5 huruf yang bermakna.');
+                setShowErrorAlert(true);
+            }, 300);
             return;
         }
 
         if (!submitImageUri) {
-            setErrorMessage('Gambar diperlukan untuk submit tugas.');
-            setShowErrorAlert(true);
+            // Close modal first, then show error
+            setIsSubmitModalVisible(false);
+            setSubmitReason('');
+            setSubmitImageUri(null);
+            setSelectedTaskId(null);
+            setTimeout(() => {
+                setErrorMessage('Gambar diperlukan untuk submit tugas.');
+                setShowErrorAlert(true);
+            }, 300);
             return;
         }
 
@@ -437,9 +475,16 @@ const AdhocDashboard = ({ navigation }) => {
 
                 // Validate file size (1MB = 1024 * 1024 bytes)
                 if (fileInfo.size > 1024 * 1024) {
-                    setErrorMessage('Ukuran file terlalu besar. Mohon pilih gambar dengan ukuran maksimal 1MB.');
-                    setShowErrorAlert(true);
+                    // Close modal first, then show error
+                    setIsSubmitModalVisible(false);
+                    setSubmitReason('');
+                    setSubmitImageUri(null);
+                    setSelectedTaskId(null);
                     setLoading(false);
+                    setTimeout(() => {
+                        setErrorMessage('Ukuran file terlalu besar. Mohon pilih gambar dengan ukuran maksimal 1MB.');
+                        setShowErrorAlert(true);
+                    }, 300);
                     return;
                 }
 
@@ -459,20 +504,29 @@ const AdhocDashboard = ({ navigation }) => {
             // Call the submit API with image
             await submitAdhocTask(selectedTaskId, companyId, imageBase64, submitReason);
 
+            // Close modal and reset state first
+            setIsSubmitModalVisible(false);
+            setSubmitReason('');
+            setSubmitImageUri(null);
+            setSelectedTaskId(null);
+
             // Show success alert using ReusableAlert
             setShowSubmitSuccessAlert(true);
 
             // Refresh the my tasks list
             await fetchMyTasks();
         } catch (error) {
-            setErrorMessage(`Gagal submit tugas: ${error.message}`);
-            setShowErrorAlert(true);
-        } finally {
-            setLoading(false);
+            // Close modal first, then show error
             setIsSubmitModalVisible(false);
             setSubmitReason('');
             setSubmitImageUri(null);
             setSelectedTaskId(null);
+            setTimeout(() => {
+                setErrorMessage(`Gagal submit tugas: ${error.message}`);
+                setShowErrorAlert(true);
+            }, 300);
+        } finally {
+            setLoading(false);
         }
     };
 
