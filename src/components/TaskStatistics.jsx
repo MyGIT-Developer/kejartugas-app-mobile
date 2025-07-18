@@ -50,27 +50,25 @@ const TaskStatistics = ({ tasks, adhocTasks, isLoading = false }) => {
     const inProgressTasks = regularInProgressTasks + adhocInProgressTasks;
     const pendingReview = regularPendingReview + adhocPendingReview;
 
-    if (totalTasks === 0) return null;
-
     return (
         <View style={styles.container}>
             <View style={styles.statItem}>
-                <Text style={styles.statNumber}>{totalTasks}</Text>
+                <Text style={styles.statNumber}>{totalTasks ? totalTasks : 0}</Text>
                 <Text style={styles.statLabel}>Total</Text>
             </View>
             <View style={styles.separator} />
             <View style={styles.statItem}>
-                <Text style={styles.statNumber}>{inProgressTasks}</Text>
+                <Text style={styles.statNumber}>{inProgressTasks ? inProgressTasks : 0}</Text>
                 <Text style={styles.statLabel}>Dikerjakan</Text>
             </View>
             <View style={styles.separator} />
             <View style={styles.statItem}>
-                <Text style={styles.statNumber}>{pendingReview}</Text>
+                <Text style={styles.statNumber}>{pendingReview ? pendingReview : 0}</Text>
                 <Text style={styles.statLabel}>Review</Text>
             </View>
             <View style={styles.separator} />
             <View style={styles.statItem}>
-                <Text style={styles.statNumber}>{completedTasks}</Text>
+                <Text style={styles.statNumber}>{completedTasks ? completedTasks : 0}</Text>
                 <Text style={styles.statLabel}>Selesai</Text>
             </View>
         </View>

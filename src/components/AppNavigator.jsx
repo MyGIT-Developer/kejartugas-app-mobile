@@ -5,10 +5,8 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import Home from '../screens/Home';
 import Kehadiran from '../screens/Kehadiran';
-import Profile from '../screens/Profile';
-import ProjectDashboard from '../screens/ProjectDashboard';
 import Tugas from '../screens/Tugas';
-import { HomeIcon, KehadiranIcon, ProfileIcon, ProjectIcon, TugasIcon } from '../../assets/icon/icons';
+import { HomeIcon, KehadiranIcon, TugasIcon } from '../../assets/icon/icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const Tab = createBottomTabNavigator();
@@ -18,8 +16,6 @@ const SCREEN_OPTIONS = {
     Home: { component: Home, icon: HomeIcon },
     Kehadiran: { component: Kehadiran, icon: KehadiranIcon },
     Tugas: { component: Tugas, icon: TugasIcon },
-    // Project: { component: ProjectDashboard, icon: ProjectIcon },
-    // Profile: { component: Profile, icon: ProfileIcon },
 };
 
 const AppNavigator = () => {

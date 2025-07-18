@@ -365,7 +365,7 @@ const DetailTaskSection = () => {
 
             // Optionally check task status for modal type
             if (taskDetails.task_status === 'Completed') {
-                setModalType('success');
+                setModalType('default');
             } else {
                 setModalType('default');
             }
@@ -443,7 +443,6 @@ const DetailTaskSection = () => {
             <ScrollView
                 contentContainerStyle={styles.scrollViewContent}
                 showsVerticalScrollIndicator={false}
-                style={styles.scrollView}
             >
                 {/* Header Content Inside ScrollView */}
                 <View style={styles.headerContainer}>
@@ -501,9 +500,6 @@ const styles = StyleSheet.create({
     container: {
         flex: 1,
         backgroundColor: '#F8FAFC',
-    },
-    scrollView: {
-        flex: 1,
     },
     scrollViewContent: {
         flexGrow: 1,

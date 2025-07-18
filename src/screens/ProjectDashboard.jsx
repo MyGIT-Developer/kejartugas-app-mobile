@@ -9,6 +9,7 @@ import {
     Platform,
     StatusBar,
     ScrollView,
+    Animated
 } from 'react-native';
 import FloatingButton from '../components/FloatingButtonProject';
 import { getProject } from '../api/projectTask';
@@ -17,10 +18,11 @@ import { TextInput } from 'react-native-gesture-handler';
 import { LinearGradient } from 'expo-linear-gradient';
 import * as Progress from 'react-native-progress';
 import { TouchableOpacity } from 'react-native';
-import { Feather, MaterialIcons } from '@expo/vector-icons';
+import { Feather, Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import ProjectScrollView from '../components/ProjectScrollView';
 import AccessDenied from '../components/AccessDenied';
+import { FONTS } from '../constants/fonts';
 
 const { height, width: SCREEN_WIDTH } = Dimensions.get('window');
 
@@ -52,28 +54,30 @@ const SkeletonSection = () => (
 );
 
 const ProjectCard = ({ item, handleGoToDetail }) => (
-    <View style={styles.cardContainer}>
-        <View style={styles.card}>
-            <Text style={styles.projectName} numberOfLines={2} ellipsizeMode="tail">
-                {item.project_name}
-            </Text>
-            <View style={styles.progressContainer}>
-                <Progress.Bar
-                    progress={item.percentage / 100}
-                    color="#27B44E"
-                    width={null}
-                    style={styles.progressBar}
-                />
-                <Text style={{ fontFamily: 'Poppins-Medium', letterSpacing: -0.3 }}>
-                    {item.percentage ? Math.round(item.percentage).toFixed(1) : '0'}%
+    <TouchableOpacity onPress={() => handleGoToDetail(item.id)}>
+        <View style={styles.cardContainer}>
+            <View style={styles.card}>
+                <Text style={styles.projectName} numberOfLines={2} ellipsizeMode="tail">
+                    {item.project_name}
                 </Text>
+                <View style={styles.progressContainer}>
+                    <Progress.Bar
+                        progress={item.percentage / 100}
+                        color="#27B44E"
+                        width={null}
+                        style={styles.progressBar}
+                    />
+                    <Text style={{ fontFamily: 'Poppins-Medium', letterSpacing: -0.3 }}>
+                        {item.percentage ? Math.round(item.percentage).toFixed(1) : '0'}%
+                    </Text>
+                </View>
+                <TouchableOpacity style={styles.detailButton} onPress={() => handleGoToDetail(item.id)}>
+                    <Text style={styles.detailButtonText}>Lihat Detail</Text>
+                    <Feather name="chevron-right" size={24} color="black" />
+                </TouchableOpacity>
             </View>
-            <TouchableOpacity style={styles.detailButton} onPress={() => handleGoToDetail(item.id)}>
-                <Text style={{ fontFamily: 'Poppins-Medium', letterSpacing: -0.3 }}>Lihat Detail</Text>
-                <Feather name="chevron-right" size={24} color="black" />
-            </TouchableOpacity>
         </View>
-    </View>
+    </TouchableOpacity>
 );
 
 const ProjectSection = ({ title, projects, status, handleGoTo, handleGoToDetail }) => (
@@ -123,6 +127,9 @@ const ProjectDashboard = () => {
     const [taskCount, setTaskCount] = useState([]);
     const [hasAccess, setHasAccess] = useState(null);
     const [searchQuery, setSearchQuery] = useState(''); // Search query state
+
+    const headerAnim = React.useRef(new Animated.Value(1)).current;
+    const headerScaleAnim = React.useRef(new Animated.Value(1)).current;
 
     useEffect(() => {
         const getData = async () => {
@@ -183,9 +190,6 @@ const ProjectDashboard = () => {
     };
 
     const renderContent = () => {
-        if (!hasAccess) {
-            return <AccessDenied />;
-        }
 
         if (loading) {
             return (
@@ -206,7 +210,10 @@ const ProjectDashboard = () => {
         }
 
         return (
-            <>
+            <ScrollView
+                contentContainerStyle={styles.contentContainer}
+                refreshControl={<RefreshControl refreshing={refreshing} onRefresh={fetchProject} />}
+            >
                 <ProjectSection
                     title="Semua Proyek"
                     projects={filteredProjects}
@@ -226,9 +233,135 @@ const ProjectDashboard = () => {
                     status="onReview"
                     handleGoTo={() => handleGoTo('onReview')}
                 />
-            </>
+            </ScrollView>
         );
     };
+
+    const renderHeader = () => (
+        <Animated.View
+            style={[
+                styles.backgroundBox,
+                {
+                    opacity: headerAnim,
+                    transform: [
+                        {
+                            scale: headerScaleAnim.interpolate({
+                                inputRange: [0.9, 1],
+                                outputRange: [0.95, 1],
+                                extrapolate: 'clamp',
+                            }),
+                        },
+                    ],
+                },
+            ]}
+        >
+            <LinearGradient
+                colors={['#4A90E2', '#357ABD', '#2E5984']}
+                style={styles.linearGradient}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 1 }}
+            />
+
+            {/* Header decorative elements */}
+            <View style={styles.headerDecorations}>
+                <Animated.View
+                    style={[
+                        styles.decorativeCircle1,
+                        {
+                            opacity: headerAnim.interpolate({
+                                inputRange: [0, 1],
+                                outputRange: [0, 0.6],
+                            }),
+                            transform: [
+                                {
+                                    scale: headerAnim.interpolate({
+                                        inputRange: [0, 1],
+                                        outputRange: [0.5, 1],
+                                    }),
+                                },
+                            ],
+                        },
+                    ]}
+                />
+                <Animated.View
+                    style={[
+                        styles.decorativeCircle2,
+                        {
+                            opacity: headerAnim.interpolate({
+                                inputRange: [0, 1],
+                                outputRange: [0, 0.4],
+                            }),
+                            transform: [
+                                {
+                                    scale: headerAnim.interpolate({
+                                        inputRange: [0, 1],
+                                        outputRange: [0.3, 1],
+                                    }),
+                                },
+                            ],
+                        },
+                    ]}
+                />
+                <Animated.View
+                    style={[
+                        styles.decorativeCircle3,
+                        {
+                            opacity: headerAnim.interpolate({
+                                inputRange: [0, 1],
+                                outputRange: [0, 0.5],
+                            }),
+                            transform: [
+                                {
+                                    scale: headerAnim.interpolate({
+                                        inputRange: [0, 1],
+                                        outputRange: [0.7, 1],
+                                    }),
+                                },
+                            ],
+                        },
+                    ]}
+                />
+                <Animated.View
+                    style={[
+                        styles.decorativeCircle4,
+                        {
+                            opacity: headerAnim.interpolate({
+                                inputRange: [0, 1],
+                                outputRange: [0, 0.5],
+                            }),
+                            transform: [
+                                {
+                                    scale: headerAnim.interpolate({
+                                        inputRange: [0, 1],
+                                        outputRange: [0.7, 1],
+                                    }),
+                                },
+                            ],
+                        },
+                    ]}
+                />
+                <Animated.View
+                    style={[
+                        styles.decorativeCircle5,
+                        {
+                            opacity: headerAnim.interpolate({
+                                inputRange: [0, 1],
+                                outputRange: [0, 0.5],
+                            }),
+                            transform: [
+                                {
+                                    scale: headerAnim.interpolate({
+                                        inputRange: [0, 1],
+                                        outputRange: [0.7, 1],
+                                    }),
+                                },
+                            ],
+                        },
+                    ]}
+                />
+            </View>
+        </Animated.View>
+    );
 
     const handleGoTo = (projectType) => {
         switch (projectType) {
@@ -253,38 +386,84 @@ const ProjectDashboard = () => {
     return (
         <SafeAreaView style={styles.safeArea}>
             <StatusBar barStyle="light-content" backgroundColor="#0E509E" hidden={true} />
+            {renderHeader()}
             {hasAccess && (
                 <>
-                    <ScrollView
-                        contentContainerStyle={styles.contentContainer}
-                        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={fetchProject} />}
-                    >
-                        <View style={styles.backgroundBox}>
-                            <LinearGradient
-                                colors={['#0E509E', '#5FA0DC', '#9FD2FF']}
-                                style={styles.linearGradient}
-                                start={{ x: 0, y: 0 }}
-                                end={{ x: 1, y: 1 }}
-                            />
-                        </View>
-                        <View style={styles.headerSection}>
-                            <Text style={styles.headerTitle}>Projek</Text>
-                            <View style={styles.searchSection}>
-                                <Feather name="search" size={20} color="#A7AFB1" style={styles.searchIcon} />
-                                <TextInput
-                                    style={styles.input}
-                                    placeholder="Pencarian"
-                                    placeholderTextColor="#A7AFB1"
-                                    underlineColorAndroid="transparent"
-                                    value={searchQuery}
-                                    onChangeText={handleSearch}
-                                />
+                    <View
+                        style={styles.scrollViewContent}>
+                        <Animated.View
+                            style={[
+                                styles.headerContainer,
+                                {
+                                    opacity: headerAnim,
+                                    transform: [
+                                        {
+                                            translateY: headerAnim.interpolate({
+                                                inputRange: [0, 1],
+                                                outputRange: [-30, 0],
+                                            }),
+                                        },
+                                        { scale: headerScaleAnim },
+                                    ],
+                                },
+                            ]}
+                        >
+                            <View style={styles.headerContent}>
+                                <View style={styles.headerTitleWrapper}>
+                                    <Animated.View
+                                        style={[
+                                            styles.headerIconContainer,
+                                            {
+                                                opacity: headerAnim,
+                                                transform: [
+                                                    {
+                                                        scale: headerAnim.interpolate({
+                                                            inputRange: [0, 1],
+                                                            outputRange: [0.5, 1],
+                                                        }),
+                                                    },
+                                                ],
+                                            },
+                                        ]}
+                                    >
+                                        <Ionicons name="clipboard-outline" size={28} color="white" />
+                                    </Animated.View>
+                                    <Animated.Text
+                                        style={[
+                                            styles.header,
+                                            {
+                                                opacity: headerAnim,
+                                                transform: [
+                                                    {
+                                                        scale: headerAnim.interpolate({
+                                                            inputRange: [0, 1],
+                                                            outputRange: [0.8, 1],
+                                                        }),
+                                                    },
+                                                ],
+                                            },
+                                        ]}
+                                    >
+                                        Projek
+                                    </Animated.Text>
+                                </View>
+                                <View style={styles.searchSection}>
+                                    <Feather name="search" size={20} color="#A7AFB1" style={styles.searchIcon} />
+                                    <TextInput
+                                        style={styles.input}
+                                        placeholder="Pencarian"
+                                        placeholderTextColor="#A7AFB1"
+                                        underlineColorAndroid="transparent"
+                                        value={searchQuery}
+                                        onChangeText={handleSearch}
+                                    />
+                                </View>
                             </View>
-                        </View>
+                        </Animated.View>
 
                         {/* Render Content */}
                         {renderContent()}
-                    </ScrollView>
+                    </View>
                     <FloatingButton bottom={100} />
                 </>
             )}
@@ -296,23 +475,143 @@ const ProjectDashboard = () => {
 const styles = StyleSheet.create({
     safeArea: {
         flex: 1,
-        backgroundColor: 'transparent',
+        backgroundColor: '#F8FAFC',
+    },
+    scrollViewContent: {
+        flexGrow: 1,
+        paddingTop: 20,
+        paddingBottom: 120,
     },
     contentContainer: {
         flexGrow: 1,
         paddingBottom: 100,
     },
     backgroundBox: {
-        height: Platform.OS === 'ios' ? 175 : 155,
+        height: 225,
         width: '100%',
         position: 'absolute',
         top: 0,
         left: 0,
+        overflow: 'hidden',
     },
     linearGradient: {
         flex: 1,
-        borderBottomLeftRadius: 30,
-        borderBottomRightRadius: 30,
+        borderBottomLeftRadius: 24,
+        borderBottomRightRadius: 24,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 20 },
+        shadowOpacity: 0.5,
+        shadowRadius: 12,
+        elevation: 8,
+        marginBottom: 30,
+    },
+    headerContainer: {
+        alignItems: 'center',
+        paddingTop: Platform.OS === 'ios' ? 70 : 50,
+        paddingBottom: 30,
+        paddingHorizontal: 20,
+        position: 'relative',
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.1,
+        shadowRadius: 8,
+        elevation: 5,
+    },
+    headerContent: {
+        alignItems: 'center',
+        justifyContent: 'center',
+        width: '100%',
+        paddingHorizontal: 20,
+    },
+    header: {
+        fontSize: FONTS.size['3xl'],
+        fontFamily: FONTS.family.bold,
+        color: 'white',
+        textAlign: 'center',
+        letterSpacing: -0.8,
+        marginBottom: 0,
+        textShadowColor: 'rgba(0, 0, 0, 0.15)',
+        textShadowOffset: { width: 0, height: 1 },
+        textShadowRadius: 3,
+    },
+    headerSubtitle: {
+        fontSize: FONTS.size.md,
+        fontFamily: FONTS.family.regular,
+        color: 'rgba(255, 255, 255, 0.85)',
+        textAlign: 'center',
+        marginTop: 4,
+        letterSpacing: 0.2,
+        lineHeight: 18,
+    },
+    headerTitleWrapper: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+        gap: 12,
+        marginBottom: 8,
+    },
+    headerIconContainer: {
+        width: 40,
+        height: 40,
+        borderRadius: 20,
+        backgroundColor: 'rgba(255, 255, 255, 0.2)',
+        justifyContent: 'center',
+        alignItems: 'center',
+        borderWidth: 1,
+        borderColor: 'rgba(255, 255, 255, 0.3)',
+    },
+    headerDecorations: {
+        position: 'absolute',
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0,
+        overflow: 'hidden',
+    },
+    decorativeCircle1: {
+        position: 'absolute',
+        width: 120,
+        height: 120,
+        borderRadius: 60,
+        backgroundColor: 'rgba(255, 255, 255, 0.08)',
+        top: -30,
+        right: -20,
+    },
+    decorativeCircle2: {
+        position: 'absolute',
+        width: 80,
+        height: 80,
+        borderRadius: 40,
+        backgroundColor: 'rgba(255, 255, 255, 0.06)',
+        top: 40,
+        left: -25,
+    },
+    decorativeCircle3: {
+        position: 'absolute',
+        width: 60,
+        height: 60,
+        borderRadius: 30,
+        backgroundColor: 'rgba(255, 255, 255, 0.1)',
+        top: 80,
+        right: 30,
+    },
+    decorativeCircle4: {
+        position: 'absolute',
+        width: 60,
+        height: 60,
+        borderRadius: 30,
+        backgroundColor: 'rgba(255, 255, 255, 0.1)',
+        top: 150,
+        left: -10,
+    },
+    decorativeCircle5: {
+        position: 'absolute',
+        width: 120,
+        height: 120,
+        borderRadius: 60,
+        backgroundColor: 'rgba(255, 255, 255, 0.08)',
+        top: 120,
+        left: 30,
     },
     cardContainer: {
         marginHorizontal: 20,
@@ -320,7 +619,7 @@ const styles = StyleSheet.create({
     },
     card: {
         backgroundColor: 'white',
-        borderRadius: 19,
+        borderRadius: 10,
         padding: 15,
         height: 125,
         width: 312,
@@ -333,7 +632,7 @@ const styles = StyleSheet.create({
     },
     projectName: {
         fontFamily: 'Poppins-Medium',
-        letterSpacing: -0.3,
+        letterSpacing: -0.5,
         fontSize: 16,
     },
     progressContainer: {
@@ -348,6 +647,12 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         alignItems: 'center',
         gap: 10,
+    },
+    detailButtonText: {
+        color: '#444',
+        fontSize: FONTS.size.sm,
+        fontFamily: 'Poppins-Regular',
+        letterSpacing: -0.5,
     },
     headerSection: {
         flexDirection: 'column',
@@ -404,12 +709,11 @@ const styles = StyleSheet.create({
         justifyContent: 'space-between',
         alignItems: 'center',
         paddingHorizontal: 20,
-        marginVertical: 10,
     },
     sectionTitle: {
-        fontSize: 18,
+        fontSize: FONTS.size.lg,
         fontFamily: 'Poppins-Medium',
-        letterSpacing: -0.3,
+        letterSpacing: -0.5,
         lineHeight: 30,
     },
     seeAllText: {

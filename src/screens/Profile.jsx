@@ -21,6 +21,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { getEmployeeById } from '../api/general';
 import { useFonts } from '../utils/UseFonts';
 import * as Haptics from 'expo-haptics';
+import { FONTS } from '../constants/fonts';
 
 const { height, width: SCREEN_WIDTH } = Dimensions.get('window');
 
@@ -231,7 +232,9 @@ const Profile = () => {
                 >
                     <View style={styles.avatarContainer}>
                         {userData.profile_picture ? (
-                            <Image source={{ uri: `${baseUrl}${userData.profile_picture}` }} style={styles.avatar} />
+                            <View style={styles.initialsContainer}>
+                                <Image source={{ uri: `${baseUrl}${userData.profile_picture}` }} style={styles.avatar} />
+                            </View>
                         ) : (
                             <View style={styles.initialsContainer}>
                                 <Text
@@ -516,7 +519,6 @@ const styles = StyleSheet.create({
     },
     scrollContent: {
         paddingTop: 20,
-        paddingBottom: 120,
     },
     header: {
         flexDirection: 'row',
@@ -583,7 +585,7 @@ const styles = StyleSheet.create({
         shadowOffset: { width: 0, height: 4 },
         shadowOpacity: 0.2,
         shadowRadius: 8,
-        elevation: 5,
+        // elevation: 5,
     },
     initialsContainer: {
         width: 100,
@@ -725,10 +727,11 @@ const styles = StyleSheet.create({
         marginBottom: 16,
     },
     sectionTitle: {
-        fontSize: 18,
+        fontSize: FONTS.size.lg,
         fontWeight: '600',
         color: '#1F2937',
         marginLeft: 8,
+        marginTop: 4,
     },
     infoItem: {
         flexDirection: 'row',
@@ -762,7 +765,7 @@ const styles = StyleSheet.create({
         fontSize: 14,
         color: '#1F2937',
         textAlign: 'right',
-        maxWidth: '50%',
+        maxWidth: '60%',
     },
     overlay: {
         flex: 1,

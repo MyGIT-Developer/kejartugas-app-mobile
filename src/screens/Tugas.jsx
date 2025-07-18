@@ -187,6 +187,7 @@ const Tugas = () => {
 
     const handleProjectDetailPress = (task) => {
         const projectDetails = {
+            title: task.project_name,
             assign_by_name: task.assign_by_name,
             start_date: task.project_start_date,
             end_date: task.project_end_date,
@@ -200,6 +201,7 @@ const Tugas = () => {
     const handleTaskDetailPress = (task) => {
         const baseUrl = 'https://app.kejartugas.com/';
         const taskStatus = task.task_status || task.status;
+        const submitTaskStatus = task.task_submit_status || 'N/A';
         const collectionStatus = getCollectionStatusBadgeColor(task.task_submit_status || 'N/A');
 
         const taskDetails = {
@@ -228,13 +230,7 @@ const Tugas = () => {
         };
 
         setSelectedTask(taskDetails);
-
-        if (taskStatus === 'Completed') {
-            setModalType('default');
-        } else {
-            setModalType('default');
-        }
-
+        setModalType('default');
         setDraggableModalVisible(true);
     };
 
@@ -545,22 +541,14 @@ const Tugas = () => {
                 </View>
             </View>
 
-            {modalType === 'default' ? (
-                <DraggableModalTask
-                    visible={draggableModalVisible}
-                    onClose={() => {
-                        setDraggableModalVisible(false);
-                        setSelectedTask(null);
-                    }}
-                    taskDetails={selectedTask || {}}
-                />
-            ) : (
-                <ReusableModalSuccess
-                    visible={draggableModalVisible}
-                    onClose={() => setDraggableModalVisible(false)}
-                    taskDetails={selectedTask || {}}
-                />
-            )}
+            <DraggableModalTask
+                visible={draggableModalVisible}
+                onClose={() => {
+                    setDraggableModalVisible(false);
+                    setSelectedTask(null);
+                }}
+                taskDetails={selectedTask || {}}
+            />
 
             <DetailProyekModal
                 visible={modalVisible}

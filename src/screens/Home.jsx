@@ -23,7 +23,7 @@ import { useEmployeeData, useDashboardData, useTasksData, useNotifications } fro
 
 // Components
 import { StatisticCard, StatisticSkeleton } from '../components/StatisticCard';
-import TaskCard from '../components/TaskCard';
+import TaskCard from '../components/TaskCardByProject';
 import { NotificationIcon, NotificationIconSkeleton } from '../components/NotificationIcon';
 import ReusableBottomPopUp from '../components/ReusableBottomPopUp';
 import Shimmer from '../components/Shimmer';
@@ -472,7 +472,7 @@ const Home = () => {
                             },
                         ]}
                     >
-                        <Text style={styles.greetingText}>{greeting}</Text>
+                        <Text style={styles.greetingText}>{greeting},</Text>
                         <Text style={styles.nameText} numberOfLines={1} ellipsizeMode="tail">
                             {employeeData.name}
                         </Text>
@@ -789,15 +789,14 @@ const styles = StyleSheet.create({
         fontSize: 15,
         color: 'rgba(255, 255, 255, 0.9)',
         fontFamily: 'Poppins-Regular',
-        marginBottom: 4,
         letterSpacing: 0.3,
     },
     nameText: {
         fontSize: 22,
         color: 'white',
         fontFamily: 'Poppins-SemiBold',
-        lineHeight: 30,
-        letterSpacing: 0.5,
+        textTransform: 'capitalize',
+        letterSpacing: -0.5,
     },
     headerRight: {
         flexDirection: 'row',

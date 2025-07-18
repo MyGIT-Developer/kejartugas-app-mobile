@@ -8,6 +8,10 @@ import { paperTheme } from './src/constants/themes';
 import * as SplashScreen from 'expo-splash-screen';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { setupNotifications } from './src/api/notification';
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
+import { BottomSheetModalProvider } from '@gorhom/bottom-sheet';
+import 'react-native-gesture-handler';
+import 'react-native-reanimated';
 
 // Create navigation ref for notifications
 export const navigationRef = React.createRef();
@@ -110,12 +114,15 @@ export default function App() {
 
     return (
         <ErrorBoundary>
-            <PaperProvider theme={paperTheme}>
-                <NavigationContainer ref={navigationRef}>
-                    <RootNavigator />
-                </NavigationContainer>
-                
-            </PaperProvider>
+            <GestureHandlerRootView style={{ flex: 1 }}>
+                <BottomSheetModalProvider>
+                    <PaperProvider theme={paperTheme}>
+                        <NavigationContainer ref={navigationRef}>
+                            <RootNavigator />
+                        </NavigationContainer>
+                    </PaperProvider>
+                </BottomSheetModalProvider>
+            </GestureHandlerRootView>
         </ErrorBoundary>
     );
 }

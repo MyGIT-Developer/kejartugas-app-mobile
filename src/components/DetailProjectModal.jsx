@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useMemo, useCallback } from 'react';
 import {
     View,
     Text,
@@ -7,13 +7,13 @@ import {
     Modal,
     Dimensions,
     ScrollView,
-    Pressable,
     Animated,
     PanResponder,
-    Easing,
 } from 'react-native';
+import { BottomSheetModal, BottomSheetScrollView } from '@gorhom/bottom-sheet';
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { useFonts } from '../utils/UseFonts';
-import Ionicons from 'react-native-vector-icons/Ionicons';
+import { MaterialIcons, Ionicons } from '@expo/vector-icons';
 import { FONTS } from '../constants/fonts';
 
 const { width, height } = Dimensions.get('window');
@@ -29,59 +29,27 @@ const calculateProjectDuration = (startDate, endDate) => {
 
 const ReusableBottomModal = ({ visible, onClose, projectDetails }) => {
     const fontsLoaded = useFonts();
-    const slideAnim = useRef(new Animated.Value(height)).current;
-    const fadeAnim = useRef(new Animated.Value(0)).current;
-    const pan = useRef(new Animated.Value(0)).current;
+    const { title, assign_by_name, start_date, end_date, description } = projectDetails;
+    const projectDuration = calculateProjectDuration(start_date, end_date);
 
-    const panResponder = useRef(
-        PanResponder.create({
-            onMoveShouldSetPanResponder: (_, gestureState) => gestureState.dy > 5,
-            onPanResponderMove: (_, gestureState) => {
-                if (gestureState.dy > 0) {
-                    pan.setValue(gestureState.dy);
-                }
-            },
-            onPanResponderRelease: (_, gestureState) => {
-                if (gestureState.dy > 150) {
-                    onClose(); // Close modal
-                } else {
-                    Animated.timing(pan, {
-                        toValue: 0,
-                        duration: 200,
-                        useNativeDriver: true,
-                    }).start();
-                }
-            },
-        }),
-    ).current;
+    // Create ref properly - remove TypeScript annotation if not using TypeScript
+    const bottomSheetRef = useRef(null);
+
+    const snapPoints = useMemo(() => ['60%', '80%', '100%'], []);
+
+    const handleSheetChanges = useCallback((index) => {
+        console.log('Sheet changed to:', index);
+    }, []);
+
+    const handleDismiss = useCallback(() => {
+        onClose();
+    }, [onClose]);
 
     useEffect(() => {
-        if (visible) {
-            Animated.parallel([
-                Animated.timing(slideAnim, {
-                    toValue: 0,
-                    duration: 300,
-                    useNativeDriver: true,
-                }),
-                Animated.timing(fadeAnim, {
-                    toValue: 1,
-                    duration: 300,
-                    useNativeDriver: true,
-                }),
-            ]).start();
-        } else {
-            Animated.parallel([
-                Animated.timing(slideAnim, {
-                    toValue: height,
-                    duration: 300,
-                    useNativeDriver: true,
-                }),
-                Animated.timing(fadeAnim, {
-                    toValue: 0,
-                    duration: 300,
-                    useNativeDriver: true,
-                }),
-            ]).start();
+        if (visible && bottomSheetRef.current) {
+            bottomSheetRef.current.present();
+        } else if (!visible && bottomSheetRef.current) {
+            bottomSheetRef.current.dismiss();
         }
     }, [visible]);
 
@@ -93,74 +61,74 @@ const ReusableBottomModal = ({ visible, onClose, projectDetails }) => {
         return null; // Optionally, render a loading indicator here
     }
 
-    const { assign_by_name, start_date, end_date, description } = projectDetails;
-    const projectDuration = calculateProjectDuration(start_date, end_date);
-
     return (
-        <Modal transparent visible={visible} animationType="none">
-            {/* Animated Overlay */}
-            <Pressable style={StyleSheet.absoluteFill} onPress={onClose}>
-                <Animated.View
-                    style={[
-                        styles.overlay,
-                        {
-                            opacity: fadeAnim,
-                        },
-                    ]}
-                />
-            </Pressable>
-
-            {/* Sliding Up Modal */}
-            <Animated.View
-                style={[styles.modalContent, { transform: [{ translateY: Animated.add(slideAnim, pan) }] }]}
-                {...panResponder.panHandlers}
+        <GestureHandlerRootView style={{ flex: 1 }}>
+            <BottomSheetModal
+                ref={bottomSheetRef}
+                index={0}
+                snapPoints={snapPoints}
+                enablePanDownToClose
+                onDismiss={handleDismiss}
+                onChange={handleSheetChanges}
             >
-                <ScrollView contentContainerStyle={styles.scrollViewContent}>
-                    <View style={styles.cardHeader}>
-                        <Ionicons name="folder-outline" size={18} color="#3498db" />
-                        <Text style={styles.title}>Detail Proyek</Text>
-                    </View>
+                <BottomSheetScrollView
+                    contentContainerStyle={{
+                        padding: 16,
+                    }}
+                >
+                    <ScrollView contentContainerStyle={styles.scrollViewContent}>
+                        <View style={styles.taskTitleContainer}>
+                            <View style={styles.headerContent}>
+                                <View style={styles.headerContent}>
+                                    <MaterialIcons name="assignment" size={14} color="#27A0CF" />
+                                    <Text style={styles.title}>Detail Proyek</Text>
+                                </View>
+                            </View>
 
-                    {/* Assigner & Duration */}
-                    <View style={styles.card}>
-                        <View style={styles.row}>
-                            <Ionicons
-                                name="person-circle-outline"
-                                size={18}
-                                color="#3498db"
-                                style={{ marginRight: 6 }}
-                            />
-                            <Text style={styles.sectionLabel}>Ditugaskan Oleh</Text>
+                            <Text style={styles.taskTitle}>{title}</Text>
                         </View>
-                        <Text style={styles.sectionValue}>{assign_by_name || 'Tidak tersedia'}</Text>
 
-                        <View style={[styles.row, { marginTop: 12 }]}>
-                            <Ionicons name="calendar-outline" size={18} color="#3498db" style={{ marginRight: 6 }} />
-                            <Text style={styles.sectionLabel}>Durasi Proyek</Text>
+                        {/* Assigner & Duration */}
+                        <View style={styles.card}>
+                            <View style={styles.row}>
+                                <Ionicons
+                                    name="person-circle-outline"
+                                    size={18}
+                                    color="#3498db"
+                                    style={{ marginRight: 6 }}
+                                />
+                                <Text style={styles.sectionLabel}>Ditugaskan Oleh</Text>
+                            </View>
+                            <Text style={styles.sectionValue}>{assign_by_name || 'Tidak tersedia'}</Text>
+
+                            <View style={[styles.row, { marginTop: 12 }]}>
+                                <Ionicons name="calendar-outline" size={18} color="#3498db" style={{ marginRight: 6 }} />
+                                <Text style={styles.sectionLabel}>Durasi Proyek</Text>
+                            </View>
+                            <Text style={styles.sectionValue}>{projectDuration}</Text>
                         </View>
-                        <Text style={styles.sectionValue}>{projectDuration}</Text>
-                    </View>
 
-                    {/* Description */}
-                    <View style={styles.card}>
-                        <View style={styles.row}>
-                            <Ionicons
-                                name="document-text-outline"
-                                size={18}
-                                color="#3498db"
-                                style={{ marginRight: 6 }}
-                            />
-                            <Text style={styles.sectionLabel}>Keterangan</Text>
+                        {/* Description */}
+                        <View style={styles.card}>
+                            <View style={styles.row}>
+                                <Ionicons
+                                    name="document-text-outline"
+                                    size={18}
+                                    color="#3498db"
+                                    style={{ marginRight: 6 }}
+                                />
+                                <Text style={styles.sectionLabel}>Keterangan</Text>
+                            </View>
+                            <Text style={styles.sectionValue}>{description || 'Tidak ada keterangan'}</Text>
                         </View>
-                        <Text style={styles.sectionValue}>{description || 'Tidak ada keterangan'}</Text>
-                    </View>
-                </ScrollView>
+                    </ScrollView>
 
-                <TouchableOpacity style={styles.button} onPress={onClose}>
-                    <Text style={styles.buttonText}>Tutup</Text>
-                </TouchableOpacity>
-            </Animated.View>
-        </Modal>
+                    <TouchableOpacity style={styles.button} onPress={onClose}>
+                        <Text style={styles.buttonText}>Tutup</Text>
+                    </TouchableOpacity>
+                </BottomSheetScrollView>
+            </BottomSheetModal>
+        </GestureHandlerRootView>
     );
 };
 
@@ -189,10 +157,36 @@ const styles = StyleSheet.create({
         paddingBottom: 30,
         paddingHorizontal: 10,
     },
+    headerContent: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 12,
+    },
+    taskTitleContainer: {
+        marginBottom: 20,
+        paddingVertical: 20,
+
+        borderBottomWidth: 1,
+        borderBottomColor: '#E5E7EB',
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
+    taskTitle: {
+        fontFamily: FONTS.family.bold,
+        fontSize: FONTS.size['2xl'],
+        color: '#111827',
+        marginBottom: 12,
+        lineHeight: 32,
+        letterSpacing: -0.5,
+        textAlign: 'center',
+    },
     cardHeader: {
         flexDirection: 'row',
         alignItems: 'center',
         marginBottom: 16,
+        paddingVertical: 10,
+        borderBottomColor: '#e5e7eb',
+        borderBottomWidth: 1,
         gap: 8,
         justifyContent: 'center',
     },
@@ -225,10 +219,9 @@ const styles = StyleSheet.create({
         letterSpacing: -0.5,
     },
     title: {
-        fontSize: 18,
-        fontWeight: 'bold',
-        textAlign: 'center',
-        fontFamily: 'Poppins-Bold',
+        fontFamily: FONTS.family.semiBold,
+        fontSize: FONTS.size.md,
+        color: '#6e6e6eff',
         letterSpacing: -0.5,
     },
     detailContainer: {

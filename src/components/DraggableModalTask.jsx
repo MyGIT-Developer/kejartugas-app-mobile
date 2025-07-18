@@ -1,18 +1,19 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useMemo, useCallback } from 'react';
 import {
     View,
     Text,
     StyleSheet,
     TouchableOpacity,
-    Dimensions,
-    ScrollView,
-    Modal,
     Image,
-    Animated,
-    Easing,
+    ScrollView,
     TextInput,
+    Pressable,
+    Modal,
+    TouchableWithoutFeedback
 } from 'react-native';
-import * as Progress from 'react-native-progress';
+import Animated, { useAnimatedStyle, useSharedValue, useAnimatedGestureHandler, withDecay } from 'react-native-reanimated';
+import { BottomSheetModal, BottomSheetScrollView } from '@gorhom/bottom-sheet';
+import { GestureHandlerRootView, PinchGestureHandler, PanGestureHandler } from 'react-native-gesture-handler';
 import { useFonts } from '../utils/UseFonts';
 import { useNavigation } from '@react-navigation/native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -20,7 +21,7 @@ import { Feather, MaterialIcons, Ionicons } from '@expo/vector-icons';
 import { approveTask, rejectTask } from '../api/task';
 import { LinearGradient } from 'expo-linear-gradient';
 import { FONTS } from '../constants/fonts';
-const { height: SCREEN_HEIGHT, width: SCREEN_WIDTH } = Dimensions.get('window');
+import * as FileSystem from 'expo-file-system';
 
 const getStatusBadgeColor = (status) => {
     switch (status) {
@@ -76,6 +77,429 @@ const getStatusBadgeColor = (status) => {
     }
 };
 
+const DraggableModalTask = ({ visible, onClose, taskDetails }) => {
+    // ALL HOOKS MUST BE CALLED BEFORE ANY CONDITIONAL RETURNS
+    const navigation = useNavigation();
+    const [employeeId, setEmployeeId] = useState(null);
+    const [isRejectModalVisible, setIsRejectModalVisible] = useState(false);
+    const [previewVisible, setPreviewVisible] = useState(false);
+    const { color: badgeColor, label: displayStatus, textColor, icon } = getStatusBadgeColor(taskDetails.status);
+
+    const scale = useSharedValue(1);
+    const translateX = useSharedValue(0);
+    const translateY = useSharedValue(0);
+
+    const pinchHandler = useAnimatedGestureHandler({
+        onActive: (event) => {
+            scale.value = event.scale;
+        },
+        onEnd: () => {
+            scale.value = withDecay({ velocity: 0 });
+        },
+    });
+
+    const panHandler = useAnimatedGestureHandler({
+        onActive: (event) => {
+            translateX.value = event.translationX;
+            translateY.value = event.translationY;
+        },
+    });
+
+    const animatedStyle = useAnimatedStyle(() => ({
+        transform: [
+            { scale: scale.value },
+            { translateX: translateX.value },
+            { translateY: translateY.value },
+        ],
+    }));
+
+    const fontsLoaded = useFonts();
+
+    // Create ref properly - remove TypeScript annotation if not using TypeScript
+    const bottomSheetRef = useRef(null);
+
+    const snapPoints = useMemo(() => ['60%', '80%', '100%'], []);
+
+    const handleSheetChanges = useCallback((index) => {
+        console.log('Sheet changed to:', index);
+    }, []);
+
+    const handleDismiss = useCallback(() => {
+        onClose();
+    }, [onClose]);
+
+    useEffect(() => {
+        const getData = async () => {
+            try {
+                const id = await AsyncStorage.getItem('employeeId');
+                setEmployeeId(id);
+            } catch (error) {
+                console.error('Error getting employeeId:', error.message);
+            }
+        };
+        getData();
+    }, []);
+
+    useEffect(() => {
+        if (visible && bottomSheetRef.current) {
+            bottomSheetRef.current.present();
+        } else if (!visible && bottomSheetRef.current) {
+            bottomSheetRef.current.dismiss();
+        }
+    }, [visible]);
+
+    // 🚨 Only now is it safe to do a conditional return
+    if (!taskDetails || !fontsLoaded) {
+        return null;
+    }
+
+    const formatDate = (date) => {
+        const options = { year: 'numeric', month: 'long', day: 'numeric' };
+        return new Date(date).toLocaleDateString('id-ID', options);
+    };
+
+    const handleCommentPress = async () => {
+        try {
+            navigation.navigate('ChatInterface', {
+                taskId: taskDetails.id,
+                taskDetails: taskDetails,
+                taskSubtitle: taskDetails.subtitle,
+            });
+            onClose();
+        } catch (error) {
+            console.error('Error navigating to chat:', error.message);
+        }
+    };
+
+    const handleSubmit = () => {
+        navigation.navigate('SubmitTugas', { taskId: taskDetails.id });
+        onClose();
+    };
+
+    const handleReject = async (rejectionReason) => {
+        try {
+            const response = await rejectTask(taskDetails.id, rejectionReason);
+            onClose();
+            console.log('Task rejected successfully:', response.message);
+        } catch (error) {
+            console.error('Error rejecting task:', error.message);
+        }
+        setIsRejectModalVisible(false);
+    };
+
+    const handleApprove = async () => {
+        try {
+            const response = await approveTask(taskDetails.id);
+            onClose();
+            console.log('Task approved successfully:', response.message);
+        } catch (error) {
+            console.error('Error approving task:', error.message);
+        }
+    };
+
+    // const downloadAndShareImage = async (imageUrl) => {
+    //     try {
+    //         const fileUri = FileSystem.documentDirectory + 'downloaded-image.jpg';
+
+    //         // Download
+    //         const { uri } = await FileSystem.downloadAsync(imageUrl, fileUri);
+
+    //         // Share (or save manually if needed)
+    //         if (await Sharing.isAvailableAsync()) {
+    //             await Sharing.shareAsync(uri);
+    //         } else {
+    //             alert("Sharing not available on this device");
+    //         }
+    //     } catch (error) {
+    //         console.error("Download error", error);
+    //     }
+    // };
+
+    return (
+        <GestureHandlerRootView style={{ flex: 1 }}>
+            <BottomSheetModal
+                ref={bottomSheetRef}
+                index={0}
+                snapPoints={snapPoints}
+                enablePanDownToClose
+                onDismiss={handleDismiss}
+                onChange={handleSheetChanges}
+            >
+                <BottomSheetScrollView
+                    contentContainerStyle={{
+                        padding: 16,
+                    }}
+                >
+                    <View style={styles.taskTitleContainer}>
+                        <View style={styles.headerContent}>
+                            <View style={styles.headerContent}>
+                                <MaterialIcons name="assignment" size={14} color="#27A0CF" />
+                                <Text style={styles.title}>Detail Tugas</Text>
+                            </View>
+                        </View>
+
+                        <Text style={styles.taskTitle}>{taskDetails.title}</Text>
+                        <View style={styles.headerContent}>
+                            <LinearGradient
+                                colors={badgeColor}
+                                style={styles.statusBadge}
+                                start={{ x: 0, y: 0 }}
+                                end={{ x: 1, y: 1 }}
+                            >
+                                <MaterialIcons name={icon} size={16} color={textColor} />
+                                <Text style={[styles.statusText, { color: textColor }]}>{displayStatus}</Text>
+                            </LinearGradient>
+                            {taskDetails.collectionStatus === "N/A" ? (
+                                <></>
+                            ) : (
+                                <View
+                                    style={[
+                                        styles.statusBadge,
+                                        { backgroundColor: taskDetails.collectionStatusColor },
+                                    ]}
+                                >
+                                    <MaterialIcons name={"schedule"} size={16} color={taskDetails.collectionStatusTextColor} />
+                                    <Text
+                                        style={[
+                                            styles.statusText,
+                                            { color: taskDetails.collectionStatusTextColor },
+                                        ]}
+                                    >
+                                        {taskDetails.collectionStatus}
+                                    </Text>
+                                </View>
+                            )}
+                        </View>
+                    </View>
+
+                    {/* General Information Section */}
+                    <View style={styles.section}>
+                        <View style={styles.sectionHeader}>
+                            <MaterialIcons name="info-outline" size={20} color="#27A0CF" />
+                            <Text style={styles.sectionTitle}>Informasi Umum</Text>
+                        </View>
+                        <View style={styles.infoCard}>
+                            <View style={styles.infoRow}>
+                                <View style={styles.infoColumn}>
+                                    <View style={styles.infoItem}>
+                                        <Ionicons name="calendar-outline" size={16} color="#666" />
+                                        <Text style={styles.infoLabel}>Tanggal Mulai</Text>
+                                    </View>
+                                    <Text style={styles.infoValue}>{formatDate(taskDetails.startDate)}</Text>
+                                </View>
+                                <View style={styles.infoColumn}>
+                                    <View style={styles.infoItem}>
+                                        <Ionicons name="calendar-outline" size={16} color="#666" />
+                                        <Text style={styles.infoLabel}>Tanggal Selesai</Text>
+                                    </View>
+                                    <Text style={styles.infoValue}>{formatDate(taskDetails.endDate)}</Text>
+                                </View>
+                            </View>
+                            <View style={styles.infoRow}>
+                                <View style={styles.infoColumn}>
+                                    <View style={styles.infoItem}>
+                                        <Ionicons name="person-outline" size={16} color="#666" />
+                                        <Text style={styles.infoLabel}>Ditugaskan Oleh</Text>
+                                    </View>
+                                    <Text style={styles.infoValue}>
+                                        {taskDetails.assignedByName || taskDetails.assignedBy || 'N/A'}
+                                    </Text>
+                                </View>
+                            </View>
+                            <View style={styles.infoColumn}>
+                                <View style={styles.infoItem}>
+                                    <Ionicons name="document-text-outline" size={16} color="#666" />
+                                    <Text style={styles.infoLabel}>Keterangan</Text>
+                                </View>
+                                <ScrollView style={styles.descriptionScrollView}>
+                                    <Text style={styles.infoValue}>
+                                        {!taskDetails.description || taskDetails.description === "N/A" ? 'Tidak ada keterangan tersedia' : taskDetails.description}
+                                    </Text>
+                                </ScrollView>
+                            </View>
+                        </View>
+                    </View>
+
+                    {/* Collection Information Section */}
+                    {(taskDetails.status === 'onReview' ||
+                        taskDetails.status === 'Completed' ||
+                        taskDetails.status === 'onHold') &&
+                        taskDetails.collectionDate && (
+                            <View style={styles.section}>
+                                <View style={styles.sectionHeader}>
+                                    <MaterialIcons name="cloud-upload" size={20} color="#27A0CF" />
+                                    <Text style={styles.sectionTitle}>Informasi Pengumpulan</Text>
+                                </View>
+                                <View style={styles.infoCard}>
+                                    <View style={styles.infoRow}>
+                                        <View style={styles.infoColumn}>
+                                            <View style={styles.infoItem}>
+                                                <Ionicons name="calendar-outline" size={16} color="#666" />
+                                                <Text style={styles.infoLabel}>Tanggal Pengumpulan</Text>
+                                            </View>
+                                            <Text style={styles.infoValue}>
+                                                {formatDate(taskDetails.collectionDate)}
+                                            </Text>
+                                        </View>
+                                    </View>
+                                    <View style={styles.infoRow}>
+                                        <View style={styles.infoColumn}>
+                                            <View style={styles.infoItem}>
+                                                <Ionicons name="image-outline" size={16} color="#666" />
+                                                <Text style={styles.infoLabel}>Bukti Pengumpulan</Text>
+                                            </View>
+
+                                            {taskDetails.task_image ? (
+                                                <>
+                                                    <TouchableOpacity
+                                                        activeOpacity={0.8}
+                                                        onPress={() => setPreviewVisible(true)}
+                                                        style={styles.evidenceTouchable}
+                                                    >
+                                                        <Image
+                                                            source={{ uri: taskDetails.task_image }}
+                                                            style={styles.evidenceImage}
+                                                            resizeMode="cover"
+                                                        />
+                                                    </TouchableOpacity>
+
+                                                    <Modal visible={visible} transparent animationType="fade">
+                                                        <View style={{ flex: 1, backgroundColor: 'black' }}>
+                                                            {/* Tap outside to close */}
+                                                            <TouchableWithoutFeedback onPress={onClose}>
+                                                                <View style={{ flex: 1 }} />
+                                                            </TouchableWithoutFeedback>
+
+                                                            {/* Centered image with gestures */}
+                                                            <View style={{ position: 'absolute', top: '50%', left: '50%', transform: [{ translateX: -150 }, { translateY: -200 }] }}>
+                                                                <PanGestureHandler onGestureEvent={panHandler}>
+                                                                    <Animated.View>
+                                                                        <PinchGestureHandler onGestureEvent={pinchHandler}>
+                                                                            <Animated.Image
+                                                                                source={{ uri: taskDetails.task_image }}
+                                                                                style={[{ width: 300, height: 400 }, animatedStyle]}
+                                                                                resizeMode="contain"
+                                                                            />
+                                                                        </PinchGestureHandler>
+                                                                    </Animated.View>
+                                                                </PanGestureHandler>
+                                                            </View>
+                                                        </View>
+                                                    </Modal>
+                                                </>
+                                            ) : (
+                                                <View style={styles.evidenceBox}>
+                                                    <Ionicons name="image-outline" size={32} color="#ccc" />
+                                                    <Text style={styles.noImageText}>Tidak ada bukti</Text>
+                                                </View>
+                                            )}
+                                        </View>
+                                    </View>
+                                    <View style={styles.infoColumn}>
+                                        <View style={styles.infoItem}>
+                                            <Ionicons name="document-text-outline" size={16} color="#666" />
+                                            <Text style={styles.infoLabel}>Keterangan Pengumpulan</Text>
+                                        </View>
+                                        <ScrollView style={styles.descriptionScrollView}>
+                                            <Text style={styles.infoValue}>
+                                                {taskDetails.collectionDescription &&
+                                                    taskDetails.collectionDescription.trim().toLowerCase() !== 'n/a'
+                                                    ? taskDetails.collectionDescription
+                                                    : 'Tidak ada keterangan pengumpulan'}
+                                            </Text>
+                                        </ScrollView>
+                                    </View>
+                                </View>
+                            </View>
+                        )}
+                </BottomSheetScrollView>
+
+                {/* Action Buttons */}
+                <View style={styles.actionContainer}>
+                    <TouchableOpacity
+                        style={styles.commentButton}
+                        onPress={handleCommentPress}
+                        activeOpacity={0.8}
+                    >
+                        <LinearGradient
+                            colors={['#27A0CF', '#1976D2']}
+                            style={styles.gradientButton}
+                            start={{ x: 0, y: 0 }}
+                            end={{ x: 1, y: 1 }}
+                        >
+                            <Feather name="message-square" size={18} color="white" />
+                            <Text style={styles.commentButtonText}>Komentar</Text>
+                        </LinearGradient>
+                    </TouchableOpacity>
+
+                    {/* Submit button for working/rejected tasks */}
+                    {(taskDetails.status === 'workingOnIt' || taskDetails.status === 'rejected') && (
+                        <TouchableOpacity
+                            style={styles.submitTaskButton}
+                            onPress={handleSubmit}
+                            activeOpacity={0.8}
+                        >
+                            <LinearGradient
+                                colors={['#4CAF50', '#2E7D32']}
+                                style={styles.gradientButton}
+                                start={{ x: 0, y: 0 }}
+                                end={{ x: 1, y: 1 }}
+                            >
+                                <MaterialIcons name="upload" size={18} color="white" />
+                                <Text style={styles.submitButtonText}>Submit Tugas</Text>
+                            </LinearGradient>
+                        </TouchableOpacity>
+                    )}
+
+                    {/* Review buttons for pending review */}
+                    {taskDetails.status === 'onReview' && taskDetails.assignedById == employeeId && (
+                        <View style={styles.reviewButtonContainer}>
+                            <TouchableOpacity
+                                style={styles.reviewButton}
+                                onPress={() => setIsRejectModalVisible(true)}
+                                activeOpacity={0.8}
+                            >
+                                <LinearGradient
+                                    colors={['#FF6B6B', '#D32F2F']}
+                                    style={styles.gradientButton}
+                                    start={{ x: 0, y: 0 }}
+                                    end={{ x: 1, y: 1 }}
+                                >
+                                    <MaterialIcons name="close" size={18} color="white" />
+                                    <Text style={styles.submitButtonText}>Tolak</Text>
+                                </LinearGradient>
+                            </TouchableOpacity>
+                            <TouchableOpacity
+                                style={styles.reviewButton}
+                                onPress={handleApprove}
+                                activeOpacity={0.8}
+                            >
+                                <LinearGradient
+                                    colors={['#4CAF50', '#2E7D32']}
+                                    style={styles.gradientButton}
+                                    start={{ x: 0, y: 0 }}
+                                    end={{ x: 1, y: 1 }}
+                                >
+                                    <MaterialIcons name="check" size={18} color="white" />
+                                    <Text style={styles.submitButtonText}>Setujui</Text>
+                                </LinearGradient>
+                            </TouchableOpacity>
+                        </View>
+                    )}
+                </View>
+            </BottomSheetModal>
+
+            <RejectConfirmationModal
+                visible={isRejectModalVisible}
+                onConfirm={handleReject}
+                onCancel={() => setIsRejectModalVisible(false)}
+            />
+        </GestureHandlerRootView>
+    );
+};
+
+
+
 const RejectConfirmationModal = ({ visible, onConfirm, onCancel }) => {
     const [rejectionReason, setRejectionReason] = useState('');
 
@@ -125,571 +549,8 @@ const RejectConfirmationModal = ({ visible, onConfirm, onCancel }) => {
     );
 };
 
-const DraggableModalTask = ({ visible, onClose, taskDetails }) => {
-    console.log('DraggableModalTask received taskDetails:', taskDetails); // Debug log
-
-    const navigation = useNavigation();
-    const modalY = useRef(new Animated.Value(SCREEN_HEIGHT)).current;
-    const fontsLoaded = useFonts();
-    const [employeeId, setEmployeeId] = useState(null);
-    const [isRejectModalVisible, setIsRejectModalVisible] = useState(false);
-
-    const isWorkingOnIt = taskDetails.status === 'workingOnIt';
-
-    const getData = async () => {
-        try {
-            const employeeId = await AsyncStorage.getItem('employeeId');
-            setEmployeeId(employeeId);
-        } catch (error) {
-            console.error('Error getting employeeId:', error.message);
-        }
-    };
-
-    useEffect(() => {
-        getData();
-    }, []);
-
-    React.useEffect(() => {
-        if (visible) {
-            Animated.spring(modalY, {
-                toValue: 0,
-                useNativeDriver: true,
-            }).start();
-        } else {
-            Animated.spring(modalY, {
-                toValue: SCREEN_HEIGHT,
-                useNativeDriver: true,
-            }).start();
-        }
-    }, [visible]);
-
-    const ANIMATION_DURATION = 600; // Increased duration for smoother effect
-
-    const handleClose = () => {
-        Animated.timing(modalY, {
-            toValue: SCREEN_HEIGHT,
-            duration: ANIMATION_DURATION,
-            easing: Easing.out(Easing.cubic), // Changed easing function
-            useNativeDriver: true,
-        }).start(({ finished }) => {
-            if (finished) {
-                onClose();
-            }
-        });
-    };
-
-    // Add this listener to track the animation progress
-    useEffect(() => {
-        const listener = modalY.addListener(({ value }) => {});
-
-        return () => {
-            modalY.removeListener(listener);
-        };
-    }, []);
-
-    // Don't forget to remove the listener when the component unmounts
-    useEffect(() => {
-        if (visible) {
-            modalY.setValue(SCREEN_HEIGHT);
-            Animated.spring(modalY, {
-                toValue: 0,
-                useNativeDriver: true,
-                tension: 50,
-                friction: 7,
-            }).start();
-        }
-    }, [visible]);
-
-    const handleCommentPress = async () => {
-        try {
-            // Navigate to ChatInterface and pass the taskId and taskDetails
-            navigation.navigate('ChatInterface', {
-                taskId: taskDetails.id,
-                taskDetails: taskDetails,
-                taskSubtitle: taskDetails.subtitle, // Pass taskDetails here
-                // chatData can be removed if not used in ChatInterface
-            });
-            onClose();
-        } catch (error) {
-            console.error('Error navigating to chat:', error.message);
-            // Handle error (e.g., show an alert or notification)
-        }
-    };
-
-    const handleSubmit = () => {
-        navigation.navigate('SubmitTugas', { taskId: taskDetails.id });
-        onClose(); // Close the modal after navigation
-    };
-
-    const handleReject = async (rejectionReason) => {
-        try {
-            const response = await rejectTask(taskDetails.id, rejectionReason);
-            onClose();
-            // Success feedback could be handled by parent component
-            console.log('Task rejected successfully:', response.message);
-        } catch (error) {
-            console.error('Error rejecting task:', error.message);
-            // Error feedback could be handled by parent component
-        }
-        setIsRejectModalVisible(false);
-    };
-
-    const handleApprove = async () => {
-        try {
-            const response = await approveTask(taskDetails.id);
-            onClose();
-            console.log('Task approved successfully:', response.message);
-        } catch (error) {
-            console.error('Error approving task:', error.message);
-            // Error feedback could be handled by parent component
-        }
-    };
-
-    if (!fontsLoaded) {
-        return null;
-    }
-
-    const { color: badgeColor, label: displayStatus, textColor, icon } = getStatusBadgeColor(taskDetails.status);
-
-    const formatDate = (date) => {
-        const options = { year: 'numeric', month: 'long', day: 'numeric' };
-        return new Date(date).toLocaleDateString('id-ID', options);
-    };
-
-    const getProgressColor = (progress) => {
-        if (progress === 0) return '#E0E0E0';
-        if (progress < 30) return '#FF6B6B';
-        if (progress < 70) return '#FFA726';
-        return '#4CAF50';
-    };
-
-    const getProgressTextColor = (progress) => {
-        if (progress === 0) return '#666';
-        if (progress < 30) return '#D32F2F';
-        if (progress < 70) return '#F57C00';
-        return '#2E7D32';
-    };
-
-    return (
-        <Modal transparent={true} visible={visible} onRequestClose={handleClose}>
-            <View style={styles.modalContainer}>
-                <TouchableOpacity style={styles.overlay} onPress={handleClose} activeOpacity={1} />
-                <Animated.View
-                    style={[
-                        styles.bottomSheetContainer,
-                        {
-                            transform: [{ translateY: modalY }],
-                        },
-                    ]}
-                >
-                    <View style={styles.bottomSheet}>
-                        {/* Handle bar */}
-                        <View style={styles.handleContainer}>
-                            <View style={styles.handle} />
-                        </View>
-
-                        <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
-                            {/* Header */}
-                            {/* <View style={styles.header}>
-                                <TouchableOpacity onPress={handleClose} style={styles.closeButton}>
-                                    <Ionicons name="close" size={24} color="#666" />
-                                </TouchableOpacity>
-                            </View> */}
-
-                            <View style={styles.taskTitleContainer}>
-                                <View style={styles.headerContent}>
-                                    <View style={styles.headerContent}>
-                                        <MaterialIcons name="assignment" size={14} color="#27A0CF" />
-                                        <Text style={styles.title}>Detail Tugas</Text>
-                                    </View>
-                                </View>
-
-                                <Text style={styles.taskTitle}>{taskDetails.title}</Text>
-                                <View style={styles.headerContent}>
-                                    <LinearGradient
-                                        colors={badgeColor}
-                                        style={styles.statusBadge}
-                                        start={{ x: 0, y: 0 }}
-                                        end={{ x: 1, y: 1 }}
-                                    >
-                                        <MaterialIcons name={icon} size={16} color={textColor} />
-                                        <Text style={[styles.statusText, { color: textColor }]}>{displayStatus}</Text>
-                                    </LinearGradient>
-                                    {taskDetails.collectionStatusColor ? (
-                                        <View
-                                            style={[
-                                                styles.statusBadge,
-                                                { backgroundColor: taskDetails.collectionStatusColor },
-                                            ]}
-                                        >
-                                            <Text
-                                                style={[
-                                                    styles.statusText,
-                                                    { color: taskDetails.collectionStatusTextColor },
-                                                ]}
-                                            >
-                                                {taskDetails.collectionStatus}
-                                            </Text>
-                                        </View>
-                                    ) : (
-                                        <LinearGradient
-                                            colors={['#E8F5E9', '#C8E6C9']}
-                                            style={styles.statusBadge}
-                                            start={{ x: 0, y: 0 }}
-                                            end={{ x: 1, y: 1 }}
-                                        >
-                                            <MaterialIcons name="check-circle" size={16} color="#2E7D32" />
-                                            <Text style={[styles.statusText, { color: '#2E7D32' }]}>Dikumpulkan</Text>
-                                        </LinearGradient>
-                                    )}
-                                </View>
-                            </View>
-
-                            {/* Task Header with Status */}
-                            {/* <View style={styles.taskHeaderSection}>
-                                <View style={styles.progressContainer}>
-                                    <View style={styles.progressWrapper}>
-                                        <Progress.Circle
-                                            size={85}
-                                            progress={taskDetails.progress / 100}
-                                            thickness={8}
-                                            color={getProgressColor(taskDetails.progress)}
-                                            unfilledColor="#F5F5F5"
-                                            borderWidth={0}
-                                            showsText={true}
-                                            formatText={() => `${taskDetails.progress}%`}
-                                            textStyle={{
-                                                fontFamily: 'Poppins-Bold',
-                                                fontSize: 16,
-                                                color: getProgressTextColor(taskDetails.progress),
-                                            }}
-                                        />
-                                        {taskDetails.status === 'Completed' && (
-                                            <View style={styles.completionOverlay}>
-                                                <MaterialIcons name="check-circle" size={28} color="#4CAF50" />
-                                            </View>
-                                        )}
-                                    </View>
-                                    <View style={styles.progressLabelContainer}>
-                                        <Text style={styles.progressLabel}>
-                                            {taskDetails.status === 'Completed' ? 'Selesai' : 'Progress'}
-                                        </Text>
-                                        {taskDetails.status === 'Completed' && (
-                                            <View style={styles.completedBadge}>
-                                                <MaterialIcons name="verified" size={16} color="#4CAF50" />
-                                                <Text style={styles.completedBadgeText}>100% Selesai</Text>
-                                            </View>
-                                        )}
-                                    </View>
-                                </View>
-                            </View> */}
-
-                            {/* General Information Section */}
-                            <View style={styles.section}>
-                                <View style={styles.sectionHeader}>
-                                    <MaterialIcons name="info-outline" size={20} color="#27A0CF" />
-                                    <Text style={styles.sectionTitle}>Informasi Umum</Text>
-                                </View>
-                                <View style={styles.infoCard}>
-                                    <View style={styles.infoRow}>
-                                        <View style={styles.infoColumn}>
-                                            <View style={styles.infoItem}>
-                                                <Ionicons name="calendar-outline" size={16} color="#666" />
-                                                <Text style={styles.infoLabel}>Tanggal Mulai</Text>
-                                            </View>
-                                            <Text style={styles.infoValue}>{formatDate(taskDetails.startDate)}</Text>
-                                        </View>
-                                        <View style={styles.infoColumn}>
-                                            <View style={styles.infoItem}>
-                                                <Ionicons name="calendar-outline" size={16} color="#666" />
-                                                <Text style={styles.infoLabel}>Tanggal Selesai</Text>
-                                            </View>
-                                            <Text style={styles.infoValue}>{formatDate(taskDetails.endDate)}</Text>
-                                        </View>
-                                    </View>
-                                    <View style={styles.infoRow}>
-                                        <View style={styles.infoColumn}>
-                                            <View style={styles.infoItem}>
-                                                <Ionicons name="person-outline" size={16} color="#666" />
-                                                <Text style={styles.infoLabel}>Ditugaskan Oleh</Text>
-                                            </View>
-                                            <Text style={styles.infoValue}>
-                                                {taskDetails.assignedByName || taskDetails.assignedBy || 'N/A'}
-                                            </Text>
-                                        </View>
-                                    </View>
-                                    <View style={styles.infoColumn}>
-                                        <View style={styles.infoItem}>
-                                            <Ionicons name="document-text-outline" size={16} color="#666" />
-                                            <Text style={styles.infoLabel}>Keterangan</Text>
-                                        </View>
-                                        <ScrollView style={styles.descriptionScrollView}>
-                                            <Text style={styles.infoValue}>
-                                                {taskDetails.description || 'Tidak ada keterangan tersedia'}
-                                            </Text>
-                                        </ScrollView>
-                                    </View>
-                                </View>
-                            </View>
-                            {(taskDetails.status === 'onReview' ||
-                                taskDetails.status === 'Completed' ||
-                                taskDetails.status === 'onHold') &&
-                                taskDetails.collectionDate && (
-                                    <View style={styles.section}>
-                                        <View style={styles.sectionHeader}>
-                                            <MaterialIcons name="cloud-upload" size={20} color="#27A0CF" />
-                                            <Text style={styles.sectionTitle}>Informasi Pengumpulan</Text>
-                                        </View>
-                                        <View style={styles.infoCard}>
-                                            <View style={styles.infoRow}>
-                                                <View style={styles.infoColumn}>
-                                                    <View style={styles.infoItem}>
-                                                        <Ionicons name="calendar-outline" size={16} color="#666" />
-                                                        <Text style={styles.infoLabel}>Tanggal Pengumpulan</Text>
-                                                    </View>
-                                                    <Text style={styles.infoValue}>
-                                                        {formatDate(taskDetails.collectionDate)}
-                                                    </Text>
-                                                </View>
-                                            </View>
-                                            <View style={styles.infoRow}>
-                                                <View style={styles.infoColumn}>
-                                                    <View style={styles.infoItem}>
-                                                        <Ionicons name="image-outline" size={16} color="#666" />
-                                                        <Text style={styles.infoLabel}>Bukti Pengumpulan</Text>
-                                                    </View>
-                                                    {taskDetails.task_image ? (
-                                                        <TouchableOpacity activeOpacity={0.8}>
-                                                            <Image
-                                                                source={{ uri: taskDetails.task_image }}
-                                                                style={styles.evidenceImage}
-                                                                resizeMode="cover"
-                                                            />
-                                                        </TouchableOpacity>
-                                                    ) : (
-                                                        <View style={styles.evidenceBox}>
-                                                            <Ionicons name="image-outline" size={32} color="#ccc" />
-                                                            <Text style={styles.noImageText}>Tidak ada bukti</Text>
-                                                        </View>
-                                                    )}
-                                                </View>
-                                            </View>
-                                            <View style={styles.infoColumn}>
-                                                <View style={styles.infoItem}>
-                                                    <Ionicons name="document-text-outline" size={16} color="#666" />
-                                                    <Text style={styles.infoLabel}>Keterangan Pengumpulan</Text>
-                                                </View>
-                                                <ScrollView style={styles.descriptionScrollView}>
-                                                    <Text style={styles.infoValue}>
-                                                        {taskDetails.collectionDescription &&
-                                                        taskDetails.collectionDescription.trim().toLowerCase() !== 'n/a'
-                                                            ? taskDetails.collectionDescription
-                                                            : 'Tidak ada keterangan pengumpulan'}
-                                                    </Text>
-                                                </ScrollView>
-                                            </View>
-
-                                            {/* Additional info for completed tasks */}
-                                            {/* {taskDetails.status === 'Completed' && (
-                                                <View style={styles.completedTaskInfo}>
-                                                    <View style={styles.completionBadge}>
-                                                        <LinearGradient
-                                                            colors={['#4CAF50', '#2E7D32']}
-                                                            style={styles.completionGradient}
-                                                            start={{ x: 0, y: 0 }}
-                                                            end={{ x: 1, y: 1 }}
-                                                        >
-                                                            <MaterialIcons name="task-alt" size={20} color="white" />
-                                                            <Text style={styles.completionText}>
-                                                                Tugas Telah Selesai
-                                                            </Text>
-                                                        </LinearGradient>
-                                                    </View>
-                                                    {taskDetails.completedDate && (
-                                                        <View style={styles.infoItem}>
-                                                            <Ionicons
-                                                                name="checkmark-done-circle"
-                                                                size={16}
-                                                                color="#4CAF50"
-                                                            />
-                                                            <Text style={styles.completedDateLabel}>
-                                                                Diselesaikan pada:{' '}
-                                                                {formatDate(taskDetails.completedDate)}
-                                                            </Text>
-                                                        </View>
-                                                    )}
-                                                </View>
-                                            )} */}
-                                        </View>
-                                    </View>
-                                )}
-                        </ScrollView>
-                        {/* Action Buttons */}
-                        <View style={styles.actionContainer}>
-                            <TouchableOpacity
-                                style={styles.commentButton}
-                                onPress={handleCommentPress}
-                                activeOpacity={0.8}
-                            >
-                                <LinearGradient
-                                    colors={['#27A0CF', '#1976D2']}
-                                    style={styles.gradientButton}
-                                    start={{ x: 0, y: 0 }}
-                                    end={{ x: 1, y: 1 }}
-                                >
-                                    <Feather name="message-square" size={18} color="white" />
-                                    <Text style={styles.commentButtonText}>Komentar</Text>
-                                </LinearGradient>
-                            </TouchableOpacity>
-
-                            {/* Submit button for working/rejected tasks */}
-                            {console.log('Debug Submit Button:', {
-                                status: taskDetails.status,
-                                isWorkingOnIt: taskDetails.status === 'workingOnIt',
-                                isRejected: taskDetails.status === 'rejected',
-                                shouldShow: taskDetails.status === 'workingOnIt' || taskDetails.status === 'rejected',
-                                assignedEmployees: taskDetails.assignedEmployees,
-                                employeeId: employeeId,
-                            })}
-                            {(taskDetails.status === 'workingOnIt' || taskDetails.status === 'rejected') && (
-                                <TouchableOpacity
-                                    style={styles.submitTaskButton}
-                                    onPress={handleSubmit}
-                                    activeOpacity={0.8}
-                                >
-                                    <LinearGradient
-                                        colors={['#4CAF50', '#2E7D32']}
-                                        style={styles.gradientButton}
-                                        start={{ x: 0, y: 0 }}
-                                        end={{ x: 1, y: 1 }}
-                                    >
-                                        <MaterialIcons name="upload" size={18} color="white" />
-                                        <Text style={styles.submitButtonText}>Submit Tugas</Text>
-                                    </LinearGradient>
-                                </TouchableOpacity>
-                            )}
-
-                            {/* Review buttons for pending review */}
-                            {taskDetails.status === 'onReview' && taskDetails.assignedById == employeeId && (
-                                <View style={styles.reviewButtonContainer}>
-                                    <TouchableOpacity
-                                        style={styles.reviewButton}
-                                        onPress={() => setIsRejectModalVisible(true)}
-                                        activeOpacity={0.8}
-                                    >
-                                        <LinearGradient
-                                            colors={['#FF6B6B', '#D32F2F']}
-                                            style={styles.gradientButton}
-                                            start={{ x: 0, y: 0 }}
-                                            end={{ x: 1, y: 1 }}
-                                        >
-                                            <MaterialIcons name="close" size={18} color="white" />
-                                            <Text style={styles.submitButtonText}>Tolak</Text>
-                                        </LinearGradient>
-                                    </TouchableOpacity>
-                                    <TouchableOpacity
-                                        style={styles.reviewButton}
-                                        onPress={handleApprove}
-                                        activeOpacity={0.8}
-                                    >
-                                        <LinearGradient
-                                            colors={['#4CAF50', '#2E7D32']}
-                                            style={styles.gradientButton}
-                                            start={{ x: 0, y: 0 }}
-                                            end={{ x: 1, y: 1 }}
-                                        >
-                                            <MaterialIcons name="check" size={18} color="white" />
-                                            <Text style={styles.submitButtonText}>Setujui</Text>
-                                        </LinearGradient>
-                                    </TouchableOpacity>
-                                </View>
-                            )}
-
-                            {/* Additional actions for completed tasks */}
-                            {taskDetails.status === 'Completed' && taskDetails.task_image && (
-                                <TouchableOpacity
-                                    style={styles.viewEvidenceButton}
-                                    onPress={() => {
-                                        // Handle view evidence - could open full screen image viewer
-                                        console.log('View evidence:', taskDetails.task_image);
-                                    }}
-                                    activeOpacity={0.8}
-                                >
-                                    <LinearGradient
-                                        colors={['#9C27B0', '#7B1FA2']}
-                                        style={styles.gradientButton}
-                                        start={{ x: 0, y: 0 }}
-                                        end={{ x: 1, y: 1 }}
-                                    >
-                                        <MaterialIcons name="visibility" size={18} color="white" />
-                                        <Text style={styles.submitButtonText}>Lihat Bukti</Text>
-                                    </LinearGradient>
-                                </TouchableOpacity>
-                            )}
-                        </View>
-                    </View>
-                </Animated.View>
-            </View>
-            <RejectConfirmationModal
-                visible={isRejectModalVisible}
-                onConfirm={handleReject}
-                onCancel={() => setIsRejectModalVisible(false)}
-            />
-        </Modal>
-    );
-};
 
 const styles = StyleSheet.create({
-    modalContainer: {
-        flex: 1,
-        justifyContent: 'flex-end',
-    },
-    overlay: {
-        ...StyleSheet.absoluteFillObject,
-        backgroundColor: 'rgba(0, 0, 0, 0.7)',
-    },
-    bottomSheet: {
-        position: 'absolute',
-        bottom: 0,
-        left: 0,
-        right: 0,
-        backgroundColor: 'white',
-        borderTopLeftRadius: 32,
-        borderTopRightRadius: 32,
-        maxHeight: SCREEN_HEIGHT * 0.9,
-        shadowColor: '#000',
-        shadowOffset: {
-            width: 0,
-            height: -12,
-        },
-        shadowOpacity: 0.25,
-        shadowRadius: 20,
-        elevation: 16,
-    },
-    bottomSheetContainer: {
-        height: SCREEN_HEIGHT,
-        width: SCREEN_WIDTH,
-    },
-    handleContainer: {
-        alignItems: 'center',
-        paddingTop: 16,
-        paddingBottom: 12,
-    },
-    handle: {
-        width: 48,
-        height: 5,
-        backgroundColor: '#D1D5DB',
-        borderRadius: 3,
-    },
-    header: {
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        paddingHorizontal: 24,
-        paddingVertical: 20,
-        marginHorizontal: 20,
-        marginBottom: 8,
-    },
     headerContent: {
         flexDirection: 'row',
         alignItems: 'center',
@@ -701,31 +562,10 @@ const styles = StyleSheet.create({
         color: '#6e6e6eff',
         letterSpacing: -0.5,
     },
-    closeButton: {
-        padding: 10,
-        borderRadius: 24,
-        backgroundColor: '#F3F4F6',
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.1,
-        shadowRadius: 4,
-        elevation: 2,
-    },
-    content: {
-        paddingHorizontal: 24,
-        paddingTop: 16,
-    },
-    taskHeaderSection: {
-        marginBottom: 28,
-        backgroundColor: '#FAFBFC',
-        borderRadius: 20,
-        padding: 20,
-        borderWidth: 1,
-        borderColor: '#E5E7EB',
-    },
     taskTitleContainer: {
         marginBottom: 20,
-        paddingBottom: 12,
+        paddingVertical: 20,
+
         borderBottomWidth: 1,
         borderBottomColor: '#E5E7EB',
         alignItems: 'center',
@@ -758,59 +598,6 @@ const styles = StyleSheet.create({
         fontSize: FONTS.size.sm,
         letterSpacing: -0.5,
     },
-    progressContainer: {
-        alignItems: 'center',
-        gap: 12,
-        backgroundColor: 'white',
-        padding: 20,
-        borderRadius: 16,
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.08,
-        shadowRadius: 8,
-        elevation: 4,
-    },
-    progressWrapper: {
-        position: 'relative',
-        alignItems: 'center',
-        justifyContent: 'center',
-    },
-    completionOverlay: {
-        position: 'absolute',
-        top: 0,
-        left: 0,
-        right: 0,
-        bottom: 0,
-        alignItems: 'center',
-        justifyContent: 'center',
-        backgroundColor: 'rgba(255, 255, 255, 0.95)',
-        borderRadius: 50,
-    },
-    progressLabelContainer: {
-        alignItems: 'center',
-        gap: 6,
-    },
-    progressLabel: {
-        fontFamily: 'Poppins-Medium',
-        fontSize: 15,
-        color: '#6B7280',
-    },
-    completedBadge: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        gap: 6,
-        backgroundColor: '#DCFCE7',
-        paddingHorizontal: 12,
-        paddingVertical: 6,
-        borderRadius: 16,
-        borderWidth: 1,
-        borderColor: '#BBF7D0',
-    },
-    completedBadgeText: {
-        fontFamily: 'Poppins-SemiBold',
-        fontSize: 13,
-        color: '#166534',
-    },
     section: {
         marginBottom: 28,
     },
@@ -823,7 +610,7 @@ const styles = StyleSheet.create({
     },
     sectionTitle: {
         fontFamily: FONTS.family.semiBold,
-        fontSize: 18,
+        fontSize: FONTS.size.lg,
         color: '#111827',
         letterSpacing: -0.5,
     },
@@ -888,7 +675,7 @@ const styles = StyleSheet.create({
         shadowOpacity: 0.15,
         shadowRadius: 8,
         elevation: 6,
-        width: '48%',
+        flex: 1,
     },
     gradientButton: {
         flexDirection: 'row',
@@ -912,7 +699,7 @@ const styles = StyleSheet.create({
         shadowOpacity: 0.15,
         shadowRadius: 8,
         elevation: 6,
-        width: '48%',
+        flex: 1,
     },
     viewEvidenceButton: {
         borderRadius: 6,
@@ -922,7 +709,7 @@ const styles = StyleSheet.create({
         shadowOpacity: 0.15,
         shadowRadius: 8,
         elevation: 6,
-        width: '48%',
+        flex: 1,
     },
     reviewButtonContainer: {
         flexDirection: 'row',
@@ -937,7 +724,7 @@ const styles = StyleSheet.create({
         shadowOpacity: 0.15,
         shadowRadius: 8,
         elevation: 6,
-        width: '48%',
+        flex: 1
     },
     submitButtonText: {
         fontFamily: FONTS.family.semiBold,
@@ -945,71 +732,50 @@ const styles = StyleSheet.create({
         fontSize: FONTS.size.md,
         letterSpacing: -0.5,
     },
-    evidenceImage: {
-        width: '100%',
-        height: 140,
-        borderRadius: 16,
-        marginTop: 10,
-        borderWidth: 1,
-        borderColor: '#E5E7EB',
-    },
-    evidenceBox: {
-        height: 140,
-        backgroundColor: '#F9FAFB',
-        borderRadius: 16,
-        marginTop: 10,
-        justifyContent: 'center',
-        alignItems: 'center',
-        borderWidth: 2,
-        borderColor: '#D1D5DB',
-        borderStyle: 'dashed',
-        gap: 10,
-    },
-    noImageText: {
-        fontFamily: 'Poppins-Regular',
-        color: '#9CA3AF',
-        fontSize: 14,
-    },
-    bottomSpacer: {
-        height: 32,
-    },
-    // Completed task specific styles
-    completedTaskInfo: {
-        marginTop: 20,
-        paddingTop: 20,
-        borderTopWidth: 1,
-        borderTopColor: '#DCFCE7',
-    },
-    completionBadge: {
-        borderRadius: 16,
+    evidenceTouchable: {
+        borderRadius: 12,
         overflow: 'hidden',
-        marginBottom: 16,
+        elevation: 4,
         shadowColor: '#000',
         shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.1,
-        shadowRadius: 4,
-        elevation: 3,
+        shadowOpacity: 0.15,
+        shadowRadius: 6,
+        marginTop: 8,
     },
-    completionGradient: {
-        flexDirection: 'row',
-        alignItems: 'center',
+    evidenceImage: {
+        width: '100%',
+        height: 180,
+        borderRadius: 12,
+    },
+    evidenceBox: {
+        height: 180,
+        borderRadius: 12,
+        backgroundColor: '#f0f0f0',
         justifyContent: 'center',
-        paddingVertical: 14,
-        paddingHorizontal: 20,
-        gap: 10,
+        alignItems: 'center',
+        marginTop: 8,
     },
-    completionText: {
-        fontFamily: 'Poppins-SemiBold',
-        color: 'white',
-        fontSize: 15,
-        letterSpacing: 0.2,
+    noImageText: {
+        marginTop: 6,
+        color: '#999',
+        fontSize: 14,
     },
-    completedDateLabel: {
-        fontFamily: 'Poppins-Medium',
-        color: '#166534',
-        fontSize: 13,
+    modalOverlay: {
+        flex: 1,
+        backgroundColor: 'rgba(0,0,0,0.5)',
+        justifyContent: 'center',
+        alignItems: 'center',
     },
-    // Modal styles
+    modalContent: {
+        width: '100%',
+        height: '100%',
+        justifyContent: 'center',
+        alignItems: 'center',
+    },
+    fullscreenImage: {
+        width: '100%',
+        height: '100%',
+    },
     centeredView: {
         flex: 1,
         justifyContent: 'center',

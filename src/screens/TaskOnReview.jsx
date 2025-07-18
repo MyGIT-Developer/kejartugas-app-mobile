@@ -289,7 +289,7 @@ const TaskOnReview = () => {
 
             // Optionally check task status for modal type
             if (taskDetails.task_status === 'Completed') {
-                setModalType('success');
+                setModalType('default');
             } else {
                 setModalType('default');
             }

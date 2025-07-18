@@ -35,7 +35,7 @@ const TaskSection = ({
         if (lowerTitle.includes('selesai')) return '#34C759'; // Green
         return '#8E8E93'; // Default gray
     };
-
+    
     return (
         <View style={styles.section}>
             {isLoading ? (

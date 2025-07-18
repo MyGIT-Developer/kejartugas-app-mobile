@@ -225,9 +225,6 @@ const Kehadiran = () => {
         return stats;
     }, [attendanceData]);
 
-    console.log("attendance data:", attendanceData);
-    console.log('Attendance Stats:', attendanceStats);
-
     // Memoized start date for pagination
     const startDate = useMemo(() => new Date(START_DATE), []);
 
