@@ -24,6 +24,7 @@ import ReusableAlert from '../components/ReusableAlert';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as ImagePicker from 'expo-image-picker';
 import * as FileSystem from 'expo-file-system';
+import MenuButton from '../components/MenuButton';
 import {
     getAllAdhocTasks,
     getAdhocTaskDetail,
@@ -568,53 +569,23 @@ const AdhocDashboard = ({ navigation }) => {
     }, [fontsLoaded]);
 
     const renderTabs = () => {
-        const tabIcons = {
-            'Tugas Dibuat': 'create',
-            'Tugas Saya': 'person',
-            Persetujuan: 'checkmark-circle',
-            Riwayat: 'time',
-        };
+        const tabConfig = [
+            { id: 'Tugas Dibuat', icon: 'folder', description: 'Tugas Dibuat' },
+            { id: 'Tugas Saya', icon: 'user', description: 'Tugas Saya' },
+            { id: 'Persetujuan', icon: 'check-circle', description: 'Persetujuan' },
+            { id: 'Riwayat', icon: 'clock', description: 'Riwayat' },
+        ];
 
         return (
-            <View style={styles.tabContainer}>
-                {tabs.map((tab) => (
-                    <TouchableOpacity
-                        key={tab}
-                        style={[styles.tab, activeTab === tab ? styles.activeTab : styles.inactiveTab]}
-                        onPress={() => setActiveTab(tab)}
-                        activeOpacity={0.8}
-                    >
-                        {activeTab === tab ? (
-                            <LinearGradient
-                                colors={['#4A90E2', '#357ABD', '#2E5984']}
-                                start={{ x: 0, y: 0 }}
-                                end={{ x: 1, y: 1 }}
-                                style={styles.activeTabGradient}
-                            >
-                                <View style={styles.tabContent}>
-                                    <Ionicons name={tabIcons[tab]} size={16} color="white" style={styles.tabIcon} />
-                                    <Text
-                                        style={[styles.tabText, styles.activeTabText]}
-                                        numberOfLines={1}
-                                        adjustsFontSizeToFit
-                                    >
-                                        {tab}
-                                    </Text>
-                                </View>
-                            </LinearGradient>
-                        ) : (
-                            <View style={styles.tabContent}>
-                                <Ionicons name={tabIcons[tab]} size={14} color="#64748B" style={styles.tabIcon} />
-                                <Text
-                                    style={[styles.tabText, styles.inactiveTabText]}
-                                    numberOfLines={1}
-                                    adjustsFontSizeToFit
-                                >
-                                    {tab}
-                                </Text>
-                            </View>
-                        )}
-                    </TouchableOpacity>
+            <View style={styles.menuContainer}>
+                {tabConfig.map((tab) => (
+                    <MenuButton
+                        key={tab.id}
+                        icon={tab.icon}
+                        description={tab.description}
+                        onPress={() => setActiveTab(tab.id)}
+                        isActive={activeTab === tab.id}
+                    />
                 ))}
             </View>
         );
@@ -1359,7 +1330,7 @@ const AdhocDashboard = ({ navigation }) => {
     const renderHeader = () => (
         <View style={styles.backgroundBox}>
             <LinearGradient
-                colors={['#4A90E2', '#357ABD', '#7dbfff']}
+                colors={['#4A90E2', '#357ABD', '#2E5984']}
                 start={{ x: 0, y: 0 }}
                 end={{ x: 1, y: 1 }}
                 style={styles.linearGradient}
@@ -1982,14 +1953,11 @@ const styles = StyleSheet.create({
         width: 40,
         height: 40,
         borderRadius: 20,
-        backgroundColor: 'rgba(255, 255, 255, 0.15)',
-        alignItems: 'center',
+        backgroundColor: 'rgba(255, 255, 255, 0.2)',
         justifyContent: 'center',
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.1,
-        shadowRadius: 4,
-        elevation: 3,
+        alignItems: 'center',
+        borderWidth: 1,
+        borderColor: 'rgba(255, 255, 255, 0.3)',
     },
     headerDecorations: {
         position: 'absolute',
@@ -4563,6 +4531,23 @@ const styles = StyleSheet.create({
         fontSize: calculateFontSize(12),
         fontWeight: '600',
         letterSpacing: -0.5,
+    },
+    menuSection: {
+        backgroundColor: 'white',
+        marginHorizontal: 16,
+        borderRadius: 10,
+        padding: 12,
+        marginBottom: 24,
+        elevation: 3,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.1,
+        shadowRadius: 8,
+    },
+    menuContainer: {
+        flexDirection: 'row',
+        justifyContent: 'space-around',
+        alignItems: 'center',
     },
 });
 
