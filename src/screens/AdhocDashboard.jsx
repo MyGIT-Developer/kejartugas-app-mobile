@@ -190,9 +190,6 @@ const AdhocDashboard = ({ navigation }) => {
         try {
             const companyId = await AsyncStorage.getItem('companyId');
             const response = await getAllAdhocTasks(companyId, employeeId);
-            console.log('=== ADHOC TASKS API LOG ===');
-            console.log('getAllAdhocTasks Response:', JSON.stringify(response, null, 2));
-            console.log('=== END ADHOC TASKS LOG ===');
 
             if (response.status === 'success') setAdhocTasks(response.data);
             else setError(response.message || 'An error occurred');
@@ -204,9 +201,6 @@ const AdhocDashboard = ({ navigation }) => {
             try {
                 const employeeId = await AsyncStorage.getItem('employeeId');
                 const fallbackResponse = await getMyAdhocTasksAssigner(employeeId);
-                console.log('=== FALLBACK ADHOC TASKS API LOG ===');
-                console.log('getMyAdhocTasksAssigner Response:', JSON.stringify(fallbackResponse, null, 2));
-                console.log('=== END FALLBACK LOG ===');
 
                 setAdhocTasks(fallbackResponse.data); // Set tasks from fallback API
                 setError(null); // Clear error since fallback was successful
@@ -223,10 +217,6 @@ const AdhocDashboard = ({ navigation }) => {
         setError(null);
         try {
             const response = await getMyAdhocTasks(employeeId);
-            console.log('=== MY TASKS API LOG ===');
-            console.log('getMyAdhocTasks Response:', JSON.stringify(response, null, 2));
-            console.log('=== END MY TASKS LOG ===');
-
             if (response.status === 'success') setMyTasks(response.data);
             else setError(response.message || 'An error occurred');
         } catch (error) {
@@ -240,21 +230,6 @@ const AdhocDashboard = ({ navigation }) => {
         try {
             const response = await getAdhocTaskDetail(adhocId);
             if (response.status === 'success') {
-                console.log('=== FULL API RESPONSE LOG ===');
-                console.log('Complete API Response:', JSON.stringify(response, null, 2));
-                console.log('=== TASK DETAIL DATA ===');
-                console.log('Task Detail Data:', JSON.stringify(response.data, null, 2));
-                console.log('=== INDIVIDUAL FIELDS ===');
-                console.log('adhoc_name:', response.data.adhoc_name);
-                console.log('adhoc_desc:', response.data.adhoc_desc);
-                console.log('adhoc_status:', response.data.adhoc_status);
-                console.log('employee_tasks:', JSON.stringify(response.data.employee_tasks, null, 2));
-                console.log('task_approvals:', JSON.stringify(response.data.task_approvals, null, 2));
-                console.log('adhoc_image:', response.data.adhoc_image);
-                console.log('adhoc_current_level:', response.data.adhoc_current_level);
-                console.log('adhoc_last_level:', response.data.adhoc_last_level);
-                console.log('=== END API LOG ===');
-
                 setSelectedTaskDetail(response.data);
                 setIsDetailModalVisible(true);
             } else console.error('Error fetching task detail:', response.message);
@@ -1124,7 +1099,7 @@ const AdhocDashboard = ({ navigation }) => {
                 case 'Tugas Saya':
                     return { icon: 'user-check', color: '#10B981', bgColor: '#ECFDF5' };
                 case 'Tugas Persetujuan':
-                    return { icon: 'shield-check', color: '#F59E0B', bgColor: '#FFFBEB' };
+                    return { icon: 'check-square', color: '#F59E0B', bgColor: '#FFFBEB' };
                 default:
                     return { icon: 'file-text', color: '#6B7280', bgColor: '#F9FAFB' };
             }
@@ -1432,7 +1407,7 @@ const AdhocDashboard = ({ navigation }) => {
                     </ScrollView>
                     {/* Floating Back Button */}
                     <TouchableOpacity style={styles.floatingBackButton} onPress={() => navigation.goBack()}>
-                        <Feather name="chevron-left" size={24} color="#FFFFFF" />
+                        <Feather name="arrow-left-circle" size={24} color="#FFFFFF" />
                     </TouchableOpacity>
 
                     {activeTab === 'Tugas Dibuat' && !error && (
@@ -1440,7 +1415,7 @@ const AdhocDashboard = ({ navigation }) => {
                             style={styles.addButton}
                             onPress={() => navigation.navigate('AddAdhocTask')} // Navigasi ke layar AddAdhoc
                         >
-                            <Feather name="plus" size={24} color="#FFFFFF" />
+                            <Feather name="plus-circle" size={24} color="#FFFFFF" />
                         </TouchableOpacity>
                     )}
                 </View>
@@ -2314,10 +2289,10 @@ const styles = StyleSheet.create({
         width: 56,
         height: 56,
         borderRadius: 28,
-        backgroundColor: '#6C757D', // Slightly different color from add button
+        backgroundColor: '#4A90E2', // Slightly different color from add button
         justifyContent: 'center',
         alignItems: 'center',
-        shadowColor: '#000',
+        shadowColor: '#4A90E2',
         shadowOffset: { width: 0, height: 4 },
         shadowOpacity: 0.3,
         shadowRadius: 8,
