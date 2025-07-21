@@ -1,4 +1,6 @@
-import React, { useState, useEffect, useCallback, useMemo, memo, useRef } from 'react';
+// import * as Location from 'expo-location';
+import React, { useState, useEffect, useCallback, useMemo, memo, useRef, useContext } from 'react';
+import { LocationContext } from '../../App';
 import {
     View,
     Text,
@@ -146,10 +148,36 @@ const ShimmerTaskCard = memo(() => (
 ShimmerTaskCard.displayName = 'ShimmerTaskCard';
 
 const Kehadiran = () => {
+    const { location, errorMsg } = useContext(LocationContext);
     // State management
     const [currentTime, setCurrentTime] = useState('');
     const [locationName, setLocationName] = useState('Mencari lokasi...');
-    const [errorMsg, setErrorMsg] = useState(null);
+
+    // Ambil nama lokasi dari koordinat context
+    useEffect(() => {
+        const fetchLocationName = async () => {
+            if (location && location.coords) {
+                try {
+                    const geocode = await Location.reverseGeocodeAsync({
+                        latitude: location.coords.latitude,
+                        longitude: location.coords.longitude,
+                    });
+                    if (geocode && geocode.length > 0) {
+                        const loc = geocode[0];
+                        const name = [loc.name, loc.street, loc.city, loc.region, loc.country]
+                            .filter(Boolean)
+                            .join(', ');
+                        setLocationName(name);
+                    } else {
+                        setLocationName('Lokasi tidak ditemukan');
+                    }
+                } catch (err) {
+                    setLocationName('Gagal mengambil nama lokasi');
+                }
+            }
+        };
+        fetchLocationName();
+    }, [location]);
     const [employeeId, setEmployeeId] = useState(null);
     const [companyId, setCompanyId] = useState(null);
     const [attendanceData, setAttendanceData] = useState([]);
@@ -159,7 +187,6 @@ const Kehadiran = () => {
     const [radius, setRadius] = useState(null);
     const [refreshing, setRefreshing] = useState(false);
     const [alert, setAlert] = useState({ show: false, type: 'success', message: '' });
-    const [location, setLocation] = useState(null);
     const [currentPage, setCurrentPage] = useState(0);
     const [hasAccess, setHasAccess] = useState(null);
     const [isLoading, setIsLoading] = useState(true);
@@ -243,7 +270,7 @@ const Kehadiran = () => {
     const fetchData = useCallback(async () => {
         if (!employeeId || !companyId || !mountedRef.current) return;
 
-        console.time("fetchData");
+        console.time('fetchData');
         setIsLoading(true);
 
         try {
@@ -251,13 +278,12 @@ const Kehadiran = () => {
             const { status } = await Location.requestForegroundPermissionsAsync();
             if (status !== 'granted') {
                 const errorMessage = 'Izin lokasi ditolak. Harap aktifkan akses lokasi di pengaturan.';
-                setErrorMsg(errorMessage);
                 showAlert(errorMessage, 'error');
                 return;
             }
 
             // Step 2: Fast location with fallback
-            console.time("getLocation");
+            console.time('getLocation');
             let location = await Location.getLastKnownPositionAsync();
             if (!location) {
                 location = await Location.getCurrentPositionAsync({
@@ -265,21 +291,19 @@ const Kehadiran = () => {
                     maximumAge: 10000,
                 });
             }
-            console.timeEnd("getLocation");
+            console.timeEnd('getLocation');
 
             const { latitude, longitude } = location.coords;
             const coordinates = `${latitude.toFixed(6)}, ${longitude.toFixed(6)}`;
 
             // Immediately update visible location
-            setLocation(coordinates);
-            setLocationName("Mengambil nama lokasi...");
 
             // Step 3: Fire reverse geocode in background
             const geocodePromise = Location.reverseGeocodeAsync({ latitude, longitude })
                 .then(([result]) => formatLocationName(result))
                 .catch((err) => {
-                    console.warn("Geocoding failed:", err.message);
-                    return "Tidak dapat mengambil nama lokasi";
+                    console.warn('Geocoding failed:', err.message);
+                    return 'Tidak dapat mengambil nama lokasi';
                 });
 
             // Step 4: Fetch attendance and parameters
@@ -355,7 +379,6 @@ const Kehadiran = () => {
                 setIsCheckedOut(checkedOutStatus);
                 setJamTelat(jamTelat);
                 setRadius(radius);
-                setErrorMsg(null);
                 setCheckInTime(todayCheckInTime);
                 setCheckOutTime(todayCheckOutTime);
                 setTotalHours(todayTotalHours);
@@ -367,7 +390,6 @@ const Kehadiran = () => {
             // Step 8: Apply location name
             const locationName = await geocodePromise;
             if (mountedRef.current) {
-                setLocationName(locationName);
             }
         } catch (error) {
             console.error('Error fetching data:', error);
@@ -376,13 +398,12 @@ const Kehadiran = () => {
                 : 'Gagal memuat data. Silakan coba lagi.';
             if (mountedRef.current) {
                 showAlert(errorMessage, 'error');
-                setErrorMsg(errorMessage);
             }
         } finally {
             if (mountedRef.current) {
                 setIsLoading(false);
             }
-            console.timeEnd("fetchData");
+            console.timeEnd('fetchData');
         }
     }, [employeeId, companyId]);
 
@@ -651,7 +672,7 @@ const Kehadiran = () => {
                         setTotalPages(res.pagination.last_page); // <- keep updated if total pages can change
                     }
                 } catch (err) {
-                    console.error("Failed to fetch next page:", err);
+                    console.error('Failed to fetch next page:', err);
                 }
 
                 Animated.timing(slideAnim, {
@@ -685,7 +706,7 @@ const Kehadiran = () => {
                         setTotalPages(res.pagination.last_page);
                     }
                 } catch (err) {
-                    console.error("Failed to fetch previous page:", err);
+                    console.error('Failed to fetch previous page:', err);
                 }
 
                 Animated.timing(slideAnim, {
@@ -827,18 +848,18 @@ const Kehadiran = () => {
             const status = attendanceForDate?.status || 'Not Absent';
             const checkIn = attendanceForDate?.checkin
                 ? new Date(attendanceForDate.checkin).toLocaleTimeString('id-ID', {
-                    hour: '2-digit',
-                    minute: '2-digit',
-                    hour12: false,
-                })
+                      hour: '2-digit',
+                      minute: '2-digit',
+                      hour12: false,
+                  })
                 : '-';
 
             const checkOut = attendanceForDate?.checkout
                 ? new Date(attendanceForDate.checkout).toLocaleTimeString('id-ID', {
-                    hour: '2-digit',
-                    minute: '2-digit',
-                    hour12: false,
-                })
+                      hour: '2-digit',
+                      minute: '2-digit',
+                      hour12: false,
+                  })
                 : '-';
 
             const duration = attendanceForDate
@@ -1285,7 +1306,7 @@ const Kehadiran = () => {
                                         <View style={styles.locationIconContainer}>
                                             <Ionicons name="location" size={16} color="#10B981" />
                                         </View>
-                                        <Text style={styles.locationText}>{errorMsg || locationName}</Text>
+                                        <Text style={styles.locationText}>{errorMsg ? errorMsg : locationName}</Text>
                                     </View>
                                 </>
                             )}
@@ -1460,7 +1481,6 @@ const Kehadiran = () => {
                                     <Text style={styles.totalRecordsText}>
                                         Menampilkan {attendanceData.length} dari total {totalRecords} catatan
                                     </Text>
-
                                 </View>
                                 {attendanceData.length > 0 && (
                                     <Text style={styles.lastUpdateText}>
@@ -1598,7 +1618,7 @@ const Kehadiran = () => {
                                                     style={[
                                                         styles.paginationButton,
                                                         currentPage === totalPages - 1 &&
-                                                        styles.disabledPaginationButton,
+                                                            styles.disabledPaginationButton,
                                                     ]}
                                                     accessibilityLabel="Halaman berikutnya"
                                                 >

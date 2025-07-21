@@ -1,4 +1,7 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState, createContext } from 'react';
+import * as Location from 'expo-location';
+// Context untuk lokasi
+export const LocationContext = createContext({ location: null, errorMsg: null });
 import { NavigationContainer } from '@react-navigation/native';
 import { Provider as PaperProvider } from 'react-native-paper';
 import { View, Text, StyleSheet } from 'react-native';
@@ -70,11 +73,26 @@ const errorStyles = StyleSheet.create({
 
 export default function App() {
     const fontsLoaded = useFonts();
+    const [location, setLocation] = useState(null);
+    const [errorMsg, setErrorMsg] = useState(null);
 
     useEffect(() => {
         const setupApp = async () => {
             try {
                 if (fontsLoaded) {
+                    // Ambil lokasi sekali di awal
+                    let { status } = await Location.requestForegroundPermissionsAsync();
+                    if (status !== 'granted') {
+                        setErrorMsg('Izin lokasi ditolak');
+                    } else {
+                        try {
+                            let loc = await Location.getCurrentPositionAsync({});
+                            setLocation(loc);
+                        } catch (locError) {
+                            setErrorMsg('Gagal mengambil lokasi');
+                        }
+                    }
+
                     // Check if user is logged in and setup notifications
                     const token = await AsyncStorage.getItem('token');
                     if (token) {
@@ -114,15 +132,17 @@ export default function App() {
 
     return (
         <ErrorBoundary>
-            <GestureHandlerRootView style={{ flex: 1 }}>
-                <BottomSheetModalProvider>
-                    <PaperProvider theme={paperTheme}>
-                        <NavigationContainer ref={navigationRef}>
-                            <RootNavigator />
-                        </NavigationContainer>
-                    </PaperProvider>
-                </BottomSheetModalProvider>
-            </GestureHandlerRootView>
+            <LocationContext.Provider value={{ location, errorMsg }}>
+                <GestureHandlerRootView style={{ flex: 1 }}>
+                    <BottomSheetModalProvider>
+                        <PaperProvider theme={paperTheme}>
+                            <NavigationContainer ref={navigationRef}>
+                                <RootNavigator />
+                            </NavigationContainer>
+                        </PaperProvider>
+                    </BottomSheetModalProvider>
+                </GestureHandlerRootView>
+            </LocationContext.Provider>
         </ErrorBoundary>
     );
 }
