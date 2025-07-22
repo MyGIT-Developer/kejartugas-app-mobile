@@ -11,6 +11,7 @@ import {
     StatusBar,
     Platform,
     Easing,
+    ActivityIndicator,
 } from 'react-native';
 import { Feather, Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -21,11 +22,12 @@ const NotificationScreen = ({ navigation }) => {
     const [employeeId, setEmployeeId] = useState(null);
     const [unreadCount, setUnreadCount] = useState(0);
     const [notifications, setNotifications] = useState([]);
-    const [isLoading, setIsLoading] = useState(false);
+    const [isLoading, setIsLoading] = useState(true); // Ubah default menjadi true
     const [refreshing, setRefreshing] = useState(false);
 
     // Animation values
     const fadeAnim = useRef(new Animated.Value(0)).current;
+    const loadingOpacity = useRef(new Animated.Value(0)).current;
     const slideAnim = useRef(new Animated.Value(30)).current;
     const headerAnim = useRef(new Animated.Value(0)).current;
     const headerScaleAnim = useRef(new Animated.Value(0.95)).current;
@@ -41,24 +43,25 @@ const NotificationScreen = ({ navigation }) => {
             }
 
             const response = await getNotificationByEmployee(employeeId);
-            console.log('fetchNotifications response:', response);
             if (!response?.data) {
                 throw new Error('No data received from server');
             }
 
-            const notificationData = response.data;
-            setNotifications(notificationData);
-            setUnreadCount(notificationData.filter((notif) => !notif.is_read).length);
+            // Filter hanya notifikasi yang belum dibaca
+            const unreadNotifications = response.data.filter((notif) => !notif.is_read);
+            setNotifications(unreadNotifications);
+            setUnreadCount(unreadNotifications.length);
 
-            await AsyncStorage.setItem('cachedNotifications', JSON.stringify(notificationData));
+            await AsyncStorage.setItem('cachedNotifications', JSON.stringify(unreadNotifications));
             await AsyncStorage.setItem('lastFetchTime', new Date().toISOString());
         } catch (error) {
             console.error('Error fetching notifications:', error);
             const cachedData = await AsyncStorage.getItem('cachedNotifications');
             if (cachedData) {
                 const parsedData = JSON.parse(cachedData);
-                setNotifications(parsedData);
-                setUnreadCount(parsedData.filter((notif) => !notif.is_read).length);
+                const unreadCached = parsedData.filter((notif) => !notif.is_read);
+                setNotifications(unreadCached);
+                setUnreadCount(unreadCached.length);
             }
         } finally {
             setIsLoading(false);
@@ -72,15 +75,30 @@ const NotificationScreen = ({ navigation }) => {
     }, [fetchNotifications]);
 
     useEffect(() => {
-        const loadInitialData = async () => {
-            const cachedData = await AsyncStorage.getItem('cachedNotifications');
-            if (cachedData) {
-                const parsedData = JSON.parse(cachedData);
-                setNotifications(parsedData);
-                setUnreadCount(parsedData.filter((notif) => !notif.is_read).length);
-            }
+        Animated.timing(loadingOpacity, {
+            toValue: isLoading ? 1 : 0,
+            duration: 300,
+            easing: Easing.out(Easing.quad),
+            useNativeDriver: true,
+        }).start();
+    }, [isLoading]);
 
-            await fetchNotifications();
+    useEffect(() => {
+        const loadInitialData = async () => {
+            setIsLoading(true); // Pastikan loading aktif saat mulai
+
+            try {
+                const cachedData = await AsyncStorage.getItem('cachedNotifications');
+                if (cachedData) {
+                    const parsedData = JSON.parse(cachedData);
+                    setNotifications(parsedData);
+                    setUnreadCount(parsedData.filter((notif) => !notif.is_read).length);
+                }
+
+                await fetchNotifications();
+            } finally {
+                setIsLoading(false); // Matikan loading setelah selesai
+            }
         };
 
         loadInitialData();
@@ -131,16 +149,17 @@ const NotificationScreen = ({ navigation }) => {
             const employeeId = await AsyncStorage.getItem('employeeId');
             if (!employeeId) return;
 
-            // Optimistic UI update
-            const updatedNotifications = notifications.map((notif) => ({ ...notif, is_read: true }));
-            setNotifications(updatedNotifications);
+            // Kosongkan daftar notifikasi karena semua akan ditandai sebagai sudah dibaca
+            setNotifications([]);
             setUnreadCount(0);
 
             await markAllAsRead(employeeId);
+
+            // Update cache
+            await AsyncStorage.setItem('cachedNotifications', JSON.stringify([]));
         } catch (error) {
             console.error('Failed to mark all as read:', error);
-            // Revert changes if failed
-            fetchNotifications();
+            fetchNotifications(); // Re-fetch jika error
         } finally {
             setIsLoading(false);
         }
@@ -148,16 +167,17 @@ const NotificationScreen = ({ navigation }) => {
 
     const handleNotificationPress = async (notification) => {
         try {
-            // Optimistic UI update
-            const updatedNotifications = notifications.map((notif) =>
-                notif.id === notification.id ? { ...notif, is_read: true } : notif,
-            );
+            // Hapus notifikasi dari daftar karena akan ditandai sebagai sudah dibaca
+            const updatedNotifications = notifications.filter((notif) => notif.id !== notification.id);
             setNotifications(updatedNotifications);
-            setUnreadCount(updatedNotifications.filter((notif) => !notif.is_read).length);
+            setUnreadCount(updatedNotifications.length);
 
             await markAsRead(notification.id);
 
-            // Navigation logic
+            // Update cache
+            await AsyncStorage.setItem('cachedNotifications', JSON.stringify(updatedNotifications));
+
+            // Navigation logic tetap sama
             const navigationParams = {
                 taskId: notification.taskId,
                 projectId: notification.projectId,
@@ -265,10 +285,7 @@ const NotificationScreen = ({ navigation }) => {
             ]).start();
         }, []);
 
-        const backgroundColor = notification.is_read ? '#FFFFFF' : '#F8FAFC';
         const borderColor = getNotificationColor(notification.notif_type);
-        const textColor = notification.is_read ? '#64748B' : '#1E293B';
-        const titleWeight = notification.is_read ? '500' : '600';
 
         return (
             <Animated.View
@@ -284,7 +301,7 @@ const NotificationScreen = ({ navigation }) => {
                     style={[
                         styles.notificationItem,
                         {
-                            backgroundColor,
+                            backgroundColor: '#F8FAFC', // Always use unread background
                             borderLeftWidth: 4,
                             borderLeftColor: borderColor,
                         },
@@ -310,8 +327,8 @@ const NotificationScreen = ({ navigation }) => {
                             style={[
                                 styles.notificationTitle,
                                 {
-                                    color: textColor,
-                                    fontWeight: titleWeight,
+                                    color: '#1E293B', // Always use unread text color
+                                    fontWeight: '600', // Always use unread font weight
                                 },
                             ]}
                             numberOfLines={1}
@@ -324,14 +341,12 @@ const NotificationScreen = ({ navigation }) => {
                         </Text>
                         <View style={styles.notificationFooter}>
                             <Text style={styles.notificationTime}>{formatTimeAgo(notification.created_at)}</Text>
-                            {!notification.is_read && (
-                                <View
-                                    style={[
-                                        styles.unreadBadge,
-                                        { backgroundColor: getNotificationColor(notification.notif_type) },
-                                    ]}
-                                />
-                            )}
+                            <View
+                                style={[
+                                    styles.unreadBadge,
+                                    { backgroundColor: getNotificationColor(notification.notif_type) },
+                                ]}
+                            />
                         </View>
                     </View>
                 </TouchableOpacity>
@@ -341,7 +356,7 @@ const NotificationScreen = ({ navigation }) => {
 
     return (
         <SafeAreaView style={styles.container}>
-            <StatusBar barStyle="light-content" backgroundColor="#1D4ED8" />
+            <StatusBar barStyle="light-content" translucent backgroundColor="transparent" />
 
             {/* Header Background */}
             <Animated.View
@@ -354,11 +369,109 @@ const NotificationScreen = ({ navigation }) => {
                 ]}
             >
                 <LinearGradient
-                    colors={['#1D4ED8', '#3B82F6', '#60A5FA']}
+                    colors={['#4A90E2', '#357ABD', '#2E5984']}
                     style={styles.headerGradient}
                     start={{ x: 0, y: 0 }}
                     end={{ x: 1, y: 1 }}
                 />
+                {/* Decorative Circles */}
+                <View style={styles.headerDecorations}>
+                    <Animated.View
+                        style={[
+                            styles.decorativeCircle1,
+                            {
+                                opacity: headerAnim.interpolate({
+                                    inputRange: [0, 1],
+                                    outputRange: [0, 0.6],
+                                }),
+                                transform: [
+                                    {
+                                        scale: headerAnim.interpolate({
+                                            inputRange: [0, 1],
+                                            outputRange: [0.5, 1],
+                                        }),
+                                    },
+                                ],
+                            },
+                        ]}
+                    />
+                    <Animated.View
+                        style={[
+                            styles.decorativeCircle2,
+                            {
+                                opacity: headerAnim.interpolate({
+                                    inputRange: [0, 1],
+                                    outputRange: [0, 0.4],
+                                }),
+                                transform: [
+                                    {
+                                        scale: headerAnim.interpolate({
+                                            inputRange: [0, 1],
+                                            outputRange: [0.3, 1],
+                                        }),
+                                    },
+                                ],
+                            },
+                        ]}
+                    />
+                    <Animated.View
+                        style={[
+                            styles.decorativeCircle3,
+                            {
+                                opacity: headerAnim.interpolate({
+                                    inputRange: [0, 1],
+                                    outputRange: [0, 0.5],
+                                }),
+                                transform: [
+                                    {
+                                        scale: headerAnim.interpolate({
+                                            inputRange: [0, 1],
+                                            outputRange: [0.7, 1],
+                                        }),
+                                    },
+                                ],
+                            },
+                        ]}
+                    />
+                    <Animated.View
+                        style={[
+                            styles.decorativeCircle4,
+                            {
+                                opacity: headerAnim.interpolate({
+                                    inputRange: [0, 1],
+                                    outputRange: [0, 0.5],
+                                }),
+                                transform: [
+                                    {
+                                        scale: headerAnim.interpolate({
+                                            inputRange: [0, 1],
+                                            outputRange: [0.7, 1],
+                                        }),
+                                    },
+                                ],
+                            },
+                        ]}
+                    />
+                    <Animated.View
+                        style={[
+                            styles.decorativeCircle5,
+                            {
+                                opacity: headerAnim.interpolate({
+                                    inputRange: [0, 1],
+                                    outputRange: [0, 0.5],
+                                }),
+                                transform: [
+                                    {
+                                        scale: headerAnim.interpolate({
+                                            inputRange: [0, 1],
+                                            outputRange: [0.7, 1],
+                                        }),
+                                    },
+                                ],
+                            },
+                        ]}
+                    />
+                </View>
             </Animated.View>
 
             {/* Header Content */}
@@ -379,14 +492,9 @@ const NotificationScreen = ({ navigation }) => {
                     },
                 ]}
             >
-                <View style={styles.headerContent}>
-                    <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()} activeOpacity={0.7}>
-                        <Ionicons name="chevron-back" size={24} color="white" />
-                    </TouchableOpacity>
-
-                    <Text style={styles.headerTitle}>Notifikasi</Text>
-
-                    <View style={styles.headerRightRow}>
+                <View style={styles.headerContentColumn}>
+                    <Text style={styles.headerTitleCenter}>Notifikasi</Text>
+                    <View style={styles.headerStatusRow}>
                         <View style={styles.unreadCountBadge}>
                             <Text style={styles.unreadCountText}>{unreadCount} belum dibaca</Text>
                         </View>
@@ -429,9 +537,11 @@ const NotificationScreen = ({ navigation }) => {
                             colors={['#3B82F6']}
                             tintColor="#3B82F6"
                             progressBackgroundColor="#FFFFFF"
+                            enabled={!isLoading}
                         />
                     }
                     showsVerticalScrollIndicator={false}
+                    scrollEnabled={!isLoading}
                 >
                     {notifications.length > 0 ? (
                         notifications.map((notification, index) => (
@@ -472,6 +582,36 @@ const NotificationScreen = ({ navigation }) => {
                     )}
                 </ScrollView>
             </Animated.View>
+
+            {/* Floating Back Button */}
+            <TouchableOpacity style={styles.floatingBackButton} onPress={() => navigation.goBack()} activeOpacity={0.8}>
+                <Ionicons name="chevron-back" size={28} color="#fff" />
+            </TouchableOpacity>
+
+            {/* Full Screen Loading Overlay */}
+            {isLoading && (
+                <Animated.View
+                    style={[
+                        styles.loadingOverlay,
+                        {
+                            opacity: loadingOpacity,
+                            transform: [
+                                {
+                                    scale: loadingOpacity.interpolate({
+                                        inputRange: [0, 1],
+                                        outputRange: [0.95, 1],
+                                    }),
+                                },
+                            ],
+                        },
+                    ]}
+                >
+                    <View style={styles.loadingContainer}>
+                        <ActivityIndicator size="large" color="#3B82F6" />
+                        <Text style={styles.loadingText}>Memuat notifikasi...</Text>
+                    </View>
+                </Animated.View>
+            )}
         </SafeAreaView>
     );
 };
@@ -482,7 +622,7 @@ const styles = StyleSheet.create({
         backgroundColor: '#F8FAFC',
     },
     headerBackground: {
-        height: 200,
+        height: 325,
         width: '100%',
         position: 'absolute',
         top: 0,
@@ -495,34 +635,50 @@ const styles = StyleSheet.create({
         flex: 1,
     },
     headerContainer: {
-        paddingTop: Platform.OS === 'ios' ? 60 : 40,
+        // Tambah jarak agar header lebih turun
+        paddingTop: Platform.OS === 'ios' ? 100 : 70,
         paddingHorizontal: 24,
         paddingBottom: 24,
     },
-    headerContent: {
+    headerContentColumn: {
+        alignItems: 'flex-start',
+        justifyContent: 'flex-end',
+        gap: 12,
+        paddingLeft: 8,
+        paddingBottom: 0,
+    },
+    headerStatusRow: {
         flexDirection: 'row',
         alignItems: 'center',
-        justifyContent: 'space-between',
-        marginBottom: 16,
-        gap: 8,
+        justifyContent: 'flex-start',
+        gap: 10,
+        marginTop: 4,
     },
-    headerRightRow: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        gap: 8,
-    },
-    backButton: {
-        padding: 8,
-        marginLeft: -8,
-        borderRadius: 20,
-    },
-    headerTitle: {
+    headerTitleCenter: {
         fontSize: 24,
         fontWeight: '700',
         color: 'white',
-        flex: 1,
-        marginLeft: 16,
         letterSpacing: 0.5,
+        textAlign: 'left',
+        marginLeft: 0,
+        marginBottom: 0,
+    },
+    floatingBackButton: {
+        position: 'absolute',
+        bottom: 32,
+        right: 24,
+        backgroundColor: '#3B82F6',
+        borderRadius: 28,
+        width: 56,
+        height: 56,
+        justifyContent: 'center',
+        alignItems: 'center',
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.18,
+        shadowRadius: 4,
+        elevation: 6,
+        zIndex: 100,
     },
     markAllButton: {
         flexDirection: 'row',
@@ -544,9 +700,13 @@ const styles = StyleSheet.create({
     },
     unreadCountBadge: {
         backgroundColor: 'rgba(255, 255, 255, 0.15)',
+        paddingVertical: 8,
         paddingHorizontal: 12,
-        paddingVertical: 6,
         borderRadius: 12,
+        flexDirection: 'row',
+        alignItems: 'center',
+        minHeight: 40,
+        minWidth: 0,
     },
     unreadCountText: {
         color: 'white',
@@ -555,8 +715,8 @@ const styles = StyleSheet.create({
     },
     notificationsContainer: {
         flex: 1,
-        paddingHorizontal: 20,
-        marginTop: -24,
+        paddingHorizontal: 12,
+        marginTop: 20,
     },
     scrollViewContent: {
         paddingBottom: 24,
@@ -572,6 +732,7 @@ const styles = StyleSheet.create({
         shadowColor: '#000',
         shadowOffset: { width: 0, height: 1 },
         shadowOpacity: 0.05,
+
         shadowRadius: 3,
         elevation: 2,
     },
@@ -664,6 +825,92 @@ const styles = StyleSheet.create({
         fontSize: 15,
         fontWeight: '600',
         marginLeft: 8,
+    },
+    headerDecorations: {
+        position: 'absolute',
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0,
+        justifyContent: 'center',
+        alignItems: 'center',
+        overflow: 'hidden',
+    },
+    decorativeCircle1: {
+        position: 'absolute',
+        width: 120,
+        height: 120,
+        borderRadius: 60,
+        backgroundColor: 'rgba(255, 255, 255, 0.1)',
+        top: -30,
+        left: -30,
+    },
+    decorativeCircle2: {
+        position: 'absolute',
+        width: 100,
+        height: 100,
+        borderRadius: 50,
+        backgroundColor: 'rgba(255, 255, 255, 0.1)',
+        top: 20,
+        right: -20,
+    },
+    decorativeCircle3: {
+        position: 'absolute',
+        width: 140,
+        height: 140,
+        borderRadius: 70,
+        backgroundColor: 'rgba(255, 255, 255, 0.1)',
+        top: 60,
+        left: -20,
+    },
+    decorativeCircle4: {
+        position: 'absolute',
+        width: 160,
+        height: 160,
+        borderRadius: 80,
+        backgroundColor: 'rgba(255, 255, 255, 0.1)',
+        top: 100,
+        right: -40,
+    },
+    decorativeCircle5: {
+        position: 'absolute',
+        width: 180,
+        height: 180,
+        borderRadius: 90,
+        backgroundColor: 'rgba(255, 255, 255, 0.1)',
+        top: 150,
+        left: -50,
+    },
+    // Loading Overlay Styles
+    loadingOverlay: {
+        position: 'absolute',
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0,
+        backgroundColor: 'rgba(255, 255, 255, 0.95)',
+        zIndex: 9999,
+        justifyContent: 'center',
+        alignItems: 'center',
+    },
+    loadingContainer: {
+        alignItems: 'center',
+        justifyContent: 'center',
+        backgroundColor: 'white',
+        padding: 32,
+        borderRadius: 16,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.1,
+        shadowRadius: 8,
+        elevation: 4,
+    },
+    loadingText: {
+        marginTop: 16,
+        fontSize: 16,
+        color: '#334155',
+        fontWeight: '500',
+        letterSpacing: 0.5,
     },
 });
 

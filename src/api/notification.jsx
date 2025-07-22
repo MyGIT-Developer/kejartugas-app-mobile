@@ -29,7 +29,7 @@ TaskManager.defineTask(BACKGROUND_NOTIFICATION_TASK, ({ data, error }) => {
     }
 
     const { type, taskId, projectId } = data;
-    
+
     // Note: useNavigation() cannot be used in a background task
     // Instead, you should handle the navigation when the app is opened
     console.log('Background notification received:', { type, taskId, projectId });
@@ -41,7 +41,7 @@ export const registerDeviceToken = async () => {
         const [employeeId, authToken, companyId] = await Promise.all([
             AsyncStorage.getItem('employeeId'),
             AsyncStorage.getItem('token'),
-            AsyncStorage.getItem('companyId')
+            AsyncStorage.getItem('companyId'),
         ]);
 
         if (!employeeId || !authToken) {
@@ -62,19 +62,18 @@ export const registerDeviceToken = async () => {
             employee_id: employeeId,
             company_id: companyId,
             token: deviceToken,
-            device_type: Platform.OS
+            device_type: Platform.OS,
         };
 
         // Make the API call
         const response = await apiService.post('/device/register', requestData, {
             headers: {
                 Authorization: `Bearer ${authToken}`,
-                'Content-Type': 'application/json'
-            }
+                'Content-Type': 'application/json',
+            },
         });
 
         return response.data;
-
     } catch (error) {
         console.error('Device registration error:', {
             message: error.message,
@@ -90,12 +89,12 @@ export const setupNotifications = async () => {
         // Request permissions first
         const { status: existingStatus } = await Notifications.getPermissionsAsync();
         let finalStatus = existingStatus;
-        
+
         if (existingStatus !== 'granted') {
             const { status } = await Notifications.requestPermissionsAsync();
             finalStatus = status;
         }
-        
+
         if (finalStatus !== 'granted') {
             console.log('Failed to get push token for push notification!');
             return;
@@ -111,27 +110,23 @@ export const setupNotifications = async () => {
         await Notifications.registerTaskAsync(BACKGROUND_NOTIFICATION_TASK);
 
         // Setup foreground handler
-        const foregroundSubscription = Notifications.addNotificationReceivedListener(
-            async (notification) => {
-                console.log('Received notification:', notification);
-                
-                if (employeeId) {
-                    try {
-                        await getNotificationByEmployee(employeeId);
-                    } catch (error) {
-                        console.error('Error fetching notifications:', error);
-                    }
+        const foregroundSubscription = Notifications.addNotificationReceivedListener(async (notification) => {
+            console.log('Received notification:', notification);
+
+            if (employeeId) {
+                try {
+                    await getNotificationByEmployee(employeeId);
+                } catch (error) {
+                    console.error('Error fetching notifications:', error);
                 }
             }
-        );
+        });
 
         // Setup notification response handler
-        const responseSubscription = Notifications.addNotificationResponseReceivedListener(
-            (response) => {
-                const data = response.notification.request.content.data;
-                handleNotificationInteraction(data);
-            }
-        );
+        const responseSubscription = Notifications.addNotificationResponseReceivedListener((response) => {
+            const data = response.notification.request.content.data;
+            handleNotificationInteraction(data);
+        });
 
         // Return cleanup function
         return () => {
@@ -166,7 +161,7 @@ export const getNotificationByEmployee = async (employeeId) => {
                 Authorization: `Bearer ${token}`,
             },
         });
-        
+
         return response.data;
     } catch (error) {
         throw new Error(error.response?.data?.message || 'Fetching notification failed');
@@ -183,5 +178,19 @@ export const markAsRead = async (notificationId) => {
         });
     } catch (error) {
         throw new Error(error.response?.data?.message || 'Marking notification as read failed');
+    }
+};
+// Mark all notifications as read for an employee
+export const markAllAsRead = async (employeeId) => {
+    try {
+        const token = await AsyncStorage.getItem('token');
+        await apiService.post(`/notifications/mark-all-read/${employeeId}`, null, {
+            headers: {
+                Authorization: `Bearer ${token}`,
+                'Content-Type': 'application/json',
+            },
+        });
+    } catch (error) {
+        throw new Error(error.response?.data?.message || 'Marking all notifications as read failed');
     }
 };
