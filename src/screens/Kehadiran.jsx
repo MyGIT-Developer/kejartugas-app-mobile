@@ -583,7 +583,8 @@ const Kehadiran = () => {
             if (Platform.OS === 'ios') {
                 Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
             }
-
+            // Konversi objek location menjadi string
+            const locationString = `${location.coords.latitude}, ${location.coords.longitude}`;
             // Enhanced button press animation with spring effect
             Animated.sequence([
                 Animated.timing(scaleAnim, {
@@ -601,7 +602,15 @@ const Kehadiran = () => {
 
             // Add a subtle delay for better perceived performance
             setTimeout(() => {
-                navigation.navigate('DetailKehadiran', { location, locationName, jamTelat, radius });
+                const addressString = locationName; // atau hasil reverse geocode lain
+
+                navigation.navigate('DetailKehadiran', {
+                    location: locationString,
+                    locationName,
+                    jamTelat,
+                    radius,
+                    address: addressString, // <-- tambahkan di sini
+                });
             }, 200);
         } catch (error) {
             console.error('Navigation error:', error);
@@ -2356,16 +2365,7 @@ const styles = StyleSheet.create({
     },
 
     // Collapsed Indicator
-    collapsedIndicator: {
-        backgroundColor: '#F8FAFC',
-        borderRadius: 12,
-        padding: 16,
-        alignItems: 'center',
-        marginTop: 12,
-        borderWidth: 1,
-        borderColor: '#E5E7EB',
-        borderStyle: 'dashed',
-    },
+    collapsedIndicator: {},
     collapsedText: {
         fontSize: 14,
         color: '#6B7280',

@@ -33,8 +33,20 @@ const { width, height } = Dimensions.get('window');
 const DetailKehadiran = () => {
     const navigation = useNavigation();
     const route = useRoute();
-    const { location, locationName, jamTelat = '', radius } = route.params || {};
+    // Tambahkan address di destructuring params
+    const { location: locationParam, locationName, jamTelat = '', radius, address } = route.params || {};
 
+    // Log address agar tahu hasilnya
+    useEffect(() => {
+        if (address) {
+            console.log('Alamat hasil reverse geocode:', address);
+        }
+    }, [address]);
+
+    // Pastikan location selalu string
+    const initialLocation = typeof locationParam === 'string' ? locationParam : '';
+
+    const [currentLocation, setCurrentLocation] = useState(initialLocation);
     const [currentTime, setCurrentTime] = useState('');
     const [employeeId, setEmployeeId] = useState(null);
     const [companyId, setCompanyId] = useState(null);
@@ -55,7 +67,6 @@ const DetailKehadiran = () => {
     const [isClientEnabled, setIsClientEnabled] = useState(false);
     const [originalLocation, setOriginalLocation] = useState(null);
     const [originalLocationName, setOriginalLocationName] = useState(null);
-    const [currentLocation, setCurrentLocation] = useState(null);
     const [currentLocationName, setCurrentLocationName] = useState('');
 
     // Animation refs for better performance
@@ -69,10 +80,7 @@ const DetailKehadiran = () => {
     const headerAnim = useRef(new Animated.Value(0)).current;
     const headerScaleAnim = useRef(new Animated.Value(0.9)).current;
 
-    const [latitude, longitude] = (currentLocation || location)
-        ?.split(',')
-        .map((coord) => parseFloat(coord.trim())) || [0, 0];
-
+    const [latitude, longitude] = currentLocation?.split(',').map((coord) => parseFloat(coord.trim())) || [0, 0];
     const parsedLocation = {
         latitude: isNaN(latitude) ? 0 : latitude,
         longitude: isNaN(longitude) ? 0 : longitude,
@@ -96,9 +104,9 @@ const DetailKehadiran = () => {
         getStoredData();
 
         // Initialize location states
-        setOriginalLocation(location);
+        setOriginalLocation(initialLocation);
         setOriginalLocationName(locationName);
-        setCurrentLocation(location);
+        setCurrentLocation(initialLocation);
         setCurrentLocationName(locationName || 'Memuat lokasi...');
 
         // Start animations with staggered effect
@@ -143,7 +151,7 @@ const DetailKehadiran = () => {
         }
 
         return () => clearInterval(interval);
-    }, [location, locationName, isUserLate, pulseAnim]);
+    }, [initialLocation, locationName, isUserLate, pulseAnim]);
 
     const updateCurrentTime = () => {
         const now = new Date();
@@ -640,12 +648,13 @@ const DetailKehadiran = () => {
                     keyboardShouldPersistTaps="handled"
                 >
                     <View style={styles.headerContainer}>
-                        <TouchableOpacity style={[
-                            styles.backButton,
-                            {
-                                transform: [{ scale: backButtonScale }],
-                            },
-                        ]}
+                        <TouchableOpacity
+                            style={[
+                                styles.backButton,
+                                {
+                                    transform: [{ scale: backButtonScale }],
+                                },
+                            ]}
                             onPress={handleGoBack}
                             activeOpacity={0.7}
                         >
@@ -725,10 +734,13 @@ const DetailKehadiran = () => {
                                     </View>
 
                                     <View style={styles.locationDetails}>
-                                        <Text style={styles.locationName}>{currentLocationName || 'Memuat lokasi...'}</Text>
-                                        {currentLocation && <Text style={styles.coordinatesText}>{currentLocation}</Text>}
+                                        <Text style={styles.locationName}>
+                                            {currentLocationName || 'Memuat lokasi...'}
+                                        </Text>
+                                        {currentLocation && (
+                                            <Text style={styles.coordinatesText}>{currentLocation}</Text>
+                                        )}
                                     </View>
-
                                 </View>
                             </View>
 
@@ -853,13 +865,14 @@ const DetailKehadiran = () => {
                                                         <Text style={styles.selectedClientLabel}>
                                                             Klien yang kamu pilih
                                                         </Text>
-                                                        <Text style={styles.selectedClientName}>{selectedClient.name}</Text>
+                                                        <Text style={styles.selectedClientName}>
+                                                            {selectedClient.name}
+                                                        </Text>
                                                     </View>
                                                 </View>
 
                                                 {selectedClient.address && (
                                                     <View style={styles.selectedClientAddress}>
-
                                                         <Text style={styles.selectedClientAddressText}>
                                                             {selectedClient.address}
                                                         </Text>
@@ -984,7 +997,7 @@ const DetailKehadiran = () => {
                                     !reasonValidation.isValid ||
                                     reasonValidation.hasPunctuation)) ||
                             (isClientEnabled && !selectedClient)) &&
-                        styles.disabledButton,
+                            styles.disabledButton,
                     ]}
                     onPress={handleClockIn}
                     disabled={
@@ -1010,15 +1023,13 @@ const DetailKehadiran = () => {
             </View>
 
             {/* Custom Toast for iOS */}
-            {
-                Platform.OS === 'ios' && toast.show && (
-                    <Animated.View style={styles.toastContainer}>
-                        <View style={styles.toastContent}>
-                            <Text style={styles.toastText}>{toast.message}</Text>
-                        </View>
-                    </Animated.View>
-                )
-            }
+            {Platform.OS === 'ios' && toast.show && (
+                <Animated.View style={styles.toastContainer}>
+                    <View style={styles.toastContent}>
+                        <Text style={styles.toastText}>{toast.message}</Text>
+                    </View>
+                </Animated.View>
+            )}
 
             <ReusableBottomPopUp
                 show={alert.show}
@@ -1026,7 +1037,7 @@ const DetailKehadiran = () => {
                 message={alert.message}
                 onConfirm={() => setAlert((prev) => ({ ...prev, show: false }))}
             />
-        </View >
+        </View>
     );
 };
 
