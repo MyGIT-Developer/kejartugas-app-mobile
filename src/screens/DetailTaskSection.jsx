@@ -363,12 +363,7 @@ const DetailTaskSection = () => {
             console.log('Transformed task details for modal:', transformedTaskDetails); // Debug log
             setSelectedTask(transformedTaskDetails);
 
-            // Optionally check task status for modal type
-            if (taskDetails.task_status === 'Completed') {
-                setModalType('default');
-            } else {
-                setModalType('default');
-            }
+            setModalType('default');
 
             setDraggableModalVisible(true);
         } catch (error) {
@@ -518,7 +513,7 @@ const styles = StyleSheet.create({
         flex: 1,
         borderBottomLeftRadius: 24,
         borderBottomRightRadius: 24,
-        shadowColor: '#000',
+        shadowColor: '#444',
         shadowOffset: { width: 0, height: 20 },
         shadowOpacity: 0.5,
         shadowRadius: 12,
@@ -531,7 +526,7 @@ const styles = StyleSheet.create({
         paddingBottom: 30,
         paddingHorizontal: 20,
         position: 'relative',
-        shadowColor: '#000',
+        shadowColor: '#444',
         shadowOffset: { width: 0, height: 4 },
         shadowOpacity: 0.1,
         shadowRadius: 8,
@@ -647,7 +642,7 @@ const styles = StyleSheet.create({
         backgroundColor: 'white',
         borderRadius: 20,
         marginBottom: 20,
-        shadowColor: '#000',
+        shadowColor: '#444',
         shadowOffset: { width: 0, height: 8 },
         shadowOpacity: 0.15,
         shadowRadius: 20,
@@ -832,7 +827,7 @@ const styles = StyleSheet.create({
         paddingVertical: 6,
         borderRadius: 20,
         alignSelf: 'flex-start',
-        shadowColor: '#000',
+        shadowColor: '#444',
         shadowOffset: { width: 0, height: 2 },
         shadowOpacity: 0.1,
         shadowRadius: 4,
@@ -913,7 +908,7 @@ const styles = StyleSheet.create({
         backgroundColor: 'white',
         borderRadius: 20,
         padding: 20,
-        shadowColor: '#000',
+        shadowColor: '#444',
         shadowOffset: { width: 0, height: 4 },
         shadowOpacity: 0.1,
         shadowRadius: 8,

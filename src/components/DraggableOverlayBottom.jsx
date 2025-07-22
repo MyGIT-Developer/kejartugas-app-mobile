@@ -133,7 +133,7 @@ const styles = StyleSheet.create({
         right: 0,
         backgroundColor: 'white',
         padding: 20,
-        shadowColor: '#000',
+        shadowColor: '#444',
         shadowOffset: {
             width: 0,
             height: -5,

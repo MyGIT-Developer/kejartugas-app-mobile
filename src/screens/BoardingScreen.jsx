@@ -66,7 +66,7 @@ const styles = StyleSheet.create({
         width: '90%',
         maxWidth: 400,
         alignItems: 'center',
-        shadowColor: '#000',
+        shadowColor: '#444',
         shadowOffset: {
             width: 0,
             height: 2,

@@ -579,7 +579,6 @@ const styles = StyleSheet.create({
         paddingTop: 20,
         paddingBottom: 120,
     },
-    // New header styles matching AdhocDashboard
     backgroundBox: {
         height: 325,
         width: '100%',
@@ -592,7 +591,7 @@ const styles = StyleSheet.create({
         flex: 1,
         borderBottomLeftRadius: 24,
         borderBottomRightRadius: 24,
-        shadowColor: '#000',
+        shadowColor: '#444',
         shadowOffset: { width: 0, height: 20 },
         shadowOpacity: 0.5,
         shadowRadius: 12,
@@ -605,7 +604,7 @@ const styles = StyleSheet.create({
         paddingBottom: 30,
         paddingHorizontal: 20,
         position: 'relative',
-        shadowColor: '#000',
+        shadowColor: '#444',
         shadowOffset: { width: 0, height: 4 },
         shadowOpacity: 0.1,
         shadowRadius: 8,

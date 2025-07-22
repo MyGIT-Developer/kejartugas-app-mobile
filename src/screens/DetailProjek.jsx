@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useMemo } from 'react';
+import React, { useState, useCallback, useMemo, useRef } from 'react';
 import {
     View,
     Text,
@@ -10,13 +10,16 @@ import {
     Modal,
     Pressable,
     TouchableOpacity,
+    Animated,
+    Platform
 } from 'react-native';
+import PagerView from 'react-native-pager-view';
+import { Ionicons, Feather, MaterialIcons } from '@expo/vector-icons';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import Popover from 'react-native-popover-view';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { LinearGradient } from 'expo-linear-gradient';
 import * as Progress from 'react-native-progress';
-import { Feather } from '@expo/vector-icons';
 import ReusableBottomPopUp from '../components/ReusableBottomPopUp';
 import { getProjectById, deleteProject } from '../api/projectTask';
 import SlidingButton from '../components/SlidingButton';
@@ -24,6 +27,7 @@ import SlidingFragment from '../components/SlidingFragment';
 import DetailProjekSatu from './DetailProjekSatu';
 import DetailProjekDua from './DetailProjekDua';
 const { height, width: SCREEN_WIDTH } = Dimensions.get('window');
+import { FONTS } from '../constants/fonts';
 
 const DetailProjek = ({ route }) => {
     const { projectId } = route.params;
@@ -38,6 +42,14 @@ const DetailProjek = ({ route }) => {
     const [jobsId, setJobsId] = useState(null);
     const [alert, setAlert] = useState({ show: false, type: 'success', message: '' });
     const [isPressed, setIsPressed] = useState(false);
+    const [activeTab, setActiveTab] = useState('Detail');
+
+    const pagerRef = useRef(null);
+    const tabScrollRef = useRef(null);
+    const tabItemRefs = useRef([]);
+
+    const headerAnim = React.useRef(new Animated.Value(1)).current;
+    const headerScaleAnim = React.useRef(new Animated.Value(1)).current;
 
     const toggleExpand = () => {
         setIsExpanded(!isExpanded);
@@ -96,45 +108,6 @@ const DetailProjek = ({ route }) => {
         setRefreshing(false);
     }, [fetchProjectById]);
 
-    const getStatusText = (projectStatus) => {
-        switch (projectStatus) {
-            case 'workingOnit':
-                return 'Working On It';
-            case 'Completed':
-                return 'Completed';
-            case 'onPending':
-                return 'Open';
-            default:
-                return '#dedede';
-        }
-    };
-
-    const getBackgroundColor = (projectStatus) => {
-        switch (projectStatus) {
-            case 'workingOnit':
-                return '#d4d4d4';
-            case 'Completed':
-                return '#9bebb0';
-            case 'onPending':
-                return '#f7eb9e';
-            default:
-                return '#dedede';
-        }
-    };
-
-    const getIndicatorDotColor = (projectStatus) => {
-        switch (projectStatus) {
-            case 'workingOnit':
-                return '#636363';
-            case 'Completed':
-                return '#399e53';
-            case 'onPending':
-                return '#f7af1e';
-            default:
-                return '#aaaaaa';
-        }
-    };
-
     if (loading) {
         return (
             <View style={styles.centeredContainer}>
@@ -151,8 +124,6 @@ const DetailProjek = ({ route }) => {
         );
     }
 
-    const percentageProject = Math.round(projectData.percentage).toFixed(0);
-    
     const handleGoToUpdate = () => {
         navigation.navigate('ProjectForm', {
             mode: 'update',
@@ -160,21 +131,218 @@ const DetailProjek = ({ route }) => {
         });
     };
 
-    return (
-        <View style={styles.container}>
-            <View style={styles.backgroundBox}>
-                <LinearGradient
-                    colors={['#0E509E', '#5FA0DC', '#9FD2FF']}
-                    style={styles.linearGradient}
-                    start={{ x: 0, y: 0 }}
-                    end={{ x: 1, y: 1 }}
+    const renderHeader = () => (
+        <Animated.View
+            style={[
+                styles.backgroundBox,
+                {
+                    opacity: headerAnim,
+                    transform: [
+                        {
+                            scale: headerScaleAnim.interpolate({
+                                inputRange: [0.9, 1],
+                                outputRange: [0.95, 1],
+                                extrapolate: 'clamp',
+                            }),
+                        },
+                    ],
+                },
+            ]}
+        >
+            <LinearGradient
+                colors={['#4A90E2', '#357ABD', '#2E5984']}
+                style={styles.linearGradient}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 1 }}
+            />
+
+            {/* Header decorative elements */}
+            <View style={styles.headerDecorations}>
+                <Animated.View
+                    style={[
+                        styles.decorativeCircle1,
+                        {
+                            opacity: headerAnim.interpolate({
+                                inputRange: [0, 1],
+                                outputRange: [0, 0.6],
+                            }),
+                            transform: [
+                                {
+                                    scale: headerAnim.interpolate({
+                                        inputRange: [0, 1],
+                                        outputRange: [0.5, 1],
+                                    }),
+                                },
+                            ],
+                        },
+                    ]}
+                />
+                <Animated.View
+                    style={[
+                        styles.decorativeCircle2,
+                        {
+                            opacity: headerAnim.interpolate({
+                                inputRange: [0, 1],
+                                outputRange: [0, 0.4],
+                            }),
+                            transform: [
+                                {
+                                    scale: headerAnim.interpolate({
+                                        inputRange: [0, 1],
+                                        outputRange: [0.3, 1],
+                                    }),
+                                },
+                            ],
+                        },
+                    ]}
+                />
+                <Animated.View
+                    style={[
+                        styles.decorativeCircle3,
+                        {
+                            opacity: headerAnim.interpolate({
+                                inputRange: [0, 1],
+                                outputRange: [0, 0.5],
+                            }),
+                            transform: [
+                                {
+                                    scale: headerAnim.interpolate({
+                                        inputRange: [0, 1],
+                                        outputRange: [0.7, 1],
+                                    }),
+                                },
+                            ],
+                        },
+                    ]}
+                />
+                <Animated.View
+                    style={[
+                        styles.decorativeCircle4,
+                        {
+                            opacity: headerAnim.interpolate({
+                                inputRange: [0, 1],
+                                outputRange: [0, 0.5],
+                            }),
+                            transform: [
+                                {
+                                    scale: headerAnim.interpolate({
+                                        inputRange: [0, 1],
+                                        outputRange: [0.7, 1],
+                                    }),
+                                },
+                            ],
+                        },
+                    ]}
+                />
+                <Animated.View
+                    style={[
+                        styles.decorativeCircle5,
+                        {
+                            opacity: headerAnim.interpolate({
+                                inputRange: [0, 1],
+                                outputRange: [0, 0.5],
+                            }),
+                            transform: [
+                                {
+                                    scale: headerAnim.interpolate({
+                                        inputRange: [0, 1],
+                                        outputRange: [0.7, 1],
+                                    }),
+                                },
+                            ],
+                        },
+                    ]}
                 />
             </View>
-            <View style={styles.headerSection}>
+        </Animated.View>
+    );
+
+    return (
+        <View style={styles.container}>
+            {renderHeader()}
+            <Animated.View
+                style={[
+                    styles.headerContainer,
+                    {
+                        opacity: headerAnim,
+                        transform: [
+                            {
+                                translateY: headerAnim.interpolate({
+                                    inputRange: [0, 1],
+                                    outputRange: [-30, 0],
+                                }),
+                            },
+                            { scale: headerScaleAnim },
+                        ],
+                    },
+                ]}
+            >
                 <Feather name="chevron-left" style={styles.backIcon} onPress={() => navigation.goBack()} />
-                <Text style={styles.header}>Detail Projek</Text>
-                <SlidingButton fragments={fragments} activeFragment={activeFragment} onPress={setActiveFragment} />
-            </View>
+                <View style={styles.headerContent}>
+                    <View style={styles.headerTitleWrapper}>
+                        <Animated.View
+                            style={[
+                                styles.headerIconContainer,
+                                {
+                                    opacity: headerAnim,
+                                    transform: [
+                                        {
+                                            scale: headerAnim.interpolate({
+                                                inputRange: [0, 1],
+                                                outputRange: [0.5, 1],
+                                            }),
+                                        },
+                                    ],
+                                },
+                            ]}
+                        >
+                            <Ionicons name="clipboard-outline" size={28} color="white" />
+                        </Animated.View>
+                        <Animated.Text
+                            style={[
+                                styles.header,
+                                {
+                                    opacity: headerAnim,
+                                    transform: [
+                                        {
+                                            scale: headerAnim.interpolate({
+                                                inputRange: [0, 1],
+                                                outputRange: [0.8, 1],
+                                            }),
+                                        },
+                                    ],
+                                },
+                            ]}
+                        >
+                            Detail Projek
+                        </Animated.Text>
+                    </View>
+                    <View style={styles.outerContainer}>
+                        <View style={styles.buttonContainer}>
+                            {fragments.map((tab, index) => (
+                                <Pressable
+                                    key={tab.title}
+                                    ref={(ref) => (tabItemRefs.current[index] = ref)}
+                                    style={[styles.button, activeTab === tab.title && styles.activeButton]}
+                                    onPress={() => {
+                                        setActiveTab(tab.title);
+                                        pagerRef.current?.setPage(index);
+                                    }}
+                                >
+                                    <Text
+                                        style={[
+                                            styles.buttonText,
+                                            activeTab === tab.title && styles.activeButtonText,
+                                        ]}
+                                    >
+                                        {tab.title}
+                                    </Text>
+                                </Pressable>
+                            ))}
+                        </View>
+                    </View>
+                </View>
+            </Animated.View>
             <ScrollView
                 refreshControl={
                     <RefreshControl
@@ -186,151 +354,37 @@ const DetailProjek = ({ route }) => {
                 }
                 contentContainerStyle={styles.contentContainer}
             >
-                <View style={styles.upperContainer}>
-                    <View style={styles.projectHeaderContainer}>
-                        <Text style={{ fontFamily: 'Poppins-Regular' }}>Nama Proyek</Text>
+                <PagerView
+                    style={{ minHeight: 800 }}
+                    initialPage={fragments.findIndex((t) => t.title === activeTab)}
+                    onPageSelected={(e) => {
+                        const index = e.nativeEvent.position;
+                        const title = fragments[index].title;
+                        setActiveTab(title);
 
-                        
-                        <Popover
-                            isVisible={visible}
-                            onRequestClose={togglePopover}
-                            from={
-                                <Pressable onPress={togglePopover} style={styles.iconButton}>
-                                    <Feather name="more-horizontal" size={24} color="black" />
-                                </Pressable>
-                            }
-                            placement="bottom"
-                        >
-                            <View style={styles.menuContainer}>
-                                <Pressable
-                                    onPress={() => handleGoToUpdate()}
-                                    style={styles.menuItem}
-                                >
-                                    <View style={[styles.optionIcon, { backgroundColor: '#277594' }]}>
-                                        <Feather name="edit" size={20} color="white" />
-                                    </View>
-
-                                    <Text style={[styles.optionText, { color: 'black' }]}>Edit Proyek</Text>
-                                </Pressable>
-                                {/* <Pressable
-                                    onPress={() => {
-                                        togglePopover();
-                                    }}
-                                    style={styles.menuItem}
-                                >
-                                    <View style={[styles.optionIcon, { backgroundColor: '#27CF56' }]}>
-                                        <Feather name="check-circle" size={20} color="white" />
-                                    </View>
-
-                                    <Text style={[styles.optionText, { color: 'black' }]}>Selesai</Text>
-                                </Pressable> */}
-                                {/* <Pressable
-                                    onPress={() => {
-                                        togglePopover();
-                                    }}
-                                    style={styles.menuItem}
-                                >
-                                    <View style={[styles.optionIcon, { backgroundColor: '#4078BB' }]}>
-                                        <Feather name="share-2" size={20} color="white" />
-                                    </View>
-
-                                    <Text style={[styles.optionText, { color: 'black' }]}>Bagikan</Text>
-                                </Pressable> */}
-                                <Pressable
-                                    style={[
-                                        styles.menuItem,
-                                        isPressed && styles.pressedItem, // Apply a different style when pressed
-                                    ]}
-                                    onPressIn={() => setIsPressed(true)}
-                                    onPressOut={() => setIsPressed(false)}
-                                    onPress={() => deleteProjectHandler()}
-                                >
-                                    <View
-                                        style={[
-                                            styles.optionIcon,
-                                            { backgroundColor: isPressed ? '#C43B54' : '#DF4E6E' },
-                                        ]}
-                                    >
-                                        <Feather name="trash-2" size={20} color="#fff" />
-                                    </View>
-                                    <Text style={[styles.optionText, { color: isPressed ? 'gray' : 'black' }]}>
-                                        Hapus
-                                    </Text>
-                                </Pressable>
-                            </View>
-                        </Popover>
-                    </View>
-                    <View style={styles.projectInfoContainer}>
-                        <View style={styles.projectTextContainer}>
-                            <TouchableOpacity onPress={toggleExpand}>
-                                <Text
-                                    style={styles.projectName}
-                                    numberOfLines={isExpanded ? undefined : 2}
-                                    ellipsizeMode="tail"
-                                >
-                                    {projectData.project_name}
-                                </Text>
-                            </TouchableOpacity>
-                            <View
-                                style={[
-                                    styles.statusContainer,
-                                    { backgroundColor: getBackgroundColor(projectData.project_status) },
-                                ]}
-                            >
-                                <Text
-                                    style={{
-                                        color: getIndicatorDotColor(projectData.project_status),
-                                        fontFamily: 'Poppins-Medium',
-                                        letterSpacing: -0.3,
-                                    }}
-                                >
-                                    {getStatusText(projectData.project_status)}
-                                </Text>
-                            </View>
-                        </View>
-                        {/* <Progress.Circle
-                            size={80}
-                            progress={percentageProject}
-                            thickness={8}
-                            showsText={true}
-                            color="#27B44E"
-                            borderWidth={2}
-                            borderColor="#E8F5E9"
-                        /> */}
-                        <Progress.Circle
-                                size={75}
-                                progress={percentageProject}
-                                thickness={6}
-                                color={
-                                    percentageProject === 0
-                                        ? '#E0E0E0'
-                                        :percentageProject < 50
-                                        ? '#F69292'
-                                        : percentageProject < 75
-                                        ? '#F0E08A'
-                                        : '#C9F8C1'
-                                }
-                                unfilledColor="#E8F5E9"
-                                borderWidth={0}
-                                showsText={true}
-                                formatText={() => `${percentageProject}%`}
-                                textStyle={{
-                                    fontFamily: 'Poppins-SemiBold',
-                                    fontSize: 14,
-                                    color:
-                                    percentageProject === 0
-                                            ? '#000000'
-                                            :percentageProject < 50
-                                            ? '#811616'
-                                            :percentageProject < 75
-                                            ? '#656218'
-                                            : '#0A642E', // Text color based on progress
-                                }}
+                        // Scroll tab header to active tab
+                        tabItemRefs.current[index]?.measureLayout(
+                            tabScrollRef.current,
+                            (x) => {
+                                tabScrollRef.current?.scrollTo({ x: x - 16, animated: true }); // adjust offset if needed
+                            },
+                            (error) => console.warn('measure error', error),
+                        );
+                    }}
+                    ref={pagerRef}
+                >
+                    {fragments.map((tab) => (
+                        <View key={tab.title} style={{}}>
+                            <tab.screen
+                                projectId={projectId}
+                                data={projectData}
+                                onFetch={fetchProjectById}
+                                setAlert={setAlert}
+                                setJobsId={setJobsId}
                             />
-                    </View>
-                </View>
-
-                <SlidingFragment fragments={fragments} activeFragment={activeFragment} data={projectData} onFetch={fetchProjectById}/>
+                        </View>
+                    ))}
+                </PagerView>
             </ScrollView>
             <ReusableBottomPopUp
                 show={alert.show}
@@ -346,17 +400,135 @@ const styles = StyleSheet.create({
     container: {
         flexGrow: 1,
     },
+    // New header styles matching AdhocDashboard
     backgroundBox: {
-        height: 155,
+        height: 325,
         width: '100%',
         position: 'absolute',
         top: 0,
         left: 0,
+        overflow: 'hidden',
     },
     linearGradient: {
         flex: 1,
-        borderBottomLeftRadius: 30,
-        borderBottomRightRadius: 30,
+        borderBottomLeftRadius: 24,
+        borderBottomRightRadius: 24,
+        shadowColor: '#444',
+        shadowOffset: { width: 0, height: 20 },
+        shadowOpacity: 0.5,
+        shadowRadius: 12,
+        elevation: 8,
+        marginBottom: 30,
+    },
+    headerContainer: {
+        alignItems: 'center',
+        paddingTop: Platform.OS === 'ios' ? 70 : 50,
+        paddingBottom: 30,
+        paddingHorizontal: 20,
+        position: 'relative',
+        shadowColor: '#444',
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.1,
+        shadowRadius: 8,
+        elevation: 5,
+    },
+    headerContent: {
+        alignItems: 'center',
+        justifyContent: 'center',
+        width: '100%',
+        paddingHorizontal: 20,
+        gap: 10,
+        marginTop: 20,
+    },
+    header: {
+        fontSize: FONTS.size['3xl'],
+        fontFamily: FONTS.family.bold,
+        color: 'white',
+        textAlign: 'center',
+        letterSpacing: -0.8,
+        marginBottom: 0,
+        textShadowColor: 'rgba(0, 0, 0, 0.15)',
+        textShadowOffset: { width: 0, height: 1 },
+        textShadowRadius: 3,
+    },
+    headerSubtitle: {
+        fontSize: FONTS.size.md,
+        fontFamily: FONTS.family.regular,
+        color: 'rgba(255, 255, 255, 0.85)',
+        textAlign: 'center',
+        marginTop: 4,
+        letterSpacing: 0.2,
+        lineHeight: 18,
+    },
+    headerTitleWrapper: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+        gap: 12,
+        marginBottom: 8,
+    },
+    headerIconContainer: {
+        width: 40,
+        height: 40,
+        borderRadius: 20,
+        backgroundColor: 'rgba(255, 255, 255, 0.2)',
+        justifyContent: 'center',
+        alignItems: 'center',
+        borderWidth: 1,
+        borderColor: 'rgba(255, 255, 255, 0.3)',
+    },
+    headerDecorations: {
+        position: 'absolute',
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0,
+        overflow: 'hidden',
+    },
+    decorativeCircle1: {
+        position: 'absolute',
+        width: 120,
+        height: 120,
+        borderRadius: 60,
+        backgroundColor: 'rgba(255, 255, 255, 0.08)',
+        top: -30,
+        right: -20,
+    },
+    decorativeCircle2: {
+        position: 'absolute',
+        width: 80,
+        height: 80,
+        borderRadius: 40,
+        backgroundColor: 'rgba(255, 255, 255, 0.06)',
+        top: 40,
+        left: -25,
+    },
+    decorativeCircle3: {
+        position: 'absolute',
+        width: 60,
+        height: 60,
+        borderRadius: 30,
+        backgroundColor: 'rgba(255, 255, 255, 0.1)',
+        top: 80,
+        right: 30,
+    },
+    decorativeCircle4: {
+        position: 'absolute',
+        width: 60,
+        height: 60,
+        borderRadius: 30,
+        backgroundColor: 'rgba(255, 255, 255, 0.1)',
+        top: 150,
+        left: -10,
+    },
+    decorativeCircle5: {
+        position: 'absolute',
+        width: 120,
+        height: 120,
+        borderRadius: 60,
+        backgroundColor: 'rgba(255, 255, 255, 0.08)',
+        top: 120,
+        left: 30,
     },
     contentContainer: {
         display: 'flex',
@@ -371,17 +543,19 @@ const styles = StyleSheet.create({
         gap: 20,
     },
     header: {
-        fontSize: 24,
-        fontWeight: 'bold',
+        fontSize: FONTS.size['3xl'],
+        fontFamily: FONTS.family.bold,
         color: 'white',
-        alignSelf: 'center',
-        fontFamily: 'Poppins-Bold',
-        marginTop: 30,
-        letterSpacing: -1,
+        textAlign: 'center',
+        letterSpacing: -0.8,
+        marginBottom: 0,
+        textShadowColor: 'rgba(0, 0, 0, 0.15)',
+        textShadowOffset: { width: 0, height: 1 },
+        textShadowRadius: 3,
     },
     backIcon: {
         position: 'absolute',
-        top: 35,
+        top: 80,
         left: 20,
         color: 'white',
         fontSize: 24,
@@ -394,13 +568,43 @@ const styles = StyleSheet.create({
         paddingHorizontal: 20,
         borderRadius: 20,
         backgroundColor: 'white',
-        shadowColor: '#000',
+        shadowColor: '#444',
         shadowOffset: { width: 0, height: 5 },
         shadowOpacity: 0.3,
         elevation: 5,
         marginTop: 10,
         marginHorizontal: 20,
     },
+
+    outerContainer: {
+        borderRadius: 25,
+        overflow: 'hidden',
+        borderColor: 'white',
+        borderWidth: 2,
+    },
+    buttonContainer: {
+        flexDirection: 'row',
+        justifyContent: 'center',
+        flexWrap: 'wrap',
+        backgroundColor: 'rgba(255, 255, 255, 0.4)',
+    },
+    button: {
+        paddingVertical: 5,
+        paddingHorizontal: 10,
+    },
+    activeButton: {
+        backgroundColor: 'white',
+        borderRadius: 25,
+    },
+    buttonText: {
+        color: '#fff',
+        fontFamily: 'Poppins-Medium',
+        letterSpacing: -0.5,
+    },
+    activeButtonText: {
+        color: '#238FBA',
+    },
+
     projectHeaderContainer: {
         flexDirection: 'row',
         justifyContent: 'space-between',
@@ -410,7 +614,7 @@ const styles = StyleSheet.create({
     projectTextContainer: {
         flexDirection: 'column',
         gap: 5,
-        maxWidth: '70%',
+        maxWidth: '60%',
     },
     projectInfoContainer: {
         flexDirection: 'row',
@@ -419,18 +623,29 @@ const styles = StyleSheet.create({
         width: '100%',
     },
     projectName: {
-        color: 'black',
-        fontSize: 20,
-        fontFamily: 'Poppins-Medium',
-        letterSpacing: -0.3,
+        fontFamily: FONTS.family.bold,
+        fontSize: FONTS.size['xl'],
+        color: '#111827',
+        marginBottom: 12,
+        letterSpacing: -0.5,
     },
-    statusContainer: {
-        paddingVertical: 5,
-        backgroundColor: '#d7d7d7',
-        borderRadius: 25,
-        width: 100,
-        textAlign: 'center',
+    statusBadge: {
+        flexDirection: 'row',
         alignItems: 'center',
+        paddingHorizontal: 16,
+        paddingVertical: 4,
+        borderRadius: 24,
+        gap: 6,
+        shadowColor: '#444',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.1,
+        shadowRadius: 4,
+        elevation: 3,
+    },
+    statusText: {
+        fontFamily: FONTS.family.semiBold,
+        fontSize: FONTS.size.sm,
+        letterSpacing: -0.5,
     },
     centeredContainer: {
         flex: 1,

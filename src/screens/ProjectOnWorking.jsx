@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback, useMemo } from 'react';
+import React, { useEffect, useState, useCallback, useMemo, useRef } from 'react';
 import {
     View,
     Text,
@@ -8,6 +8,8 @@ import {
     StyleSheet,
     SafeAreaView,
     TouchableOpacity,
+    Platform,
+    Animated
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -18,7 +20,7 @@ import { Feather, Ionicons } from '@expo/vector-icons';
 import DraggableModalTask from '../components/DraggableModalTask';
 import ReusableModalSuccess from '../components/TaskModalSuccess';
 import { fetchTaskById } from '../api/task'; // Import the fetchTaskById function
-import { ScrollView } from 'react-native-gesture-handler';
+import { FONTS } from '../constants/fonts';
 
 const calculateRemainingDays = (endDate) => {
     const today = new Date();
@@ -92,23 +94,25 @@ const TaskItem = ({ task, onPress }) => {
     const durationBadge = useMemo(() => getDurationBadge(remainingDays), [remainingDays]);
 
     return (
-        <View style={styles.taskItem}>
-            <View style={styles.taskContent}>
-                <View style={styles.upperTaskContent}>
-                    <Text style={styles.taskTitle}>{task.task_name}</Text>
-                    <TouchableOpacity style={styles.detailButton} onPress={onPress}>
-                        <Text style={styles.detailText}>Detail</Text>
-                    </TouchableOpacity>
-                </View>
-                <View style={styles.badgeContainer}>
+        <TouchableOpacity onPress={onPress} activeOpacity={0.8}>
+            <View style={styles.taskItem}>
+                <View style={styles.taskContent}>
+                    <View style={styles.upperTaskContent}>
+                        <Text style={styles.taskTitle} numberOfLines={2}>{task.task_name}</Text>
+                    </View>
                     <View style={[styles.badge, { backgroundColor: durationBadge.color }]}>
+                        <Ionicons
+                            name="time-outline"
+                            size={16}
+                            color={durationBadge.textColor}
+                        />
                         <Text style={[styles.badgeText, { color: durationBadge.textColor }]}>
                             {durationBadge.label}
                         </Text>
                     </View>
                 </View>
             </View>
-        </View>
+        </TouchableOpacity>
     );
 };
 
@@ -135,10 +139,21 @@ const ProjectTasksGroup = ({ projectName, tasks, onTaskPress }) => {
 
     return (
         <View style={styles.projectGroup}>
-            <Text style={styles.projectTitle}>{projectName}</Text>
-            {tasks.map((task) => (
-                <TaskItem key={task.id} task={task} onPress={() => onTaskPress(task)} />
-            ))}
+            <View style={styles.projectHeader}>
+                <View style={styles.projectTitleSection}>
+                    <Text style={styles.projectTitleLabel}>Nama Proyek</Text>
+                    <Text style={styles.projectTitle}>{projectName}</Text>
+                </View>
+                <View style={styles.taskCountBadge}>
+                    <Text style={styles.taskCountText}>{tasks.length}</Text>
+                    <Text style={styles.taskCountLabel}>Tugas</Text>
+                </View>
+            </View>
+            <View style={styles.tasksList}>
+                {tasks.map((task) => (
+                    <TaskItem key={task.id} task={task} onPress={() => onTaskPress(task)} />
+                ))}
+            </View>
             <TouchableOpacity style={styles.projectDetailButton} onPress={() => setIsExpanded(!isExpanded)}>
                 <Text style={styles.projectDetailButtonText}>
                     {isExpanded ? 'Sembunyikan detail proyek' : 'Lihat detail proyek'}
@@ -182,6 +197,9 @@ const ProjectOnWorking = () => {
     const [modalType, setModalType] = useState('default'); // Initialize modalType state
     const [selectedTask, setSelectedTask] = useState(null);
     const [draggableModalVisible, setDraggableModalVisible] = useState(false);
+
+    const headerAnim = React.useRef(new Animated.Value(1)).current;
+    const headerScaleAnim = React.useRef(new Animated.Value(1)).current;
 
     const fetchTasks = useCallback(async () => {
         try {
@@ -303,72 +321,367 @@ const ProjectOnWorking = () => {
         }
     };
 
-    return (
-        <SafeAreaView style={styles.container}>
-            <ScrollView contentContainerStyle={styles.mainContainer}>
-                <View style={styles.backgroundBox}>
-                    <LinearGradient
-                        colors={['#0E509E', '#5FA0DC', '#9FD2FF']}
-                        style={styles.linearGradient}
-                        start={{ x: 0, y: 0 }}
-                        end={{ x: 1, y: 1 }}
-                    />
-                </View>
-                <View style={styles.headerSection}>
-                    <Feather name="chevron-left" style={styles.backIcon} onPress={() => navigation.goBack()} />
-                    <Text style={styles.header}>Dalam Pengerjaan</Text>
-                </View>
+    const renderHeader = () => (
+        <Animated.View
+            style={[
+                styles.backgroundBox,
+                {
+                    opacity: headerAnim,
+                    transform: [
+                        {
+                            scale: headerScaleAnim.interpolate({
+                                inputRange: [0.9, 1],
+                                outputRange: [0.95, 1],
+                                extrapolate: 'clamp',
+                            }),
+                        },
+                    ],
+                },
+            ]}
+        >
+            <LinearGradient
+                colors={['#4A90E2', '#357ABD', '#2E5984']}
+                style={styles.linearGradient}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 1 }}
+            />
 
-                <FlatList
-                    data={projectsWithTasks}
-                    contentContainerStyle={styles.contentContainer}
-                    keyExtractor={([projectName]) => projectName}
-                    renderItem={({ item: [projectName, tasks] }) => (
-                        <ProjectTasksGroup
-                            projectName={projectName}
-                            tasks={tasks}
-                            onTaskPress={handleTaskDetailPress}
-                        />
-                    )}
-                    showsVerticalScrollIndicator={false}
+            {/* Header decorative elements */}
+            <View style={styles.headerDecorations}>
+                <Animated.View
+                    style={[
+                        styles.decorativeCircle1,
+                        {
+                            opacity: headerAnim.interpolate({
+                                inputRange: [0, 1],
+                                outputRange: [0, 0.6],
+                            }),
+                            transform: [
+                                {
+                                    scale: headerAnim.interpolate({
+                                        inputRange: [0, 1],
+                                        outputRange: [0.5, 1],
+                                    }),
+                                },
+                            ],
+                        },
+                    ]}
                 />
+                <Animated.View
+                    style={[
+                        styles.decorativeCircle2,
+                        {
+                            opacity: headerAnim.interpolate({
+                                inputRange: [0, 1],
+                                outputRange: [0, 0.4],
+                            }),
+                            transform: [
+                                {
+                                    scale: headerAnim.interpolate({
+                                        inputRange: [0, 1],
+                                        outputRange: [0.3, 1],
+                                    }),
+                                },
+                            ],
+                        },
+                    ]}
+                />
+                <Animated.View
+                    style={[
+                        styles.decorativeCircle3,
+                        {
+                            opacity: headerAnim.interpolate({
+                                inputRange: [0, 1],
+                                outputRange: [0, 0.5],
+                            }),
+                            transform: [
+                                {
+                                    scale: headerAnim.interpolate({
+                                        inputRange: [0, 1],
+                                        outputRange: [0.7, 1],
+                                    }),
+                                },
+                            ],
+                        },
+                    ]}
+                />
+                <Animated.View
+                    style={[
+                        styles.decorativeCircle4,
+                        {
+                            opacity: headerAnim.interpolate({
+                                inputRange: [0, 1],
+                                outputRange: [0, 0.5],
+                            }),
+                            transform: [
+                                {
+                                    scale: headerAnim.interpolate({
+                                        inputRange: [0, 1],
+                                        outputRange: [0.7, 1],
+                                    }),
+                                },
+                            ],
+                        },
+                    ]}
+                />
+                <Animated.View
+                    style={[
+                        styles.decorativeCircle5,
+                        {
+                            opacity: headerAnim.interpolate({
+                                inputRange: [0, 1],
+                                outputRange: [0, 0.5],
+                            }),
+                            transform: [
+                                {
+                                    scale: headerAnim.interpolate({
+                                        inputRange: [0, 1],
+                                        outputRange: [0.7, 1],
+                                    }),
+                                },
+                            ],
+                        },
+                    ]}
+                />
+            </View>
+        </Animated.View>
+    );
 
-                {modalType === 'default' ? (
-                    <DraggableModalTask
-                        visible={draggableModalVisible}
-                        onClose={() => {
-                            setDraggableModalVisible(false);
-                            setSelectedTask(null);
-                        }}
-                        taskDetails={selectedTask || {}}
-                    />
-                ) : (
-                    <ReusableModalSuccess
-                        visible={draggableModalVisible}
-                        onClose={() => setDraggableModalVisible(false)}
-                        taskDetails={selectedTask || {}}
+    return (
+        <View style={styles.container}>
+            {renderHeader()}
+            <Animated.View
+                style={[
+                    styles.headerContainer,
+                    {
+                        opacity: headerAnim,
+                        transform: [
+                            {
+                                translateY: headerAnim.interpolate({
+                                    inputRange: [0, 1],
+                                    outputRange: [-30, 0],
+                                }),
+                            },
+                            { scale: headerScaleAnim },
+                        ],
+                    },
+                ]}
+            >
+                <Feather name="chevron-left" style={styles.backIcon} onPress={() => navigation.goBack()} />
+                <View style={styles.headerContent}>
+                    <View style={styles.headerTitleWrapper}>
+                        <Animated.View
+                            style={[
+                                styles.headerIconContainer,
+                                {
+                                    opacity: headerAnim,
+                                    transform: [
+                                        {
+                                            scale: headerAnim.interpolate({
+                                                inputRange: [0, 1],
+                                                outputRange: [0.5, 1],
+                                            }),
+                                        },
+                                    ],
+                                },
+                            ]}
+                        >
+                            <Ionicons name="clipboard-outline" size={28} color="white" />
+                        </Animated.View>
+                        <Animated.Text
+                            style={[
+                                styles.header,
+                                {
+                                    opacity: headerAnim,
+                                    transform: [
+                                        {
+                                            scale: headerAnim.interpolate({
+                                                inputRange: [0, 1],
+                                                outputRange: [0.8, 1],
+                                            }),
+                                        },
+                                    ],
+                                },
+                            ]}
+                        >
+                            Dalam Pengerjaan
+                        </Animated.Text>
+                    </View>
+                </View>
+            </Animated.View>
+
+            <FlatList
+                data={projectsWithTasks}
+                contentContainerStyle={styles.contentContainer}
+                keyExtractor={([projectName]) => projectName}
+                renderItem={({ item: [projectName, tasks] }) => (
+                    <ProjectTasksGroup
+                        projectName={projectName}
+                        tasks={tasks}
+                        onTaskPress={handleTaskDetailPress}
                     />
                 )}
-            </ScrollView>
-        </SafeAreaView>
+                showsVerticalScrollIndicator={false}
+            />
+
+            {modalType === 'default' ? (
+                <DraggableModalTask
+                    visible={draggableModalVisible}
+                    onClose={() => {
+                        setDraggableModalVisible(false);
+                        setSelectedTask(null);
+                    }}
+                    taskDetails={selectedTask || {}}
+                />
+            ) : (
+                <ReusableModalSuccess
+                    visible={draggableModalVisible}
+                    onClose={() => setDraggableModalVisible(false)}
+                    taskDetails={selectedTask || {}}
+                />
+            )}
+        </View>
     );
 };
 const styles = StyleSheet.create({
     container: {
-        minHeight: height, // Ensure the content is at least as tall as the screen
         flexGrow: 1,
     },
+    // New header styles matching AdhocDashboard
     backgroundBox: {
-        height: 120,
+        height: 325,
         width: '100%',
         position: 'absolute',
         top: 0,
         left: 0,
+        overflow: 'hidden',
     },
     linearGradient: {
         flex: 1,
-        borderBottomLeftRadius: 30,
-        borderBottomRightRadius: 30,
+        borderBottomLeftRadius: 24,
+        borderBottomRightRadius: 24,
+        shadowColor: '#444',
+        shadowOffset: { width: 0, height: 20 },
+        shadowOpacity: 0.5,
+        shadowRadius: 12,
+        elevation: 8,
+        marginBottom: 30,
+    },
+    headerContainer: {
+        alignItems: 'center',
+        paddingTop: Platform.OS === 'ios' ? 70 : 50,
+        paddingBottom: 30,
+        paddingHorizontal: 20,
+        position: 'relative',
+        shadowColor: '#444',
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.1,
+        shadowRadius: 8,
+        elevation: 5,
+    },
+    headerContent: {
+        alignItems: 'center',
+        justifyContent: 'center',
+        width: '100%',
+        paddingHorizontal: 20,
+        gap: 10,
+        marginTop: 20,
+    },
+    header: {
+        fontSize: FONTS.size['3xl'],
+        fontFamily: FONTS.family.bold,
+        color: 'white',
+        textAlign: 'center',
+        letterSpacing: -0.8,
+        marginBottom: 0,
+        textShadowColor: 'rgba(0, 0, 0, 0.15)',
+        textShadowOffset: { width: 0, height: 1 },
+        textShadowRadius: 3,
+    },
+    headerSubtitle: {
+        fontSize: FONTS.size.md,
+        fontFamily: FONTS.family.regular,
+        color: 'rgba(255, 255, 255, 0.85)',
+        textAlign: 'center',
+        marginTop: 4,
+        letterSpacing: 0.2,
+        lineHeight: 18,
+    },
+    headerTitleWrapper: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+        gap: 12,
+        marginBottom: 8,
+    },
+    headerIconContainer: {
+        width: 40,
+        height: 40,
+        borderRadius: 20,
+        backgroundColor: 'rgba(255, 255, 255, 0.2)',
+        justifyContent: 'center',
+        alignItems: 'center',
+        borderWidth: 1,
+        borderColor: 'rgba(255, 255, 255, 0.3)',
+    },
+    headerDecorations: {
+        position: 'absolute',
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0,
+        overflow: 'hidden',
+    },
+    decorativeCircle1: {
+        position: 'absolute',
+        width: 120,
+        height: 120,
+        borderRadius: 60,
+        backgroundColor: 'rgba(255, 255, 255, 0.08)',
+        top: -30,
+        right: -20,
+    },
+    decorativeCircle2: {
+        position: 'absolute',
+        width: 80,
+        height: 80,
+        borderRadius: 40,
+        backgroundColor: 'rgba(255, 255, 255, 0.06)',
+        top: 40,
+        left: -25,
+    },
+    decorativeCircle3: {
+        position: 'absolute',
+        width: 60,
+        height: 60,
+        borderRadius: 30,
+        backgroundColor: 'rgba(255, 255, 255, 0.1)',
+        top: 80,
+        right: 30,
+    },
+    decorativeCircle4: {
+        position: 'absolute',
+        width: 60,
+        height: 60,
+        borderRadius: 30,
+        backgroundColor: 'rgba(255, 255, 255, 0.1)',
+        top: 150,
+        left: -10,
+    },
+    decorativeCircle5: {
+        position: 'absolute',
+        width: 120,
+        height: 120,
+        borderRadius: 60,
+        backgroundColor: 'rgba(255, 255, 255, 0.08)',
+        top: 120,
+        left: 30,
+    },
+
+    contentContainer: {
+        display: 'flex',
+        flexDirection: 'column',
+        gap: 20,
     },
     headerSection: {
         justifyContent: 'center',
@@ -378,57 +691,22 @@ const styles = StyleSheet.create({
         gap: 20,
     },
     header: {
-        fontSize: 24,
-        fontWeight: 'bold',
+        fontSize: FONTS.size['3xl'],
+        fontFamily: FONTS.family.bold,
         color: 'white',
-        alignSelf: 'center',
-        fontFamily: 'Poppins-Bold',
-        marginTop: 30,
-        letterSpacing: -1,
+        textAlign: 'center',
+        letterSpacing: -0.8,
+        marginBottom: 0,
+        textShadowColor: 'rgba(0, 0, 0, 0.15)',
+        textShadowOffset: { width: 0, height: 1 },
+        textShadowRadius: 3,
     },
     backIcon: {
         position: 'absolute',
-        top: 35,
+        top: 80,
         left: 20,
         color: 'white',
         fontSize: 24,
-    },
-    contentContainer: {
-        paddingHorizontal: 16,
-        paddingTop: 20,
-        paddingBottom: 20,
-    },
-    safeArea: {
-        flex: 1,
-        backgroundColor: '#F2F2F7',
-    },
-    mainContainer: {
-        // height: '200vh',
-        borderRadius: 20,
-        display: 'flex',
-        flexDirection: 'column',
-        gap: 20,
-    },
-    sectionContainer: {
-        flex: 1,
-        display: 'flex',
-        flexDirection: 'column',
-        gap: 20,
-        marginBottom: 10,
-    },
-    subHeader: {
-        display: 'flex',
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-    },
-    subHeaderTextLeft: {
-        fontSize: 14,
-        fontWeight: 'bold',
-    },
-    subHeaderTextRight: {
-        fontSize: 14,
-        color: 'gray',
     },
     centered: {
         flex: 1,
@@ -436,45 +714,107 @@ const styles = StyleSheet.create({
         alignItems: 'center',
     },
     projectGroup: {
+         backgroundColor: 'white',
+        borderRadius: 20,
         marginBottom: 20,
-        backgroundColor: '#ffffff',
-        borderRadius: 8,
-        padding: 16,
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.1,
-        shadowRadius: 4,
-        elevation: 3,
+        shadowColor: '#444',
+        shadowOffset: { width: 0, height: 8 },
+        shadowOpacity: 0.15,
+        shadowRadius: 20,
+        elevation: 12,
+        overflow: 'hidden',
+        marginHorizontal: 20,
+    },
+    projectHeader: {
+             flexDirection: 'row',
+        alignItems: 'center',
+        paddingHorizontal: 20,
+        paddingTop: 10,
+        paddingBottom: 16,
+        borderWidth: 1,
+        borderColor: '#E2E8F0',
+    },
+    projectTitleSection: {
+        flex: 1,
+        marginRight: 16,
+        gap: 8,
+    },
+    projectTitleLabel: {
+        fontSize: FONTS.size.md,
+        fontFamily: FONTS.family.semiBold,
+        marginBottom: 4,
+        color: '#444',
+        letterSpacing: -0.5,
     },
     projectTitle: {
-        fontSize: 18,
-        fontWeight: 'bold',
+        fontSize: FONTS.size.lg,
+        fontFamily: FONTS.family.semiBold,
         marginBottom: 8,
         color: '#1C1C1E',
-        fontFamily: 'Poppins-SemiBold',
+        letterSpacing: -0.5,
+    },
+    taskCountBadge: {
+        backgroundColor: '#F0F9FF',
+        alignItems: 'center',
+        justifyContent: 'center',
+        paddingHorizontal: 16,
+        paddingVertical: 12,
+        borderRadius: 20,
+        borderWidth: 2,
+        borderColor: '#357ABD',
+        minWidth: 70,
+        shadowColor: '#357ABD',
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.1,
+        shadowRadius: 8,
+        elevation: 4,
+    },
+    taskCountText: {
+        fontSize: 24,
+        color: '#357ABD',
+        fontWeight: '800',
+        lineHeight: 28,
+    },
+    taskCountLabel: {
+        fontSize: 12,
+        color: '#357ABD',
+        fontWeight: '600',
+        textTransform: 'uppercase',
+        letterSpacing: -0.5,
+    },
+    tasksList: {
+        paddingVertical: 16,
+        paddingHorizontal: 20,
     },
     taskItem: {
-        backgroundColor: '#FFFFFF',
-        borderRadius: 8,
-        marginBottom: 8,
-        borderBottomColor: '#E9E9EB',
-        borderBottomWidth: 1,
-        padding: 12,
+        marginBottom: 12,
+        backgroundColor: '#FAFBFC',
+        borderRadius: 16,
+        padding: 20,
+        borderWidth: 1,
+        borderColor: '#E2E8F0',
+        shadowColor: '#64748B',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.04,
+        shadowRadius: 8,
+        elevation: 2,
     },
     taskContent: {
-        flex: 1,
+        gap: 16,
     },
     upperTaskContent: {
         flexDirection: 'row',
         justifyContent: 'space-between',
         alignItems: 'center',
-        marginBottom: 8,
+        gap: 12,
     },
     taskTitle: {
-        fontSize: 18,
-        fontWeight: 'semibold',
-        color: '#333333',
         flex: 1,
+        fontSize: FONTS.size.md,
+        color: '#1E293B',
+        fontFamily: FONTS.family.semiBold,
+        lineHeight: 20,
+        letterSpacing: -0.5,
     },
     detailButton: {
         paddingHorizontal: 12,
@@ -482,7 +822,7 @@ const styles = StyleSheet.create({
         backgroundColor: '#E9E9EB',
         borderRadius: 6,
         alignSelf: 'flex-start',
-        shadowColor: '#000',
+        shadowColor: '#444',
         shadowOffset: { width: 0, height: 2 },
         shadowOpacity: 0.1,
         shadowRadius: 4,
@@ -493,19 +833,25 @@ const styles = StyleSheet.create({
         color: '#1f1f1f',
         fontFamily: 'Poppins-Regular',
     },
-    badgeContainer: {
-        flexDirection: 'row',
-    },
     badge: {
-        paddingHorizontal: 8,
-        paddingVertical: 4,
-        borderRadius: 12,
+        flexDirection: 'row',
+        paddingHorizontal: 12,
+        paddingVertical: 6,
+        borderRadius: 20,
         alignSelf: 'flex-start',
-        marginTop: 4,
+        shadowColor: '#444',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.1,
+        shadowRadius: 4,
+        elevation: 2,
+        gap: 8,
+        alignItems: 'center',
     },
     badgeText: {
-        fontSize: 12,
-        fontFamily: 'Poppins-Medium',
+        fontSize: FONTS.size.xs,
+        fontWeight: '700',
+        letterSpacing: 0.3,
+        textTransform: 'uppercase',
     },
     projectDetailButton: {
         flexDirection: 'row',

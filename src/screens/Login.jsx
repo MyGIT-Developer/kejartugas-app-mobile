@@ -22,6 +22,8 @@ import ReusableAlert from '../components/ReusableAlert';
 import { useFonts } from '../utils/UseFonts';
 import NotificationService from '../utils/notificationService';
 import { setupNotifications } from '../api/notification';
+import { FONTS } from '../constants/fonts';
+import { LinearGradient } from 'expo-linear-gradient';
 
 const Login = () => {
     const [credentials, setCredentials] = useState({ username: '', password: '' });
@@ -198,6 +200,7 @@ const Login = () => {
                         togglePasswordVisibility={togglePasswordVisibility}
                         error={inputErrors.password}
                         editable={!isLoading}
+                        placeholder="Masukkan Password"
                     />
                     <TouchableOpacity
                         onPress={() => navigation.navigate('ForgotPassword')}
@@ -207,17 +210,25 @@ const Login = () => {
                     </TouchableOpacity>
                     <TouchableOpacity
                         onPress={handleLogin}
-                        style={[styles.loginButton, isLoading && styles.loginButtonDisabled]}
+                        style={[{ width: '100%' }, isLoading && styles.loginButtonDisabled]}
                         disabled={isLoading}
+                        activeOpacity={0.8}
                     >
-                        {isLoading ? (
-                            <View style={styles.loadingContainer}>
-                                <ActivityIndicator size="small" color="#fff" />
-                                <Text style={[styles.loginButtonText, { marginLeft: 10 }]}>Logging in...</Text>
-                            </View>
-                        ) : (
-                            <Text style={styles.loginButtonText}>Login</Text>
-                        )}
+                        <LinearGradient
+                            colors={isLoading ? ['#ccc', '#727272ff'] : ['#007AFF', '#0051A8']}
+                            start={{ x: 0, y: 0 }}
+                            end={{ x: 1, y: 0 }}
+                            style={styles.loginButton}
+                        >
+                            {isLoading ? (
+                                <View style={styles.loadingContainer}>
+                                    <ActivityIndicator size="small" color="#fff" />
+                                    <Text style={[styles.loginButtonText, { marginLeft: 10 }]}>Logging in...</Text>
+                                </View>
+                            ) : (
+                                <Text style={styles.loginButtonText}>Login</Text>
+                            )}
+                        </LinearGradient>
                     </TouchableOpacity>
                     <TouchableOpacity onPress={() => navigation.navigate('BoardingScreen')}>
                         <Text style={styles.registerText}>
@@ -249,17 +260,18 @@ const InputField = ({ label, value, onChangeText, placeholder, error, editable =
             editable={editable}
             autoCapitalize="none"
             autoCorrect={false}
+            placeholderTextColor="#888"
         />
         {error ? <Text style={styles.errorText}>{error}</Text> : null}
     </View>
 );
 
-const PasswordField = ({ value, onChangeText, passwordVisible, togglePasswordVisibility, error, editable = true }) => (
+const PasswordField = ({ value, onChangeText, passwordVisible, togglePasswordVisibility, error, editable = true, placeholder }) => (
     <View style={styles.inputContainer}>
         <Text style={styles.label}>Password</Text>
         <View style={[styles.passwordContainer, error && styles.inputError]}>
             <TextInput
-                placeholder="Masukkan Password"
+                placeholder={placeholder}
                 value={value}
                 onChangeText={onChangeText}
                 secureTextEntry={!passwordVisible}
@@ -267,6 +279,7 @@ const PasswordField = ({ value, onChangeText, passwordVisible, togglePasswordVis
                 editable={editable}
                 autoCapitalize="none"
                 autoCorrect={false}
+                placeholderTextColor="#888"
             />
             <TouchableOpacity onPress={togglePasswordVisibility} style={styles.showButton}>
                 <Text style={styles.showButtonText}>{passwordVisible ? 'Hide' : 'Show'}</Text>
@@ -311,17 +324,21 @@ const styles = StyleSheet.create({
         marginBottom: 15,
     },
     label: {
-        fontSize: 16,
+        fontSize: FONTS.size.md,
         marginBottom: 5,
-        fontWeight: 'bold',
+        fontFamily: FONTS.family.semiBold,
+        letterSpacing: -0.5,
     },
     input: {
         backgroundColor: '#fff',
         borderRadius: 5,
         padding: 10,
-        fontSize: 16,
+        fontSize: FONTS.size.md,
         borderWidth: 1,
         borderColor: '#ccc',
+        fontFamily: FONTS.family.regular,
+        letterSpacing: -0.5,
+        color: '#000',
     },
     passwordContainer: {
         flexDirection: 'row',
@@ -334,7 +351,9 @@ const styles = StyleSheet.create({
     passwordInput: {
         flex: 1,
         padding: 10,
-        fontSize: 16,
+        fontSize: FONTS.size.md,
+        fontFamily: FONTS.family.regular,
+        letterSpacing: -0.5,
         color: '#000',
     },
     showButton: {
@@ -344,23 +363,25 @@ const styles = StyleSheet.create({
     },
     showButtonText: {
         color: '#007AFF',
-        fontSize: 14,
+        fontSize: FONTS.size.sm,
+        fontFamily: FONTS.family.semiBold,
+        letterSpacing: -0.5,
     },
     forgotPasswordContainer: {
         alignSelf: 'flex-start',
         marginBottom: 20,
     },
     forgotPasswordText: {
+        fontFamily: FONTS.family.regular,
+        letterSpacing: -0.5,
         color: '#000',
-        fontSize: 14,
+        fontSize: FONTS.size.md,
     },
     loginButton: {
-        backgroundColor: '#007AFF',
         borderRadius: 5,
-        padding: 15,
+        padding: 10,
         width: '100%',
         alignItems: 'center',
-        minHeight: 50,
     },
     loginButtonDisabled: {
         backgroundColor: '#ccc',
@@ -371,8 +392,8 @@ const styles = StyleSheet.create({
     },
     loginButtonText: {
         color: '#fff',
-        fontSize: 18,
-        fontWeight: 'bold',
+        fontSize: FONTS.size.lg,
+        fontFamily: FONTS.family.semiBold,
     },
     inputError: {
         borderColor: '#ff3333',
@@ -380,8 +401,10 @@ const styles = StyleSheet.create({
     },
     errorText: {
         color: '#ff3333',
-        fontSize: 12,
+        fontSize: FONTS.size.sm,
         marginTop: 5,
+        fontFamily: FONTS.family.regular,
+        letterSpacing: -0.5,
     },
     centeredLoadingContainer: {
         flex: 1,
@@ -393,16 +416,21 @@ const styles = StyleSheet.create({
         marginTop: 10,
         fontSize: 16,
         color: '#007AFF',
+        fontFamily: FONTS.family.regular
     },
     registerText: {
         marginTop: 20,
         flexDirection: 'row',
+        letterSpacing: -0.5,
+        fontSize: FONTS.size.md,
     },
     registerTextBlack: {
         color: '#000',
+        fontFamily: FONTS.family.regular
     },
     registerTextBlue: {
         color: '#007AFF',
+        fontFamily: FONTS.family.semiBold
     },
     footerText: {
         position: 'absolute',
@@ -411,6 +439,7 @@ const styles = StyleSheet.create({
         textAlign: 'center',
         color: '#333',
         fontSize: 12,
+        fontFamily: FONTS.family.regular
     },
 });
 

@@ -5,10 +5,11 @@ import DraggableModalTask from '../components/DraggableModalTask';
 import ReusableModalSuccess from '../components/TaskModalSuccess';
 import { fetchTaskById, deleteTask } from '../api/task'; // Import the fetchTaskById function
 import AsyncStorage from '@react-native-async-storage/async-storage';
-const { height } = Dimensions.get('window');
+const { height, width: SCREEN_WIDTH } = Dimensions.get('window');
 import FloatingButtonTask from '../components/FloatingButtonTask';
 import { useNavigation } from '@react-navigation/native';
 import ReusableBottomPopUp from '../components/ReusableBottomPopUp';
+import { FONTS } from '../constants/fonts';
 
 const STATUS_MAPPING = {
     Completed: { text: 'Selesai', bgColor: '#C9F8C1', textColor: '#0A642E' },
@@ -334,18 +335,18 @@ const DetailProjekDua = ({ data, onFetch }) => {
         );
     };
 
-     // Function to sort tasks by status priority
-     const sortTasks = (tasks) => {
+    // Function to sort tasks by status priority
+    const sortTasks = (tasks) => {
         return [...tasks].sort((a, b) => {
             const priorityA = statusPriority[a.task_status] || 999;
             const priorityB = statusPriority[b.task_status] || 999;
-            return sortDirection === 'asc' 
-                ? priorityA - priorityB 
+            return sortDirection === 'asc'
+                ? priorityA - priorityB
                 : priorityB - priorityA;
         });
     };
 
-      // Filter and sort tasks based on selected criteria
+    // Filter and sort tasks based on selected criteria
     const filteredAndSortedTasks = useMemo(() => {
         let result = data.tasks;
 
@@ -403,183 +404,184 @@ const DetailProjekDua = ({ data, onFetch }) => {
     };
 
     // Filter Modal Component
-   // FilterModal component with improved behavior
-const FilterModal = () => {
-    // Local state for handling chip selections without re-renders
-    const [localFilters, setLocalFilters] = useState(tempFilters);
+    // FilterModal component with improved behavior
+    const FilterModal = () => {
+        // Local state for handling chip selections without re-renders
+        const [localFilters, setLocalFilters] = useState(tempFilters);
 
-    // Reset local filters when modal opens
-    useEffect(() => {
-        setLocalFilters(tempFilters);
-    }, [filterModalVisible]);
+        // Reset local filters when modal opens
+        useEffect(() => {
+            setLocalFilters(tempFilters);
+        }, [filterModalVisible]);
 
-    const handleChipPress = (type, value) => {
-        setLocalFilters(prev => ({
-            ...prev,
-            [type]: value
-        }));
-    };
-
-    const handleApply = () => {
-        setTempFilters(localFilters);
-        setActiveFilters(localFilters);
-        setFilterModalVisible(false);
-    };
-
-    const handleReset = () => {
-        const resetFilters = {
-            status: 'all',
-            deadlineRange: 'all',
-            startDate: '',
-            endDate: ''
+        const handleChipPress = (type, value) => {
+            setLocalFilters(prev => ({
+                ...prev,
+                [type]: value
+            }));
         };
-        setLocalFilters(resetFilters);
-        setTempFilters(resetFilters);
-        setActiveFilters(resetFilters);
-    };
 
-    return (
-        <Modal
-            animationType="slide"
-            transparent={true}
-            visible={filterModalVisible}
-            onRequestClose={() => {
-                setFilterModalVisible(false);
-                setLocalFilters(activeFilters);
-            }}
-        >
-            <TouchableOpacity 
-                style={styles.modalOverlay}
-                activeOpacity={1}
-                onPress={() => {
+        const handleApply = () => {
+            setTempFilters(localFilters);
+            setActiveFilters(localFilters);
+            setFilterModalVisible(false);
+        };
+
+        const handleReset = () => {
+            const resetFilters = {
+                status: 'all',
+                deadlineRange: 'all',
+                startDate: '',
+                endDate: ''
+            };
+            setLocalFilters(resetFilters);
+            setTempFilters(resetFilters);
+            setActiveFilters(resetFilters);
+        };
+
+        return (
+            <Modal
+                animationType="slide"
+                transparent={true}
+                visible={filterModalVisible}
+                onRequestClose={() => {
                     setFilterModalVisible(false);
                     setLocalFilters(activeFilters);
                 }}
             >
-                <TouchableOpacity 
-                    activeOpacity={1} 
-                    style={styles.modalContent}
-                    onPress={e => e.stopPropagation()}
+                <TouchableOpacity
+                    style={styles.modalOverlay}
+                    activeOpacity={1}
+                    onPress={() => {
+                        setFilterModalVisible(false);
+                        setLocalFilters(activeFilters);
+                    }}
                 >
-                    <View style={styles.modalHeader}>
-                        <Text style={styles.modalTitle}>Filter Tugas</Text>
-                        <TouchableOpacity 
-                            onPress={() => {
-                                setFilterModalVisible(false);
-                                setLocalFilters(activeFilters);
-                            }}
-                            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-                        >
-                            <Feather name="x" size={24} color="black" />
-                        </TouchableOpacity>
-                    </View>
+                    <TouchableOpacity
+                        activeOpacity={1}
+                        style={styles.modalContent}
+                        onPress={e => e.stopPropagation()}
+                    >
+                        <View style={styles.modalHeader}>
+                            <Text style={styles.modalTitle}>Filter Tugas</Text>
+                            <TouchableOpacity
+                                onPress={() => {
+                                    setFilterModalVisible(false);
+                                    setLocalFilters(activeFilters);
+                                }}
+                                hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                            >
+                                <Feather name="x" size={24} color="black" />
+                            </TouchableOpacity>
+                        </View>
 
-                    <View style={styles.filterSection}>
-                        <Text style={styles.filterLabel}>Status</Text>
-                        <ScrollView 
-                            horizontal 
-                            showsHorizontalScrollIndicator={false}
-                            style={styles.chipScrollView}
-                        >
-                            <View style={styles.chipContainer}>
-                                {statusOptions.map((option) => (
-                                    <TouchableOpacity
-                                        key={option.value}
-                                        style={[
-                                            styles.chip,
-                                            localFilters.status === option.value && styles.chipSelected
-                                        ]}
-                                        onPress={() => handleChipPress('status', option.value)}
-                                    >
-                                        <Text 
+                        <View style={styles.filterSection}>
+                            <Text style={styles.filterLabel}>Status</Text>
+                            <ScrollView
+                                horizontal
+                                showsHorizontalScrollIndicator={false}
+                                style={styles.chipScrollView}
+                            >
+                                <View style={styles.chipContainer}>
+                                    {statusOptions.map((option) => (
+                                        <TouchableOpacity
+                                            key={option.value}
                                             style={[
-                                                styles.chipText,
-                                                localFilters.status === option.value && styles.chipTextSelected
+                                                styles.chip,
+                                                localFilters.status === option.value && styles.chipSelected
                                             ]}
+                                            onPress={() => handleChipPress('status', option.value)}
                                         >
-                                            {option.label}
-                                        </Text>
-                                    </TouchableOpacity>
-                                ))}
-                            </View>
-                        </ScrollView>
-                    </View>
+                                            <Text
+                                                style={[
+                                                    styles.chipText,
+                                                    localFilters.status === option.value && styles.chipTextSelected
+                                                ]}
+                                            >
+                                                {option.label}
+                                            </Text>
+                                        </TouchableOpacity>
+                                    ))}
+                                </View>
+                            </ScrollView>
+                        </View>
 
-                    <View style={styles.filterSection}>
-                        <Text style={styles.filterLabel}>Deadline</Text>
-                        <ScrollView 
-                            horizontal 
-                            showsHorizontalScrollIndicator={false}
-                            style={styles.chipScrollView}
-                        >
-                            <View style={styles.chipContainer}>
-                                {deadlineOptions.map((option) => (
-                                    <TouchableOpacity
-                                        key={option.value}
-                                        style={[
-                                            styles.chip,
-                                            localFilters.deadlineRange === option.value && styles.chipSelected
-                                        ]}
-                                        onPress={() => handleChipPress('deadlineRange', option.value)}
-                                    >
-                                        <Text 
+                        <View style={styles.filterSection}>
+                            <Text style={styles.filterLabel}>Deadline</Text>
+                            <ScrollView
+                                horizontal
+                                showsHorizontalScrollIndicator={false}
+                                style={styles.chipScrollView}
+                            >
+                                <View style={styles.chipContainer}>
+                                    {deadlineOptions.map((option) => (
+                                        <TouchableOpacity
+                                            key={option.value}
                                             style={[
-                                                styles.chipText,
-                                                localFilters.deadlineRange === option.value && styles.chipTextSelected
+                                                styles.chip,
+                                                localFilters.deadlineRange === option.value && styles.chipSelected
                                             ]}
+                                            onPress={() => handleChipPress('deadlineRange', option.value)}
                                         >
-                                            {option.label}
-                                        </Text>
-                                    </TouchableOpacity>
-                                ))}
-                            </View>
-                        </ScrollView>
-                    </View>
+                                            <Text
+                                                style={[
+                                                    styles.chipText,
+                                                    localFilters.deadlineRange === option.value && styles.chipTextSelected
+                                                ]}
+                                            >
+                                                {option.label}
+                                            </Text>
+                                        </TouchableOpacity>
+                                    ))}
+                                </View>
+                            </ScrollView>
+                        </View>
 
-                    <View style={styles.modalFooter}>
-                        <TouchableOpacity 
-                            style={styles.clearButton}
-                            onPress={handleReset}
-                        >
-                            <Text style={styles.clearButtonText}>Reset Filter</Text>
-                        </TouchableOpacity>
-                        <TouchableOpacity 
-                            style={styles.applyButton}
-                            onPress={handleApply}
-                        >
-                            <Text style={styles.applyButtonText}>Terapkan</Text>
-                        </TouchableOpacity>
-                    </View>
+                        <View style={styles.modalFooter}>
+                            <TouchableOpacity
+                                style={styles.clearButton}
+                                onPress={handleReset}
+                            >
+                                <Text style={styles.clearButtonText}>Reset Filter</Text>
+                            </TouchableOpacity>
+                            <TouchableOpacity
+                                style={styles.applyButton}
+                                onPress={handleApply}
+                            >
+                                <Text style={styles.applyButtonText}>Terapkan</Text>
+                            </TouchableOpacity>
+                        </View>
+                    </TouchableOpacity>
                 </TouchableOpacity>
-            </TouchableOpacity>
-        </Modal>
-    );
-};
+            </Modal>
+        );
+    };
 
 
     // Action Buttons Component
     const ActionButtons = () => (
         <View style={styles.actionButtonsContainer}>
-            <TouchableOpacity 
+            <TouchableOpacity
                 style={styles.actionButton}
                 onPress={() => setFilterModalVisible(true)}
             >
                 <Feather name="filter" size={20} color="#0E509E" />
                 <Text style={styles.actionButtonText}>Filter</Text>
             </TouchableOpacity>
-            <TouchableOpacity 
+            <TouchableOpacity
                 style={styles.actionButton}
                 onPress={toggleSort}
             >
-                <Feather 
-                    name={sortDirection === 'asc' ? 'arrow-up' : 'arrow-down'} 
-                    size={20} 
-                    color="#0E509E" 
+                <Feather
+                    name={sortDirection === 'asc' ? 'arrow-up' : 'arrow-down'}
+                    size={20}
+                    color="#0E509E"
                 />
                 <Text style={styles.actionButtonText}>Sort</Text>
             </TouchableOpacity>
         </View>
     );
+
     const handleTaskDetailPress = async (task) => {
         const baseUrl = 'https://app.kejartugas.com/';
         try {
@@ -624,13 +626,7 @@ const FilterModal = () => {
 
             setSelectedTask(transformedTaskDetails);
 
-            // Optionally check task status for modal type
-            if (taskDetails.task_status === 'Completed') {
-                setModalType('default');
-            } else {
-                setModalType('default');
-            }
-
+            setModalType('default');
             setDraggableModalVisible(true);
         } catch (error) {
             console.error('Error fetching task details:', error);
@@ -639,27 +635,27 @@ const FilterModal = () => {
     };
 
     return (
-        <SafeAreaView style={styles.safeArea}>
+        <ScrollView contentContainerStyle={styles.container}>
             <View style={styles.mainContainer}>
-            <ActionButtons />
+                <ActionButtons />
 
-                  <View style={styles.headerSection}>
-                    <View style={styles.tableHeader}>
-                        <Text style={[styles.headerCell, styles.indexHeaderCell]}>No</Text>
-                        <Text style={[styles.headerCell, styles.taskNameHeaderCell]}>Nama Tugas</Text>
-                        <Text style={[styles.headerCell, styles.statusHeaderCell]}>Status</Text>
+                <ScrollView
+                    style={styles.scrollView}
+                    contentContainerStyle={styles.scrollViewContent}
+                    showsVerticalScrollIndicator={false}
+                >
+                    <View style={styles.headerSection}>
+                        <View style={styles.tableHeader}>
+                            <Text style={[styles.headerCell, styles.indexHeaderCell]}>No</Text>
+                            <Text style={[styles.headerCell, styles.taskNameHeaderCell]}>Nama Tugas</Text>
+                            <Text style={[styles.headerCell, styles.statusHeaderCell]}>Status</Text>
+                        </View>
                     </View>
-                </View>
 
-                {/* Table Section */}
-                <View style={styles.tableSection}>
-                    <ScrollView
-                        style={styles.scrollView}
-                        contentContainerStyle={styles.scrollViewContent}
-                        showsVerticalScrollIndicator={false}
-                    >
-                        {filteredAndSortedTasks  && filteredAndSortedTasks .length > 0 ? (
-                            filteredAndSortedTasks .map((item, index) => (
+                    {/* Table Section */}
+                    <View style={styles.tableSection}>
+                        {filteredAndSortedTasks && filteredAndSortedTasks.length > 0 ? (
+                            filteredAndSortedTasks.map((item, index) => (
                                 <TableRow
                                     key={item.id || index}
                                     item={item}
@@ -672,42 +668,36 @@ const FilterModal = () => {
                         ) : (
                             <TableRow item={{ task_name: 'No data available' }} index={0} />
                         )}
-                        <View style={styles.bottomPadding} />
-                    </ScrollView>
-                </View>
+                    </View>
+                </ScrollView>
 
                 {/* Floating Button */}
                 <FloatingButtonTask projectData={data} />
             </View>
 
-            
+
             <FilterModal />
 
             {/* Modals */}
-            {modalType === 'default' ? (
-                <DraggableModalTask
-                    visible={draggableModalVisible}
-                    onClose={() => {
-                        setDraggableModalVisible(false);
-                        setSelectedTask(null);
-                    }}
-                    taskDetails={selectedTask || {}}
-                />
-            ) : (
-                <ReusableModalSuccess
-                    visible={draggableModalVisible}
-                    onClose={() => setDraggableModalVisible(false)}
-                    taskDetails={selectedTask || {}}
-                />
-            )}
-        </SafeAreaView>
+            <DraggableModalTask
+                visible={draggableModalVisible}
+                onClose={() => {
+                    setDraggableModalVisible(false);
+                    setSelectedTask(null);
+                }}
+                taskDetails={selectedTask || {}}
+            />
+        </ScrollView>
     );
 };
 
 const styles = StyleSheet.create({
-    safeArea: {
-        flex: 1,
-        backgroundColor: '#f5f5f5',
+    container: {
+        display: 'flex',
+        flexGrow: 1,
+        flexDirection: 'column',
+        minHeight: 1000,
+        width: SCREEN_WIDTH,
     },
     mainContainer: {
         flex: 1,
@@ -719,22 +709,18 @@ const styles = StyleSheet.create({
     },
     headerSection: {
         paddingTop: 10,
-        marginBottom: 10,
         zIndex: 2,
     },
     tableSection: {
         flex: 1,
-        marginBottom: 80, // Space for floating button
     },
     scrollView: {
         flex: 1,
+        height: height
     },
     scrollViewContent: {
         flexGrow: 1,
-        paddingBottom: 100, // Extra padding to prevent content from being hidden behind the button
-    },
-    bottomPadding: {
-        height: 80, // Increased bottom padding
+        height: height,
     },
     tableHeader: {
         flexDirection: 'row',
@@ -763,10 +749,12 @@ const styles = StyleSheet.create({
         textAlign: 'center',
     },
     rowContainer: {
-        marginBottom: 8,
+        // marginBottom: 8,
         backgroundColor: 'white',
-        borderRadius: 8,
-        shadowColor: '#000',
+        // borderRadius: 8,
+        borderBottomWidth: 1,
+        borderBottomColor: '#E5E7EB',
+        shadowColor: '#444',
         shadowOffset: {
             width: 0,
             height: 1,
@@ -776,11 +764,21 @@ const styles = StyleSheet.create({
         elevation: 1,
     },
     expandedContent: {
-        padding: 12,
-        backgroundColor: '#F5F5F5',
-        borderBottomLeftRadius: 8,
-        borderBottomRightRadius: 8,
-        minHeight: 200, // Added minimum height for expanded content
+        marginTop: 12,
+        backgroundColor: '#F9FAFB',
+        borderRadius: 12,
+        padding: 16,
+        gap: 8,
+    },
+    expandedText: {
+        fontSize: 14,
+        color: '#111827',
+    },
+    expandedLabel: {
+        fontWeight: '600',
+        fontSize: 13,
+        color: '#374151',
+        marginBottom: 2,
     },
     row: {
         flexDirection: 'row',
@@ -812,47 +810,36 @@ const styles = StyleSheet.create({
         letterSpacing: -0.3,
     },
     statusCell: {
+        paddingHorizontal: 10,
         paddingVertical: 4,
-        paddingHorizontal: 8,
-        borderRadius: 15,
-        minWidth: 80,
+        borderRadius: 999,
+        alignSelf: 'flex-start',
+        minWidth: 90,
+        alignItems: 'center',
+        justifyContent: 'center',
     },
     statusText: {
         fontSize: 14,
         fontWeight: '600',
         textAlign: 'center',
     },
-    expandedLabel: {
-        fontSize: 14,
-        fontWeight: '600',
-        color: '#0E509E',
-        marginBottom: 4,
-        fontFamily: 'Poppins-Medium',
-        letterSpacing: -0.3,
-    },
-    expandedText: {
-        fontSize: 14,
-        color: '#333',
-        fontFamily: 'Poppins-Medium',
-        letterSpacing: -0.3,
-    },
     expandedColumnText: {
         flexDirection: 'row',
         justifyContent: 'space-between',
         marginBottom: 8,
     },
-    buttonAction: {
-        padding: 8,
-        backgroundColor: '#E3E3E3',
-        borderRadius: 8,
-        alignItems: 'center',
-        justifyContent: 'center',
-    },
     expandedButtonContainer: {
-        position: 'flex-start',
         flexDirection: 'row',
-        justifyContent: 'center',
-        gap: 10,
+        justifyContent: 'space-around',
+        marginTop: 12,
+    },
+    buttonAction: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 6,
+        padding: 6,
+        borderRadius: 8,
+        backgroundColor: '#EFF6FF',
     },
     actionButtonsContainer: {
         flexDirection: 'row',

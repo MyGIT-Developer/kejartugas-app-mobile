@@ -166,7 +166,7 @@ const styles = StyleSheet.create({
         padding: 20,
         width: '100%',
         maxWidth: 400,
-        shadowColor: '#000',
+        shadowColor: '#444',
         shadowOffset: {
             width: 0,
             height: 2,

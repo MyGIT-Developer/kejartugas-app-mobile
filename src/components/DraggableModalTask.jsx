@@ -363,7 +363,7 @@ const DraggableModalTask = ({ visible, onClose, taskDetails }) => {
                                                         />
                                                     </TouchableOpacity>
 
-                                                    <Modal visible={visible} transparent animationType="fade">
+                                                    <Modal visible={previewVisible} transparent animationType="fade">
                                                         <View style={{ flex: 1, backgroundColor: 'black' }}>
                                                             {/* Tap outside to close */}
                                                             <TouchableWithoutFeedback onPress={onClose}>
@@ -587,7 +587,7 @@ const styles = StyleSheet.create({
         paddingVertical: 4,
         borderRadius: 24,
         gap: 6,
-        shadowColor: '#000',
+        shadowColor: '#444',
         shadowOffset: { width: 0, height: 2 },
         shadowOpacity: 0.1,
         shadowRadius: 4,
@@ -620,7 +620,7 @@ const styles = StyleSheet.create({
         padding: 20,
         borderWidth: 1,
         borderColor: '#E5E7EB',
-        shadowColor: '#000',
+        shadowColor: '#444',
         shadowOffset: { width: 0, height: 4 },
         shadowOpacity: 0.06,
         shadowRadius: 12,
@@ -670,7 +670,7 @@ const styles = StyleSheet.create({
     commentButton: {
         borderRadius: 6,
         overflow: 'hidden',
-        shadowColor: '#000',
+        shadowColor: '#444',
         shadowOffset: { width: 0, height: 4 },
         shadowOpacity: 0.15,
         shadowRadius: 8,
@@ -694,7 +694,7 @@ const styles = StyleSheet.create({
     submitTaskButton: {
         borderRadius: 6,
         overflow: 'hidden',
-        shadowColor: '#000',
+        shadowColor: '#444',
         shadowOffset: { width: 0, height: 4 },
         shadowOpacity: 0.15,
         shadowRadius: 8,
@@ -704,7 +704,7 @@ const styles = StyleSheet.create({
     viewEvidenceButton: {
         borderRadius: 6,
         overflow: 'hidden',
-        shadowColor: '#000',
+        shadowColor: '#444',
         shadowOffset: { width: 0, height: 4 },
         shadowOpacity: 0.15,
         shadowRadius: 8,
@@ -719,7 +719,7 @@ const styles = StyleSheet.create({
         flex: 1,
         borderRadius: 6,
         overflow: 'hidden',
-        shadowColor: '#000',
+        shadowColor: '#444',
         shadowOffset: { width: 0, height: 4 },
         shadowOpacity: 0.15,
         shadowRadius: 8,
@@ -736,7 +736,7 @@ const styles = StyleSheet.create({
         borderRadius: 12,
         overflow: 'hidden',
         elevation: 4,
-        shadowColor: '#000',
+        shadowColor: '#444',
         shadowOffset: { width: 0, height: 2 },
         shadowOpacity: 0.15,
         shadowRadius: 6,
@@ -788,7 +788,7 @@ const styles = StyleSheet.create({
         paddingVertical: 36,
         paddingHorizontal: 32,
         alignItems: 'center',
-        shadowColor: '#000',
+        shadowColor: '#444',
         shadowOffset: {
             width: 0,
             height: 12,
@@ -849,7 +849,7 @@ const styles = StyleSheet.create({
         flex: 1,
         alignItems: 'center',
         justifyContent: 'center',
-        shadowColor: '#000',
+        shadowColor: '#444',
         shadowOffset: { width: 0, height: 4 },
         shadowOpacity: 0.15,
         shadowRadius: 8,

@@ -151,7 +151,7 @@ const styles = StyleSheet.create({
         borderBottomColor: '#e0e0e0',
         marginHorizontal: 15,
         borderRadius: 8,
-        shadowColor: '#000',
+        shadowColor: '#444',
         shadowOffset: {
             width: 0,
             height: 2,
@@ -211,7 +211,7 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         marginHorizontal: 15,
         borderRadius: 8,
-        shadowColor: '#000',
+        shadowColor: '#444',
         shadowOffset: {
             width: 0,
             height: 2,
@@ -246,7 +246,7 @@ const styles = StyleSheet.create({
         padding: 15,
         marginHorizontal: 15,
         borderRadius: 8,
-        shadowColor: '#000',
+        shadowColor: '#444',
         shadowOffset: {
             width: 0,
             height: 2,

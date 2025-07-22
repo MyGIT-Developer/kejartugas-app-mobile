@@ -123,7 +123,7 @@ const styles = StyleSheet.create({
         paddingVertical: 32,
         paddingHorizontal: 24,
         alignItems: 'center',
-        shadowColor: '#000',
+        shadowColor: '#444',
         shadowOffset: {
             width: 0,
             height: 12,

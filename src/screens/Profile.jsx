@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import {
     View,
     StyleSheet,
@@ -22,8 +22,9 @@ import { getEmployeeById } from '../api/general';
 import { useFonts } from '../utils/UseFonts';
 import * as Haptics from 'expo-haptics';
 import { FONTS } from '../constants/fonts';
+import LogoutModal from '../components/LogoutModal';
 
-const { height, width: SCREEN_WIDTH } = Dimensions.get('window');
+const { height, width } = Dimensions.get('window');
 
 const InfoItem = ({ label, value, icon, fontsLoaded }) => (
     <View style={styles.infoItem}>
@@ -56,6 +57,10 @@ const Profile = () => {
     const [refreshing, setRefreshing] = useState(false);
     const baseUrl = 'https://app.kejartugas.com/';
 
+    // Only profile screen animations - no modal animations here
+    const fadeAnim = useRef(new Animated.Value(0)).current;
+    const scaleAnim = useRef(new Animated.Value(0.8)).current;
+
     const fetchUserData = useCallback(async () => {
         try {
             const employeeId = await AsyncStorage.getItem('employeeId');
@@ -66,12 +71,8 @@ const Profile = () => {
         }
     }, []);
 
-    const [fadeAnim] = useState(new Animated.Value(0));
-    const [slideAnim] = useState(new Animated.Value(300));
-    const [scaleAnim] = useState(new Animated.Value(0.9));
-
+    // Profile screen entrance animation
     useEffect(() => {
-        // Entrance animations
         Animated.parallel([
             Animated.timing(fadeAnim, {
                 toValue: 1,
@@ -87,22 +88,7 @@ const Profile = () => {
         ]).start();
     }, []);
 
-    useEffect(() => {
-        if (modalVisible) {
-            Animated.timing(slideAnim, {
-                toValue: 0,
-                duration: 300,
-                useNativeDriver: true,
-            }).start();
-        } else {
-            Animated.timing(slideAnim, {
-                toValue: 300,
-                duration: 300,
-                useNativeDriver: true,
-            }).start();
-        }
-    }, [modalVisible]);
-
+    // Fetch user data on mount
     useEffect(() => {
         const getUserData = async () => {
             try {
@@ -131,34 +117,53 @@ const Profile = () => {
         );
     };
 
-    const handleLogout = async () => {
-        setIsLoading(true);
-        const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+    // Clean logout handler
+    const handleLogout = useCallback(async () => {
         try {
-            await delay(2000);
-            await AsyncStorage.clear();
-            navigation.reset({
-                index: 0,
-                routes: [{ name: 'Login' }],
-            });
-            setModalVisible(false);
-        } catch (error) {
-            console.log(error);
-        } finally {
-            setIsLoading(false);
-        }
-    };
+            setIsLoading(true);
 
-    const confirmLogout = () => {
+            // Simulate logout delay
+            const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+            await delay(2000);
+
+            // Clear storage
+            await AsyncStorage.clear();
+
+            // Close modal first, then navigate
+            setModalVisible(false);
+            setIsLoading(false);
+
+            // Navigate after small delay to prevent blank screen
+            setTimeout(() => {
+                navigation.reset({
+                    index: 0,
+                    routes: [{ name: 'Login' }],
+                });
+            }, 100);
+
+        } catch (error) {
+            console.log('Logout error:', error);
+            setIsLoading(false);
+            setModalVisible(false);
+
+            Alert.alert(
+                'Logout Failed',
+                'Something went wrong. Please try again.',
+                [{ text: 'OK' }]
+            );
+        }
+    }, [navigation]);
+
+    const confirmLogout = useCallback(() => {
         if (Platform.OS === 'ios') {
             Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
         }
         setModalVisible(true);
-    };
+    }, []);
 
-    const cancelLogout = () => {
+    const cancelLogout = useCallback(() => {
         setModalVisible(false);
-    };
+    }, []);
 
     if (!fontsLoaded) {
         return <ActivityIndicator size="large" color="#0E509E" style={{ flex: 1 }} />;
@@ -417,74 +422,14 @@ const Profile = () => {
                 </Animated.View>
 
                 {/* Enhanced Modal */}
-                <Modal visible={modalVisible} transparent={true} animationType="none">
-                    <View style={styles.overlay}>
-                        <Animated.View style={[styles.modalContent, { transform: [{ translateY: slideAnim }] }]}>
-                            {isLoading ? (
-                                <View style={styles.loadingContainer}>
-                                    <ActivityIndicator size="large" color="#0E509E" />
-                                    <Text
-                                        style={[
-                                            styles.loadingText,
-                                            fontsLoaded ? { fontFamily: 'Poppins-Medium' } : null,
-                                        ]}
-                                    >
-                                        Sedang logout...
-                                    </Text>
-                                </View>
-                            ) : (
-                                <>
-                                    <View style={styles.modalIcon}>
-                                        <Ionicons name="log-out-outline" size={48} color="#EF4444" />
-                                    </View>
-                                    <Text
-                                        style={[styles.modalTitle, fontsLoaded ? { fontFamily: 'Poppins-Bold' } : null]}
-                                    >
-                                        Konfirmasi Logout
-                                    </Text>
-                                    <Text
-                                        style={[
-                                            styles.modalSubtitle,
-                                            fontsLoaded ? { fontFamily: 'Poppins-Regular' } : null,
-                                        ]}
-                                    >
-                                        Apakah Anda yakin ingin keluar dari aplikasi?
-                                    </Text>
-                                    <View style={styles.modalButtonContainer}>
-                                        <TouchableOpacity
-                                            style={styles.cancelButton}
-                                            onPress={cancelLogout}
-                                            activeOpacity={0.8}
-                                        >
-                                            <Text
-                                                style={[
-                                                    styles.cancelButtonText,
-                                                    fontsLoaded ? { fontFamily: 'Poppins-Medium' } : null,
-                                                ]}
-                                            >
-                                                Batal
-                                            </Text>
-                                        </TouchableOpacity>
-                                        <TouchableOpacity
-                                            style={styles.confirmButton}
-                                            onPress={handleLogout}
-                                            activeOpacity={0.8}
-                                        >
-                                            <Text
-                                                style={[
-                                                    styles.confirmButtonText,
-                                                    fontsLoaded ? { fontFamily: 'Poppins-Medium' } : null,
-                                                ]}
-                                            >
-                                                Logout
-                                            </Text>
-                                        </TouchableOpacity>
-                                    </View>
-                                </>
-                            )}
-                        </Animated.View>
-                    </View>
-                </Modal>
+                <LogoutModal
+                    visible={modalVisible}
+                    isLoading={isLoading}
+                    fontsLoaded={fontsLoaded}
+                    onCancel={cancelLogout}
+                    onConfirm={handleLogout}
+                />
+
             </ScrollView>
         </SafeAreaView>
     );
@@ -563,7 +508,7 @@ const styles = StyleSheet.create({
         borderRadius: 20,
         padding: 24,
         alignItems: 'center',
-        shadowColor: '#000',
+        shadowColor: '#444',
         shadowOffset: { width: 0, height: 4 },
         shadowOpacity: 0.1,
         shadowRadius: 12,
@@ -670,7 +615,7 @@ const styles = StyleSheet.create({
         marginTop: 16,
         borderRadius: 16,
         padding: 20,
-        shadowColor: '#000',
+        shadowColor: '#444',
         shadowOffset: { width: 0, height: 2 },
         shadowOpacity: 0.08,
         shadowRadius: 8,
@@ -713,7 +658,7 @@ const styles = StyleSheet.create({
         marginTop: 16,
         borderRadius: 16,
         padding: 20,
-        shadowColor: '#000',
+        shadowColor: '#444',
         shadowOffset: { width: 0, height: 2 },
         shadowOpacity: 0.08,
         shadowRadius: 8,
@@ -771,89 +716,137 @@ const styles = StyleSheet.create({
         flex: 1,
         justifyContent: 'center',
         alignItems: 'center',
-        backgroundColor: 'rgba(0, 0, 0, 0.6)',
+        backgroundColor: 'rgba(0, 0, 0, 0.7)',
     },
     modalContent: {
-        width: '85%',
+        width: Math.min(width * 0.85, 340),
         backgroundColor: 'white',
-        borderRadius: 20,
-        padding: 24,
+        borderRadius: 24,
+        padding: 28,
         alignItems: 'center',
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 10 },
-        shadowOpacity: 0.25,
-        shadowRadius: 20,
-        elevation: 15,
+        shadowColor: '#444',
+        shadowOffset: { width: 0, height: 15 },
+        shadowOpacity: 0.3,
+        shadowRadius: 25,
+        elevation: 20,
+        ...Platform.select({
+            ios: {
+                shadowColor: '#444',
+                shadowOffset: { width: 0, height: 15 },
+                shadowOpacity: 0.3,
+                shadowRadius: 25,
+            },
+            android: {
+                elevation: 20,
+            },
+        }),
     },
     modalIcon: {
-        width: 80,
-        height: 80,
-        borderRadius: 40,
-        backgroundColor: 'rgba(239, 68, 68, 0.1)',
+        width: 88,
+        height: 88,
+        borderRadius: 44,
+        backgroundColor: 'rgba(239, 68, 68, 0.12)',
         justifyContent: 'center',
         alignItems: 'center',
-        marginBottom: 16,
+        marginBottom: 20,
+        borderWidth: 2,
+        borderColor: 'rgba(239, 68, 68, 0.2)',
     },
     modalTitle: {
-        fontSize: 20,
+        fontSize: 22,
         fontWeight: '700',
         color: '#1F2937',
-        marginBottom: 8,
+        marginBottom: 10,
         textAlign: 'center',
+        letterSpacing: -0.5,
     },
     modalSubtitle: {
         fontSize: 16,
         color: '#6B7280',
         textAlign: 'center',
-        marginBottom: 24,
+        marginBottom: 28,
+        lineHeight: 22,
+        paddingHorizontal: 4,
     },
     loadingContainer: {
         alignItems: 'center',
-        paddingVertical: 20,
+        paddingVertical: 24,
+        minHeight: 120,
+        justifyContent: 'center',
     },
     loadingText: {
-        marginTop: 12,
+        marginTop: 16,
         fontSize: 16,
         color: '#6B7280',
+        textAlign: 'center',
+    },
+    loadingProgress: {
+        width: '80%',
+        height: 4,
+        backgroundColor: '#E5E7EB',
+        borderRadius: 2,
+        marginTop: 12,
+        overflow: 'hidden',
+    },
+    loadingProgressFill: {
+        height: '100%',
+        backgroundColor: '#0E509E',
+        borderRadius: 2,
     },
     modalButtonContainer: {
         flexDirection: 'row',
         justifyContent: 'space-between',
         width: '100%',
-        gap: 12,
+        gap: 14,
     },
     confirmButton: {
         backgroundColor: '#EF4444',
-        paddingVertical: 14,
+        paddingVertical: 16,
         paddingHorizontal: 24,
-        borderRadius: 12,
+        borderRadius: 14,
         flex: 1,
         alignItems: 'center',
         shadowColor: '#EF4444',
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.3,
-        shadowRadius: 8,
-        elevation: 4,
+        shadowOffset: { width: 0, height: 6 },
+        shadowOpacity: 0.35,
+        shadowRadius: 12,
+        elevation: 6,
+        minHeight: 52,
+        justifyContent: 'center',
+    },
+    confirmButtonPressed: {
+        backgroundColor: '#DC2626',
     },
     confirmButtonText: {
         color: '#fff',
         fontSize: 16,
         fontWeight: '600',
+        letterSpacing: 0.2,
     },
     cancelButton: {
-        backgroundColor: '#F3F4F6',
-        paddingVertical: 14,
+        backgroundColor: '#F9FAFB',
+        paddingVertical: 16,
         paddingHorizontal: 24,
-        borderRadius: 12,
+        borderRadius: 14,
         flex: 1,
         alignItems: 'center',
-        borderWidth: 1,
+        borderWidth: 1.5,
         borderColor: '#E5E7EB',
+        minHeight: 52,
+        justifyContent: 'center',
+    },
+    cancelButtonPressed: {
+        backgroundColor: '#F3F4F6',
+        borderColor: '#D1D5DB',
     },
     cancelButtonText: {
         color: '#6B7280',
         fontSize: 16,
         fontWeight: '600',
+        letterSpacing: 0.2,
+    },
+    disabledButton: {
+        opacity: 0.6,
     },
 });
 

@@ -6,6 +6,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import Home from '../screens/Home';
 import Kehadiran from '../screens/Kehadiran';
 import Tugas from '../screens/Tugas';
+
 import { HomeIcon, KehadiranIcon, TugasIcon } from '../../assets/icon/icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
@@ -159,7 +160,7 @@ const styles = StyleSheet.create({
         elevation: 20,
         borderRadius: 25,
         borderTopWidth: 0,
-        shadowColor: '#000',
+        shadowColor: '#444',
         shadowOpacity: 0.15,
         shadowOffset: { width: 0, height: 8 },
         shadowRadius: 16,

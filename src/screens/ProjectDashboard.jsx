@@ -55,66 +55,167 @@ const SkeletonSection = () => (
 
 const ProjectCard = ({ item, handleGoToDetail }) => (
     <TouchableOpacity onPress={() => handleGoToDetail(item.id)}>
-        <View style={styles.cardContainer}>
-            <View style={styles.card}>
-                <Text style={styles.projectName} numberOfLines={2} ellipsizeMode="tail">
-                    {item.project_name}
+        <View style={styles.card}>
+            <Text style={styles.projectName} numberOfLines={2} ellipsizeMode="tail">
+                {item.project_name}
+            </Text>
+            <View style={styles.progressContainer}>
+                <Progress.Bar
+                    progress={item.percentage / 100}
+                    color="#27B44E"
+                    width={null}
+                    style={styles.progressBar}
+                />
+                <Text style={{ fontFamily: 'Poppins-Medium', letterSpacing: -0.3 }}>
+                    {item.percentage ? Math.round(item.percentage).toFixed(1) : '0'}%
                 </Text>
-                <View style={styles.progressContainer}>
-                    <Progress.Bar
-                        progress={item.percentage / 100}
-                        color="#27B44E"
-                        width={null}
-                        style={styles.progressBar}
-                    />
-                    <Text style={{ fontFamily: 'Poppins-Medium', letterSpacing: -0.3 }}>
-                        {item.percentage ? Math.round(item.percentage).toFixed(1) : '0'}%
-                    </Text>
-                </View>
-                <TouchableOpacity style={styles.detailButton} onPress={() => handleGoToDetail(item.id)}>
-                    <Text style={styles.detailButtonText}>Lihat Detail</Text>
-                    <Feather name="chevron-right" size={24} color="black" />
-                </TouchableOpacity>
             </View>
+            <TouchableOpacity style={styles.detailButton} onPress={() => handleGoToDetail(item.id)}>
+                <Text style={styles.detailButtonText}>Lihat Detail</Text>
+                <Feather name="chevron-right" size={18} color="#444" />
+            </TouchableOpacity>
         </View>
     </TouchableOpacity>
 );
 
-const ProjectSection = ({ title, projects, status, handleGoTo, handleGoToDetail }) => (
-    <View style={styles.sectionContainer}>
-        <View style={styles.sectionHeader}>
-            {status === 'all' ? (
-                <Text style={styles.sectionTitle}>
-                    {title} ({projects.length})
-                </Text>
-            ) : (
-                <Text style={styles.sectionTitle}>{title}</Text>
-            )}
-            <TouchableOpacity onPress={() => handleGoTo(status)}>
-                <Text style={styles.seeAllText}>Lihat semua</Text>
-            </TouchableOpacity>
-        </View>
+const ProjectSection = ({
+    title,
+    projects,
+    status,
+    handleGoTo,
+    handleGoToDetail,
+    limitToFive = false,
+    filterByStatus = false,
+}) => {
+    let filteredProjects = projects;
 
-        {status === 'all' ? (
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.horizontalScroll}>
-                {projects && Array.isArray(projects) ? (
-                    projects
-                        .sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
-                        .slice(0, 5)
-                        .map((item, index) => (
-                            <ProjectCard key={index} item={item} handleGoToDetail={handleGoToDetail} />
-                        ))
-                ) : (
-                    <View style={styles.noProjectContainer}>
-                        <Text style={styles.noProjectText}>No projects found</Text>
+    // Apply status filtering if enabled
+    if (filterByStatus && projects) {
+        filteredProjects = projects.filter((item) => {
+            const match = item.task_status_counts?.find((t) => t.task_status === status);
+            return match && match.count > 0;
+        });
+    }
+
+    // Sort & optionally limit results
+    filteredProjects = filteredProjects
+        .sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+    if (limitToFive) filteredProjects = filteredProjects.slice(0, 5);
+
+    // Only show projects where task_status_counts for this status is not 0
+    const visibleProjects = filteredProjects.filter(
+        (item) =>
+            status === 'all' ||
+            (item.task_status_counts &&
+                item.task_status_counts.find((t) => t.task_status === status && t.count > 0))
+    );
+
+    console.log('Visible Projects:', visibleProjects);
+
+    return (
+        <View style={styles.sectionContainer}>
+            <View style={styles.sectionHeader}>
+                <Text style={styles.sectionTitle}>
+                    {title} {status === 'all' ? `(${visibleProjects.length})` : ''}
+                </Text>
+                <TouchableOpacity onPress={() => handleGoTo(status)}>
+                    <Text style={styles.seeAllText}>Lihat semua</Text>
+                </TouchableOpacity>
+            </View>
+
+            {visibleProjects.length === 0 ? (
+                <View style={styles.cardContainer}>
+                    <View style={styles.emptyCard}>
+                        <Text style={styles.emptyText}>No projects found</Text>
                     </View>
-                )}
-            </ScrollView>
-        ) : (
-            <ProjectScrollView projects={projects} status={status} />
-        )}
-    </View>
-);
+                </View>
+            ) : (
+                <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+                    {visibleProjects.map((item, index) => (
+                        <View key={index} style={styles.cardContainer}>
+                            {status === 'all' ? (
+                                <ProjectCard item={item} handleGoToDetail={handleGoToDetail} />
+                            ) : (
+                                <View style={[styles.card, { flexDirection: 'row', gap: 12, justifyContent: 'space-between', alignItems: 'center' }]}>
+                                    <View style={{ flex: 2, maxWidth: '60%', gap: 2 }}>
+                                        <Text style={styles.projectNameLabel} numberOfLines={2}>
+                                            Nama Projek
+                                        </Text>
+                                        <Text style={styles.projectName} numberOfLines={2}>
+                                            {item.project_name}
+                                        </Text>
+                                        <View style={{
+                                            alignSelf: 'flex-start',
+                                            backgroundColor: item.project_type === 'maintenance' ? '#FFF7E0' : '#E6F7FF',
+                                            borderRadius: 8,
+                                            paddingHorizontal: 10,
+                                            paddingVertical: 4,
+                                            marginTop: 4,
+                                            marginBottom: 2,
+                                            flexDirection: 'row',
+                                            alignItems: 'center',
+                                        }}>
+                                            <Ionicons
+                                                name={item.project_type === 'maintenance' ? 'construct-outline' : 'briefcase-outline'}
+                                                size={16}
+                                                color={item.project_type === 'maintenance' ? '#E6A100' : '#1890FF'}
+                                                style={{ marginRight: 4 }}
+                                            />
+                                            <Text style={{
+                                                fontFamily: FONTS.family.medium,
+                                                fontSize: FONTS.size.xs,
+                                                color: item.project_type === 'maintenance' ? '#E6A100' : '#1890FF',
+                                                letterSpacing: -0.3,
+                                                textTransform: 'capitalize',
+                                            }}>
+                                                {item.project_type === 'maintenance' ? 'Maintenance' : 'General'}
+                                            </Text>
+                                        </View>
+                                    </View>
+                                    <View
+                                        style={{
+                                            height: '80%',
+                                            width: 1,
+                                            backgroundColor: '#b4b4b4ff',
+                                            alignSelf: 'center',
+                                            marginRight: 5,
+                                            borderRadius: 5,
+                                        }}
+                                    />
+                                    <View
+                                        style={[
+                                            styles.statusBadge,
+                                            {
+                                                // borderColor:
+                                                //     status === 'workingOnIt' ? '#ec930fff' : '#d74b24ff',
+                                                backgroundColor:
+                                                    status === 'workingOnIt' ? '#ffeed6ff' : '#fff1f0ff',
+                                            },
+                                        ]}
+                                    >
+                                        <Text style={[styles.badgeTextNumber, { color: status === 'workingOnIt' ? '#ec930fff' : '#d74b24ff', }]}>
+                                            {
+                                                item.task_status_counts.find(
+                                                    (t) => t.task_status === status
+                                                )?.count
+                                            }
+                                        </Text>
+                                        <Text style={[styles.badgeTextDescription, { color: status === 'workingOnIt' ? '#ec930fff' : '#d74b24ff', }]}>
+                                            {/* {status === 'workingOnIt'
+                                                    ? 'Tugas Dalam Pengerjaan'
+                                                    : 'Tugas Perlu Ditinjau'} */}
+                                            Tugas
+                                        </Text>
+                                    </View>
+                                </View>
+                            )}
+                        </View>
+                    ))}
+                </ScrollView>
+            )}
+        </View>
+    );
+};
 
 const ProjectDashboard = () => {
     const navigation = useNavigation();
@@ -193,11 +294,14 @@ const ProjectDashboard = () => {
 
         if (loading) {
             return (
-                <>
+                <ScrollView
+                    contentContainerStyle={styles.contentContainer}
+                    refreshControl={<RefreshControl refreshing={refreshing} onRefresh={fetchProject} />}
+                >
                     <SkeletonSection />
                     <SkeletonSection />
                     <SkeletonSection />
-                </>
+                </ScrollView>
             );
         }
 
@@ -498,7 +602,7 @@ const styles = StyleSheet.create({
         flex: 1,
         borderBottomLeftRadius: 24,
         borderBottomRightRadius: 24,
-        shadowColor: '#000',
+        shadowColor: '#444',
         shadowOffset: { width: 0, height: 20 },
         shadowOpacity: 0.5,
         shadowRadius: 12,
@@ -511,7 +615,7 @@ const styles = StyleSheet.create({
         paddingBottom: 30,
         paddingHorizontal: 20,
         position: 'relative',
-        shadowColor: '#000',
+        shadowColor: '#444',
         shadowOffset: { width: 0, height: 4 },
         shadowOpacity: 0.1,
         shadowRadius: 8,
@@ -613,6 +717,7 @@ const styles = StyleSheet.create({
         top: 120,
         left: 30,
     },
+
     cardContainer: {
         marginHorizontal: 20,
         marginVertical: 15,
@@ -624,16 +729,22 @@ const styles = StyleSheet.create({
         height: 125,
         width: 312,
         justifyContent: 'space-between',
-        shadowColor: '#000',
+        shadowColor: '#444',
         shadowOffset: { width: 0, height: 2 },
         shadowOpacity: 0.1,
         shadowRadius: 4,
         elevation: 5,
     },
-    projectName: {
-        fontFamily: 'Poppins-Medium',
+    projectNameLabel: {
+        fontFamily: FONTS.family.semiBold,
         letterSpacing: -0.5,
-        fontSize: 16,
+        fontSize: FONTS.size.sm,
+        color: '#888',
+    },
+    projectName: {
+        fontFamily: FONTS.family.semiBold,
+        letterSpacing: -0.5,
+        fontSize: FONTS.size.md,
     },
     progressContainer: {
         flexDirection: 'row',
@@ -646,13 +757,36 @@ const styles = StyleSheet.create({
     detailButton: {
         flexDirection: 'row',
         alignItems: 'center',
-        gap: 10,
+        gap: 6,
     },
     detailButtonText: {
         color: '#444',
         fontSize: FONTS.size.sm,
-        fontFamily: 'Poppins-Regular',
+        fontFamily: FONTS.family.semiBold,
         letterSpacing: -0.5,
+    },
+    statusBadge: {
+        alignItems: 'center',
+        justifyContent: 'center',
+        padding: 15,
+        borderRadius: 10,
+        shadowColor: '#444',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.1,
+        shadowRadius: 4,
+        elevation: 5,
+        height: 75,
+        width: 75,
+    },
+    badgeTextNumber: {
+        fontFamily: FONTS.family.bold,
+        fontSize: FONTS.size["5xl"],
+    },
+    badgeTextDescription: {
+        fontFamily: FONTS.family.medium,
+        letterSpacing: -0.5,
+        fontSize: FONTS.size.sm,
+        textAlign: 'center',
     },
     headerSection: {
         flexDirection: 'column',
@@ -678,7 +812,7 @@ const styles = StyleSheet.create({
         paddingHorizontal: 15,
         ...Platform.select({
             ios: {
-                shadowColor: '#000',
+                shadowColor: '#444',
                 shadowOffset: { width: 0, height: 2 },
                 shadowOpacity: 0.1,
                 shadowRadius: 4,
@@ -707,19 +841,18 @@ const styles = StyleSheet.create({
     sectionHeader: {
         flexDirection: 'row',
         justifyContent: 'space-between',
-        alignItems: 'center',
         paddingHorizontal: 20,
     },
     sectionTitle: {
-        fontSize: FONTS.size.lg,
+        fontSize: FONTS.size.md,
         fontFamily: 'Poppins-Medium',
         letterSpacing: -0.5,
-        lineHeight: 30,
     },
     seeAllText: {
         color: '#0E509E',
-        fontFamily: 'Poppins-Regular',
-        lineHeight: 30,
+        fontSize: FONTS.size.md,
+        fontFamily: 'Poppins-Medium',
+        letterSpacing: -0.5,
     },
     skeletonText: {
         backgroundColor: '#e0e0e0',
@@ -733,7 +866,7 @@ const styles = StyleSheet.create({
         width: 312,
         justifyContent: 'center',
         alignItems: 'center',
-        shadowColor: '#000',
+        shadowColor: '#444',
         shadowOffset: { width: 0, height: 2 },
         shadowOpacity: 0.1,
         shadowRadius: 4,

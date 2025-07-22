@@ -39,7 +39,7 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         elevation: 8,
         zIndex: 9999,
-        shadowColor: '#000',
+        shadowColor: '#444',
         shadowOffset: {
             width: 0,
             height: 4,

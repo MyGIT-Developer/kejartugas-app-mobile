@@ -31,6 +31,8 @@ import Shimmer from '../components/Shimmer';
 // Utils
 import { groupTasksByProject, getGreeting } from '../utils/taskUtils';
 
+const AnimatedLinearGradient = Animated.createAnimatedComponent(LinearGradient);
+
 const { width } = Dimensions.get('window');
 
 // Enhanced Skeleton components with animations
@@ -79,7 +81,6 @@ const SkeletonTaskCard = () => {
     );
 };
 
-// Enhanced Menu button component with animations
 const MenuButton = ({ icon, description, onPress }) => {
     const scaleAnim = useRef(new Animated.Value(1)).current;
 
@@ -87,7 +88,7 @@ const MenuButton = ({ icon, description, onPress }) => {
         try {
             Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
         } catch (error) {
-            console.log('Haptics error in MenuButton:', error);
+            console.log('Haptics error:', error);
         }
         Animated.spring(scaleAnim, {
             toValue: 0.95,
@@ -106,36 +107,41 @@ const MenuButton = ({ icon, description, onPress }) => {
         }).start();
     };
 
-    const handlePress = () => {
-        console.log('MenuButton pressed:', description);
-        if (onPress) {
-            onPress();
-        }
+    const dynamicShadow = {
+        shadowOpacity: scaleAnim.interpolate({
+            inputRange: [0.95, 1],
+            outputRange: [0.25, 0.15],
+        }),
+        elevation: scaleAnim.interpolate({
+            inputRange: [0.95, 1],
+            outputRange: [6, 4],
+        }),
     };
 
     return (
         <TouchableOpacity
-            style={styles.menuButtonContainer}
-            onPress={handlePress}
+            onPress={onPress}
             onPressIn={handlePressIn}
             onPressOut={handlePressOut}
             activeOpacity={0.8}
+            accessibilityRole="button"
+            accessibilityLabel={`Menu ${description}`}
             hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
         >
-            <Animated.View
-                style={[
-                    styles.menuIconContainer,
-                    {
-                        transform: [{ scale: scaleAnim }],
-                    },
-                ]}
-            >
-                <Feather name={icon} size={24} color="#148FFF" />
+            <Animated.View style={[styles.menuButtonContainer, { transform: [{ scale: scaleAnim }] }]}>
+                <AnimatedLinearGradient
+                    colors={['#E0F0FF', '#FFFFFF']}
+                    style={[styles.menuIconContainer, dynamicShadow]}
+                >
+                    <Feather name={icon} size={24} color="#148FFF" />
+                </AnimatedLinearGradient>
+                <Text style={styles.menuButtonText}>{description}</Text>
             </Animated.View>
-            <Text style={styles.menuButtonText}>{description}</Text>
         </TouchableOpacity>
     );
 };
+
+
 const HEADER_HEIGHT = 325;
 const Home = () => {
     // Custom hooks for data management
@@ -504,7 +510,7 @@ const Home = () => {
                                     backgroundColor: '#fff',
                                     alignItems: 'center',
                                     justifyContent: 'center',
-                                    shadowColor: '#000',
+                                    shadowColor: '#444',
                                     shadowOffset: { width: 0, height: 2 },
                                     shadowOpacity: 0.08,
                                     shadowRadius: 4,
@@ -542,7 +548,6 @@ const Home = () => {
                     )}
                 </Animated.View>
 
-                {/* Enhanced Menu Section */}
                 <Animated.View
                     style={[
                         styles.menuSection,
@@ -553,6 +558,17 @@ const Home = () => {
                     ]}
                     pointerEvents="box-none"
                 >
+                    <Text
+                        style={{
+                            fontSize: 14,
+                            color: '#1C1C1E',
+                            fontFamily: 'Poppins-SemiBold',
+                            marginBottom: 12,
+                            marginLeft: 4,
+                        }}
+                    >
+                        Menu Lainnya
+                    </Text>
                     <View style={styles.menuContainer} pointerEvents="box-none">
                         <MenuButton
                             icon="folder"
@@ -570,7 +586,7 @@ const Home = () => {
                                 handleMenuPress('adhoc');
                             }}
                         />
-                        <MenuButton
+                        {/* <MenuButton
                             icon="calendar"
                             description="Cuti"
                             onPress={() => {
@@ -585,7 +601,7 @@ const Home = () => {
                                 console.log('Klaim button pressed');
                                 handleMenuPress('claim');
                             }}
-                        />
+                        /> */}
                     </View>
                 </Animated.View>
 
@@ -710,7 +726,7 @@ const styles = StyleSheet.create({
         flex: 1,
         borderBottomLeftRadius: 24,
         borderBottomRightRadius: 24,
-        shadowColor: '#000',
+        shadowColor: '#444',
         shadowOffset: { width: 0, height: 20 },
         shadowOpacity: 0.5,
         shadowRadius: 12,
@@ -818,7 +834,7 @@ const styles = StyleSheet.create({
         padding: 12,
         marginBottom: 24,
         elevation: 3,
-        shadowColor: '#000',
+        shadowColor: '#444',
         shadowOffset: { width: 0, height: 2 },
         shadowOpacity: 0.1,
         shadowRadius: 8,
@@ -826,9 +842,11 @@ const styles = StyleSheet.create({
     },
     menuContainer: {
         flexDirection: 'row',
+        flexWrap: 'wrap',
         justifyContent: 'space-around',
         alignItems: 'center',
-        pointerEvents: 'box-none',
+        rowGap: 12,
+        columnGap: 16,
     },
     menuButtonContainer: {
         alignItems: 'center',
@@ -842,9 +860,9 @@ const styles = StyleSheet.create({
         padding: 12,
         alignItems: 'center',
         justifyContent: 'center',
-        width: 56,
-        height: 56,
-        marginBottom: 8,
+        width: 50,
+        height: 50,
+        marginBottom: 4,
         elevation: 4,
         shadowColor: '#148FFF',
         shadowOffset: { width: 0, height: 4 },
@@ -931,7 +949,7 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         justifyContent: 'center',
         elevation: 2,
-        shadowColor: '#000',
+        shadowColor: '#444',
         shadowOffset: { width: 0, height: 2 },
         shadowOpacity: 0.05,
         shadowRadius: 8,
@@ -965,7 +983,7 @@ const styles = StyleSheet.create({
         padding: 20,
         marginBottom: 16,
         elevation: 2,
-        shadowColor: '#000',
+        shadowColor: '#444',
         shadowOffset: { width: 0, height: 2 },
         shadowOpacity: 0.05,
         shadowRadius: 8,

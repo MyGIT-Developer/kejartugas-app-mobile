@@ -59,7 +59,7 @@ const styles = StyleSheet.create({
         backgroundColor: 'white',
         padding: 20,
         zIndex: 5,
-        shadowColor: '#000',
+        shadowColor: '#444',
         shadowOffset: {
             width: 0,
             height: -5,
