@@ -1,7 +1,7 @@
 import React, { useEffect, useState, createContext } from 'react';
 import * as Location from 'expo-location';
 // Context untuk lokasi
-export const LocationContext = createContext({ location: null, errorMsg: null });
+export const LocationContext = createContext({ location: null, errorMsg: null, locationName: null });
 import { NavigationContainer } from '@react-navigation/native';
 import { Provider as PaperProvider } from 'react-native-paper';
 import { View, Text, StyleSheet } from 'react-native';
@@ -75,6 +75,7 @@ export default function App() {
     const fontsLoaded = useFonts();
     const [location, setLocation] = useState(null);
     const [errorMsg, setErrorMsg] = useState(null);
+    const [locationName, setLocationName] = useState('Mencari lokasi...');
 
     useEffect(() => {
         const setupApp = async () => {
@@ -84,12 +85,32 @@ export default function App() {
                     let { status } = await Location.requestForegroundPermissionsAsync();
                     if (status !== 'granted') {
                         setErrorMsg('Izin lokasi ditolak');
+                        setLocationName('Izin lokasi ditolak');
                     } else {
                         try {
                             let loc = await Location.getCurrentPositionAsync({});
                             setLocation(loc);
+                            // Reverse geocode langsung di sini
+                            let address = null;
+                            try {
+                                const geo = await Location.reverseGeocodeAsync({
+                                    latitude: loc.coords.latitude,
+                                    longitude: loc.coords.longitude,
+                                });
+                                if (geo && geo.length > 0) {
+                                    // Gabungkan nama jalan, kelurahan, kota, dsb
+                                    const g = geo[0];
+                                    address = [g.name, g.street, g.subregion, g.city, g.region]
+                                        .filter(Boolean)
+                                        .join(', ');
+                                }
+                            } catch (geoErr) {
+                                address = 'Tidak ditemukan';
+                            }
+                            setLocationName(address || 'Tidak ditemukan');
                         } catch (locError) {
                             setErrorMsg('Gagal mengambil lokasi');
+                            setLocationName('Gagal mengambil lokasi');
                         }
                     }
 
@@ -132,7 +153,7 @@ export default function App() {
 
     return (
         <ErrorBoundary>
-            <LocationContext.Provider value={{ location, errorMsg }}>
+            <LocationContext.Provider value={{ location, errorMsg, locationName }}>
                 <GestureHandlerRootView style={{ flex: 1 }}>
                     <BottomSheetModalProvider>
                         <PaperProvider theme={paperTheme}>

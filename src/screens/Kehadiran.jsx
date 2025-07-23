@@ -1,4 +1,3 @@
-// import * as Location from 'expo-location';
 import React, { useState, useEffect, useCallback, useMemo, memo, useRef, useContext } from 'react';
 import { LocationContext } from '../../App';
 import {
@@ -91,11 +90,6 @@ const formatDuration = (checkinTime, checkoutTime) => {
 
 const getStatusConfig = (status) => STATUS_CONFIG[status] || STATUS_CONFIG['Not Absent'];
 
-const formatLocationName = (reverseGeocodeResult) => {
-    if (!reverseGeocodeResult) return 'Tidak dapat mengambil nama lokasi';
-    return `${reverseGeocodeResult.street}, ${reverseGeocodeResult.city}, ${reverseGeocodeResult.region}, ${reverseGeocodeResult.country}`;
-};
-
 // Memoized EmptyState Component with enhanced styling
 const EmptyState = memo(() => (
     <View style={styles.emptyStateContainer}>
@@ -148,36 +142,9 @@ const ShimmerTaskCard = memo(() => (
 ShimmerTaskCard.displayName = 'ShimmerTaskCard';
 
 const Kehadiran = () => {
-    const { location, errorMsg } = useContext(LocationContext);
+    const { location, errorMsg, locationName } = useContext(LocationContext);
     // State management
     const [currentTime, setCurrentTime] = useState('');
-    const [locationName, setLocationName] = useState('Mencari lokasi...');
-
-    // Ambil nama lokasi dari koordinat context
-    useEffect(() => {
-        const fetchLocationName = async () => {
-            if (location && location.coords) {
-                try {
-                    const geocode = await Location.reverseGeocodeAsync({
-                        latitude: location.coords.latitude,
-                        longitude: location.coords.longitude,
-                    });
-                    if (geocode && geocode.length > 0) {
-                        const loc = geocode[0];
-                        const name = [loc.name, loc.street, loc.city, loc.region, loc.country]
-                            .filter(Boolean)
-                            .join(', ');
-                        setLocationName(name);
-                    } else {
-                        setLocationName('Lokasi tidak ditemukan');
-                    }
-                } catch (err) {
-                    setLocationName('Gagal mengambil nama lokasi');
-                }
-            }
-        };
-        fetchLocationName();
-    }, [location]);
     const [employeeId, setEmployeeId] = useState(null);
     const [companyId, setCompanyId] = useState(null);
     const [attendanceData, setAttendanceData] = useState([]);
@@ -267,46 +234,13 @@ const Kehadiran = () => {
     }, []);
 
     // Enhanced fetchData with better error handling and performance
+    // Sudah tidak perlu reverse geocoding di sini, cukup fetch data attendance dan parameter
     const fetchData = useCallback(async () => {
         if (!employeeId || !companyId || !mountedRef.current) return;
 
-        console.time('fetchData');
         setIsLoading(true);
-
         try {
-            // Step 1: Request location permissions
-            const { status } = await Location.requestForegroundPermissionsAsync();
-            if (status !== 'granted') {
-                const errorMessage = 'Izin lokasi ditolak. Harap aktifkan akses lokasi di pengaturan.';
-                showAlert(errorMessage, 'error');
-                return;
-            }
-
-            // Step 2: Fast location with fallback
-            console.time('getLocation');
-            let location = await Location.getLastKnownPositionAsync();
-            if (!location) {
-                location = await Location.getCurrentPositionAsync({
-                    accuracy: Location.Accuracy.Balanced,
-                    maximumAge: 10000,
-                });
-            }
-            console.timeEnd('getLocation');
-
-            const { latitude, longitude } = location.coords;
-            const coordinates = `${latitude.toFixed(6)}, ${longitude.toFixed(6)}`;
-
-            // Immediately update visible location
-
-            // Step 3: Fire reverse geocode in background
-            const geocodePromise = Location.reverseGeocodeAsync({ latitude, longitude })
-                .then(([result]) => formatLocationName(result))
-                .catch((err) => {
-                    console.warn('Geocoding failed:', err.message);
-                    return 'Tidak dapat mengambil nama lokasi';
-                });
-
-            // Step 4: Fetch attendance and parameters
+            // Step 1: Fetch attendance and parameters
             const [attendanceResponse, parameterResponse] = await Promise.all([
                 getAttendance(employeeId, 1, PAGE_SIZE).catch((error) => {
                     if (error.message === 'No attendance records found') {
@@ -319,7 +253,6 @@ const Kehadiran = () => {
                     throw error;
                 }),
                 getParameter(companyId).catch((error) => {
-                    console.warn('Parameter fetch failed, using defaults:', error.message);
                     return {
                         data: {
                             jam_telat: DEFAULT_LATE_TIME,
@@ -329,11 +262,11 @@ const Kehadiran = () => {
                 }),
             ]);
 
-            // Step 5: Extract params
+            // Step 2: Extract params
             const jamTelat = parameterResponse?.data?.jam_telat || DEFAULT_LATE_TIME;
             const radius = parameterResponse?.data?.radius || DEFAULT_RADIUS;
 
-            // Step 6: Find today's attendance from first page
+            // Step 3: Find today's attendance from first page
             const today = new Date().toISOString().split('T')[0];
             const todayAttendance = attendanceResponse.attendance?.find((record) => {
                 const recordDate = new Date(record.checkin).toISOString().split('T')[0];
@@ -372,7 +305,7 @@ const Kehadiran = () => {
                 }
             }
 
-            // Step 7: Update UI states
+            // Step 4: Update UI states
             if (mountedRef.current) {
                 setAttendanceData(attendanceResponse.attendance || []);
                 setIsCheckedIn(attendanceResponse.isCheckedInToday);
@@ -386,24 +319,14 @@ const Kehadiran = () => {
                 setTotalPages(attendanceResponse.pagination.last_page);
                 setTotalRecords(attendanceResponse.pagination.total || 0);
             }
-
-            // Step 8: Apply location name
-            const locationName = await geocodePromise;
-            if (mountedRef.current) {
-            }
         } catch (error) {
-            console.error('Error fetching data:', error);
-            const errorMessage = error.message?.includes('Location request failed')
-                ? 'Gagal mendapatkan lokasi. Periksa pengaturan GPS Anda.'
-                : 'Gagal memuat data. Silakan coba lagi.';
             if (mountedRef.current) {
-                showAlert(errorMessage, 'error');
+                showAlert('Gagal memuat data. Silakan coba lagi.', 'error');
             }
         } finally {
             if (mountedRef.current) {
                 setIsLoading(false);
             }
-            console.timeEnd('fetchData');
         }
     }, [employeeId, companyId]);
 
@@ -1549,23 +1472,16 @@ const Kehadiran = () => {
                                 accessible={true}
                                 accessibilityLabel="Riwayat Kehadiran"
                             >
-                                {isLoading ? (
-                                    <Animated.View
-                                        style={[
-                                            styles.historyContainer,
-                                            {
-                                                opacity: fadeAnim,
-                                                transform: [{ translateY: historySlideAnim }],
-                                            },
-                                        ]}
-                                    >
-                                        {Array(3)
-                                            .fill()
-                                            .map((_, index) => (
-                                                <ShimmerTaskCard key={index} />
-                                            ))}
-                                    </Animated.View>
-                                ) : paginatedDateViews.length > 0 ? (
+                                {/* Loading shimmer hanya saat benar-benar loading */}
+                                {isLoading && (
+                                    <View style={styles.historyContainer}>
+                                        {[...Array(3)].map((_, index) => (
+                                            <ShimmerTaskCard key={index} />
+                                        ))}
+                                    </View>
+                                )}
+                                {/* Jika sudah tidak loading dan ada data */}
+                                {!isLoading && paginatedDateViews.length > 0 && (
                                     <>
                                         <Animated.View
                                             style={[
@@ -1640,11 +1556,11 @@ const Kehadiran = () => {
                                             </Animated.View>
                                         )}
                                     </>
-                                ) : (
-                                    <Animated.View
+                                )}
+                                {/* Jika sudah tidak loading dan data kosong, tampilkan pesan tanpa delay dan tanpa animasi berat */}
+                                {!isLoading && paginatedDateViews.length === 0 && (
+                                    <View
                                         style={{
-                                            opacity: fadeAnim,
-                                            transform: [{ translateY: historySlideAnim }],
                                             alignItems: 'center',
                                             paddingVertical: 32,
                                         }}
@@ -1675,7 +1591,7 @@ const Kehadiran = () => {
                                         >
                                             Catatan kehadiran Anda akan muncul di sini setelah Anda melakukan clock in.
                                         </Text>
-                                    </Animated.View>
+                                    </View>
                                 )}
                             </Animated.View>
                         )}
