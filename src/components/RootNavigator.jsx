@@ -26,6 +26,7 @@ import PersonalInformation from '../screens/PersonalInformation';
 import NotificationScreen from '../screens/NotificationScreen';
 import Profile from '../screens/Profile';
 import ProjectDashboard from '../screens/ProjectDashboard';
+import WebViewScreen from '../screens/WebViewScreen';
 
 const Stack = createStackNavigator();
 
@@ -62,6 +63,7 @@ const screens = [
     { name: 'NotificationScreen', component: NotificationScreen },
     { name: 'Profile', component: Profile },
     { name: 'ProjectDashboard', component: ProjectDashboard },
+    { name: 'WebViewScreen', component: WebViewScreen },
 ];
 
 const RootNavigator = () => (

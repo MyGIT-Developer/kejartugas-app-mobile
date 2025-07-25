@@ -230,7 +230,14 @@ const Login = () => {
                             )}
                         </LinearGradient>
                     </TouchableOpacity>
-                    <TouchableOpacity onPress={() => navigation.navigate('BoardingScreen')}>
+                    <TouchableOpacity
+                        onPress={() =>
+                            navigation.navigate('WebViewScreen', {
+                                url: 'https://app.kejartugas.com/register/free',
+                                title: 'Daftar KejarTugas',
+                            })
+                        }
+                    >
                         <Text style={styles.registerText}>
                             <Text style={styles.registerTextBlack}>Belum punya akun? </Text>
                             <Text style={styles.registerTextBlue}>Daftar sekarang!</Text>
@@ -266,7 +273,15 @@ const InputField = ({ label, value, onChangeText, placeholder, error, editable =
     </View>
 );
 
-const PasswordField = ({ value, onChangeText, passwordVisible, togglePasswordVisibility, error, editable = true, placeholder }) => (
+const PasswordField = ({
+    value,
+    onChangeText,
+    passwordVisible,
+    togglePasswordVisibility,
+    error,
+    editable = true,
+    placeholder,
+}) => (
     <View style={styles.inputContainer}>
         <Text style={styles.label}>Password</Text>
         <View style={[styles.passwordContainer, error && styles.inputError]}>
@@ -416,7 +431,7 @@ const styles = StyleSheet.create({
         marginTop: 10,
         fontSize: 16,
         color: '#007AFF',
-        fontFamily: FONTS.family.regular
+        fontFamily: FONTS.family.regular,
     },
     registerText: {
         marginTop: 20,
@@ -426,11 +441,11 @@ const styles = StyleSheet.create({
     },
     registerTextBlack: {
         color: '#000',
-        fontFamily: FONTS.family.regular
+        fontFamily: FONTS.family.regular,
     },
     registerTextBlue: {
         color: '#007AFF',
-        fontFamily: FONTS.family.semiBold
+        fontFamily: FONTS.family.semiBold,
     },
     footerText: {
         position: 'absolute',
@@ -439,7 +454,7 @@ const styles = StyleSheet.create({
         textAlign: 'center',
         color: '#333',
         fontSize: 12,
-        fontFamily: FONTS.family.regular
+        fontFamily: FONTS.family.regular,
     },
 });
 
