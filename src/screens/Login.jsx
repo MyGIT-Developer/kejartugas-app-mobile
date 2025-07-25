@@ -24,7 +24,7 @@ import NotificationService from '../utils/notificationService';
 import { setupNotifications } from '../api/notification';
 import { FONTS } from '../constants/fonts';
 import { LinearGradient } from 'expo-linear-gradient';
-
+//test
 const Login = () => {
     const [credentials, setCredentials] = useState({ username: '', password: '' });
     const [passwordVisible, setPasswordVisible] = useState(false);
