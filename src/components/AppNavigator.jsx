@@ -11,7 +11,6 @@ import { HomeIcon, KehadiranIcon, TugasIcon } from '../../assets/icon/icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const Tab = createBottomTabNavigator();
-const { width } = Dimensions.get('window');
 
 const SCREEN_OPTIONS = {
     Home: { component: Home, icon: HomeIcon },
@@ -123,22 +122,6 @@ const AppNavigator = () => {
         }),
         [insets, tabBarVisibility, scaleAnims, animateTab],
     );
-
-    const hideTabBar = useCallback(() => {
-        Animated.timing(tabBarVisibility, {
-            toValue: 0,
-            duration: 200,
-            useNativeDriver: true,
-        }).start();
-    }, [tabBarVisibility]);
-
-    const showTabBar = useCallback(() => {
-        Animated.timing(tabBarVisibility, {
-            toValue: 1,
-            duration: 200,
-            useNativeDriver: true,
-        }).start();
-    }, [tabBarVisibility]);
 
     const screenList = useMemo(() => {
         return Object.entries(SCREEN_OPTIONS).map(([name, { component }]) => {

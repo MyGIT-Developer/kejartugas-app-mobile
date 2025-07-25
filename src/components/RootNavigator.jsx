@@ -11,7 +11,6 @@ import Step1 from '../screens/Step1';
 import Step2 from '../screens/Step2';
 import DetailProjek from '../screens/DetailProjek';
 import ProjectList from '../screens/ProjectList';
-import TaskOnReview from '../screens/TaskOnReview';
 import ProjectOnWorking from '../screens/ProjectOnWorking';
 import SubmitTugas from '../screens/SubmitTugas';
 import DetailTaskSection from '../screens/DetailTaskSection';
@@ -48,7 +47,6 @@ const screens = [
     { name: 'Step2', component: Step2 },
     { name: 'DetailProjek', component: DetailProjek },
     { name: 'ProjectList', component: ProjectList },
-    { name: 'TaskOnReview', component: TaskOnReview },
     { name: 'ProjectOnWorking', component: ProjectOnWorking },
     { name: 'SubmitTugas', component: SubmitTugas },
     { name: 'DetailTaskSection', component: DetailTaskSection },

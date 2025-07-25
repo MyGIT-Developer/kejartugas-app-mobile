@@ -11,7 +11,7 @@ import {
     Platform,
     Animated
 } from 'react-native';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useRoute } from '@react-navigation/native';
 import { LinearGradient } from 'expo-linear-gradient';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { getTask } from '../api/projectTask';
@@ -137,9 +137,12 @@ const ProjectTasksGroup = ({ projectName, tasks, onTaskPress }) => {
         return duration.trim();
     };
 
+    console.log('Project Details:', projectDetails);
+
     return (
         <View style={styles.projectGroup}>
-            <View style={styles.projectHeader}>
+            <TouchableOpacity
+                style={styles.projectHeader} onPress={() => setIsExpanded(!isExpanded)}>
                 <View style={styles.projectTitleSection}>
                     <Text style={styles.projectTitleLabel}>Nama Proyek</Text>
                     <Text style={styles.projectTitle}>{projectName}</Text>
@@ -148,48 +151,55 @@ const ProjectTasksGroup = ({ projectName, tasks, onTaskPress }) => {
                     <Text style={styles.taskCountText}>{tasks.length}</Text>
                     <Text style={styles.taskCountLabel}>Tugas</Text>
                 </View>
-            </View>
+            </TouchableOpacity>
+            {isExpanded && projectDetails && (
+                <View style={{ borderBottomWidth: 1, borderColor: '#E0E0E0', paddingBottom: 10 }}>
+                    <View style={styles.card}>
+                        <View style={styles.row}>
+                            <Ionicons
+                                name="person-circle-outline"
+                                size={16}
+                                color="#3498db"
+                                style={{ marginRight: 6 }}
+                            />
+                            <Text style={styles.sectionLabel}>Ditugaskan Oleh</Text>
+                        </View>
+                        <Text style={styles.sectionValue}>{projectDetails.assign_by_name ? projectDetails.assign_by_name : 'Tidak tersedia'}</Text>
+
+                        <View style={[styles.row, { marginTop: 12 }]}>
+                            <Ionicons name="calendar-outline" size={16} color="#3498db" style={{ marginRight: 6 }} />
+                            <Text style={styles.sectionLabel}>Durasi Proyek</Text>
+                        </View>
+                        <Text style={styles.sectionValue}>{calculateDuration(projectDetails.start_date, projectDetails.end_date)}</Text>
+                    </View>
+
+                    {/* Description */}
+                    <View style={styles.card}>
+                        <View style={styles.row}>
+                            <Ionicons
+                                name="document-text-outline"
+                                size={16}
+                                color="#3498db"
+                                style={{ marginRight: 6 }}
+                            />
+                            <Text style={styles.sectionLabel}>Keterangan</Text>
+                        </View>
+                        <Text style={styles.sectionValue}>{projectDetails.description || 'Tidak ada keterangan'}</Text>
+                    </View>
+                </View>
+            )}
             <View style={styles.tasksList}>
                 {tasks.map((task) => (
                     <TaskItem key={task.id} task={task} onPress={() => onTaskPress(task)} />
                 ))}
             </View>
-            <TouchableOpacity style={styles.projectDetailButton} onPress={() => setIsExpanded(!isExpanded)}>
-                <Text style={styles.projectDetailButtonText}>
-                    {isExpanded ? 'Sembunyikan detail proyek' : 'Lihat detail proyek'}
-                </Text>
-                <Ionicons
-                    name={isExpanded ? 'chevron-up' : 'chevron-down'}
-                    size={20}
-                    color="#1f1f1f"
-                    style={styles.chevronIcon}
-                />
-            </TouchableOpacity>
-            {isExpanded && projectDetails && (
-                <View style={styles.projectDetails}>
-                    <View style={styles.detailRow}>
-                        <View style={styles.leftColumn}>
-                            <Text style={styles.detailLabel}>Ditugaskan Oleh:</Text>
-                            <Text style={styles.detailValue}>{projectDetails.assignedBy}</Text>
-                            <Text style={styles.detailLabel}>Durasi Proyek:</Text>
-                            <Text style={styles.detailValue}>
-                                {calculateDuration(projectDetails.start_date, projectDetails.end_date)}
-                            </Text>
-                        </View>
-                        <View style={styles.rightColumn}>
-                            <Text style={styles.detailLabel}>Keterangan Proyek:</Text>
-                            <Text style={styles.detailValue}>
-                                {projectDetails.description || 'Tidak ada Keterangan'}
-                            </Text>
-                        </View>
-                    </View>
-                </View>
-            )}
         </View>
     );
 };
 
 const ProjectOnWorking = () => {
+    const route = useRoute();
+    const { status, subStatus } = route.params || {};
     const [taskData, setTaskData] = useState([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
@@ -224,7 +234,7 @@ const ProjectOnWorking = () => {
 
     const filteredAndGroupedTasks = useMemo(() => {
         const filteredTasks = taskData.filter(
-            (task) => task.task_status === 'workingOnIt' || task.task_status === 'rejected',
+            (task) => task.task_status === status || task.task_status === subStatus,
         );
 
         return filteredTasks.reduce((grouped, task) => {
@@ -504,7 +514,7 @@ const ProjectOnWorking = () => {
                                 },
                             ]}
                         >
-                            Dalam Pengerjaan
+                            {status === 'workingOnIt' ? 'Dalam Pengerjaan' : 'Dalam Peninjauan'}
                         </Animated.Text>
                     </View>
                 </View>
@@ -714,7 +724,7 @@ const styles = StyleSheet.create({
         alignItems: 'center',
     },
     projectGroup: {
-         backgroundColor: 'white',
+        backgroundColor: 'white',
         borderRadius: 20,
         marginBottom: 20,
         shadowColor: '#444',
@@ -726,18 +736,16 @@ const styles = StyleSheet.create({
         marginHorizontal: 20,
     },
     projectHeader: {
-             flexDirection: 'row',
+        flexDirection: 'row',
         alignItems: 'center',
         paddingHorizontal: 20,
-        paddingTop: 10,
-        paddingBottom: 16,
+        paddingVertical: 16,
         borderWidth: 1,
         borderColor: '#E2E8F0',
     },
     projectTitleSection: {
         flex: 1,
         marginRight: 16,
-        gap: 8,
     },
     projectTitleLabel: {
         fontSize: FONTS.size.md,
@@ -856,47 +864,67 @@ const styles = StyleSheet.create({
     projectDetailButton: {
         flexDirection: 'row',
         alignItems: 'center',
-        alignSelf: 'flex-end',
-        marginTop: 10,
+        alignSelf: 'flex-start',
+        paddingHorizontal: 20,
+        marginBottom: 16,
     },
     projectDetailButtonText: {
-        fontSize: 14,
+        fontSize: FONTS.size.sm,
         color: '#1f1f1f',
         marginRight: 5,
-        fontFamily: 'Poppins-Regular',
+        fontFamily: FONTS.family.semiBold,
+        letterSpacing: -0.5,
     },
     chevronIcon: {
         marginTop: 2,
     },
-    projectDetails: {
+    card: {
+        backgroundColor: '#f9f9f9',
+        padding: 14,
+        borderRadius: 12,
+        marginBottom: 16,
+        shadowColor: '#444',
+        shadowOpacity: 0.05,
+        shadowRadius: 4,
+        elevation: 2,
+        marginHorizontal: 20,
         marginTop: 10,
-        padding: 10,
-        backgroundColor: 'transparent',
-        borderRadius: 5,
     },
-    detailRow: {
+    row: {
+        flexDirection: 'row',
+        alignItems: 'center',
+    },
+    sectionLabel: {
+        fontSize: FONTS.size.sm,
+        fontFamily: FONTS.family.medium,
+        color: '#6B7280',
+        letterSpacing: -0.5,
+    },
+    sectionValue: {
+        fontSize: FONTS.size.sm,
+        fontFamily: FONTS.family.medium,
+        color: '#111827',
+        marginTop: 4,
+        lineHeight: 22,
+        letterSpacing: -0.5,
+    },
+    title: {
+        fontFamily: FONTS.family.semiBold,
+        fontSize: FONTS.size.md,
+        color: '#6e6e6eff',
+        letterSpacing: -0.5,
+    },
+    detailContainer: {
         flexDirection: 'row',
         justifyContent: 'space-between',
+        marginBottom: 20,
     },
-    leftColumn: {
+    detailColumn: {
         flex: 1,
-        marginRight: 10,
+        marginRight: 10, // Add some space between columns
     },
-    rightColumn: {
-        flex: 1,
-    },
-    detailLabel: {
-        fontSize: 14,
-        color: '#333',
-        marginBottom: 2,
-        fontFamily: 'Poppins-Medium',
-        fontWeight: 'bold',
-    },
-    detailValue: {
-        fontSize: 14,
-        color: '#333',
-        marginBottom: 8,
-        fontFamily: 'Poppins-Regular',
+    descriptionContainer: {
+        marginBottom: 20,
     },
 });
 

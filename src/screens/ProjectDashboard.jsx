@@ -11,7 +11,6 @@ import {
     ScrollView,
     Animated
 } from 'react-native';
-import FloatingButton from '../components/FloatingButtonProject';
 import { getProject } from '../api/projectTask';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { TextInput } from 'react-native-gesture-handler';
@@ -473,10 +472,13 @@ const ProjectDashboard = () => {
                 navigation.navigate('ProjectList');
                 break;
             case 'onProgress':
-                navigation.navigate('ProjectOnWorking');
+                navigation.navigate('ProjectOnWorking', {
+                    status: 'workingOnIt',
+                    subStatus: 'rejected',
+                });
                 break;
             case 'onReview':
-                navigation.navigate('TaskOnReview');
+                navigation.navigate('ProjectOnWorking', { status: 'onReview' });
                 break;
             default:
                 console.log('Unknown project type');
@@ -568,11 +570,19 @@ const ProjectDashboard = () => {
                         {/* Render Content */}
                         {renderContent()}
                     </View>
-                    <FloatingButton bottom={100} />
+                    <TouchableOpacity
+                        style={styles.addButton}
+                        onPress={() => navigation.navigate('ProjectForm',
+                            { mode: 'create' }
+                        )} // Navigasi ke layar AddAdhoc
+                    >
+                        <Feather name="plus-circle" size={24} color="#FFFFFF" />
+                    </TouchableOpacity>
                 </>
-            )}
-            {!hasAccess && <AccessDenied />}
-        </SafeAreaView>
+            )
+            }
+            {hasAccess === false && <AccessDenied setHasAccess={setHasAccess} />}
+        </SafeAreaView >
     );
 };
 
@@ -899,6 +909,22 @@ const styles = StyleSheet.create({
         color: '#333',
         textAlign: 'center',
         marginTop: 20,
+    },
+    addButton: {
+        position: 'absolute',
+        bottom: 20,
+        right: 20,
+        width: 56,
+        height: 56,
+        borderRadius: 28,
+        backgroundColor: '#4A90E2',
+        justifyContent: 'center',
+        alignItems: 'center',
+        shadowColor: '#4A90E2',
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.3,
+        shadowRadius: 8,
+        elevation: 8,
     },
 });
 

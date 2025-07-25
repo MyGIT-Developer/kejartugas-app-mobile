@@ -1,3 +1,4 @@
+import 'react-native-reanimated';
 import React, { useEffect, useState, createContext } from 'react';
 import * as Location from 'expo-location';
 // Context untuk lokasi
@@ -14,7 +15,6 @@ import { setupNotifications } from './src/api/notification';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { BottomSheetModalProvider } from '@gorhom/bottom-sheet';
 import 'react-native-gesture-handler';
-import 'react-native-reanimated';
 
 // Create navigation ref for notifications
 export const navigationRef = React.createRef();

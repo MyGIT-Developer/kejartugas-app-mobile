@@ -465,65 +465,110 @@ const TaskForm = () => {
         });
     };
 
-    return (
-        <ScrollView contentContainerStyle={styles.container}>
-            <LinearGradient
-                colors={['#0E509E', '#5FA0DC', '#9FD2FF']}
-                style={styles.backgroundGradient}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 1 }}
-            />
-            <View style={styles.headerSection}>
-                <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
-                    <Feather name="chevron-left" size={28} color="white" />
-                </TouchableOpacity>
+return (
+    <ScrollView contentContainerStyle={styles.container} showsVerticalScrollIndicator={false}>
+        <LinearGradient
+            colors={['#0E509E', '#5FA0DC', '#9FD2FF']}
+            style={styles.backgroundGradient}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+        />
+        
+        {/* Enhanced Header Section */}
+        <View style={styles.headerSection}>
+            <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
+                <View style={styles.backButtonContainer}>
+                    <Feather name="chevron-left" size={24} color="white" />
+                </View>
+            </TouchableOpacity>
+            <View style={styles.headerContent}>
                 <Text style={styles.header}>{mode === 'create' ? 'Tugas Baru' : 'Update Tugas'}</Text>
+                <Text style={styles.subHeader}>
+                    {mode === 'create' ? 'Tambahkan tugas baru untuk tim Anda' : 'Perbarui informasi tugas'}
+                </Text>
             </View>
-            <View style={styles.formContainer}>
-                <View style={styles.fieldGroup}>
+        </View>
+
+        {/* Enhanced Form Container */}
+        <View style={styles.formContainer}>
+            {/* Task Name Field */}
+            <View style={styles.fieldGroup}>
+                <View style={styles.labelContainer}>
+                    <Feather name="edit-3" size={18} color="#0E509E" />
                     <Text style={styles.labelText}>
                         Nama Tugas {mode === 'create' && <Text style={styles.required}>*</Text>}
                     </Text>
+                </View>
+                <View style={styles.inputContainer}>
                     <TextInput
-                        style={[styles.input, mode === 'create' && !formData.task_name && styles.requiredField]}
-                        placeholder="Masukkan Nama Tugas"
+                        style={[
+                            styles.input, 
+                            mode === 'create' && !formData.task_name && styles.requiredField,
+                            formData.task_name && styles.inputFilled
+                        ]}
+                        placeholder="Masukkan nama tugas yang jelas dan deskriptif"
+                        placeholderTextColor="#999"
                         value={formData.task_name}
                         onChangeText={(value) => updateFormField('task_name', value)}
                     />
+                    {formData.task_name ? (
+                        <Feather name="check-circle" size={20} color="#10B981" style={styles.inputIcon} />
+                    ) : null}
                 </View>
+            </View>
 
-                <View style={styles.fieldGroup}>
+            {/* Task Label Field */}
+            <View style={styles.fieldGroup}>
+                <View style={styles.labelContainer}>
+                    <Feather name="tag" size={18} color="#0E509E" />
                     <Text style={styles.labelText}>Label Tugas</Text>
+                </View>
+                <View style={styles.inputContainer}>
                     <TextInput
-                        style={styles.input}
-                        placeholder="Masukkan Label Tugas"
+                        style={[styles.input, formData.task_label && styles.inputFilled]}
+                        placeholder="Tambahkan label untuk kategori tugas"
+                        placeholderTextColor="#999"
                         value={formData.task_label}
                         onChangeText={(value) => updateFormField('task_label', value)}
                     />
+                    {formData.task_label ? (
+                        <Feather name="check-circle" size={20} color="#10B981" style={styles.inputIcon} />
+                    ) : null}
                 </View>
+            </View>
 
+            {/* Enhanced Date Section */}
+            <View style={styles.sectionContainer}>
+                <View style={styles.sectionHeader}>
+                    <Feather name="calendar" size={20} color="#0E509E" />
+                    <Text style={styles.sectionTitle}>Jadwal Tugas</Text>
+                </View>
                 <View style={styles.dateContainer}>
                     {renderDatePicker('start_date', showStartPicker, setShowStartPicker)}
                     {renderDatePicker('end_date', showEndPicker, setShowEndPicker)}
                 </View>
+            </View>
 
-                {/* {renderPicker('assign_by', 'Ditugaskan oleh', assignedEmployees.map(emp => ({ label: emp.employee_name, value: emp.id })))} */}
-                {/* {renderPicker(
-                    'assign_to',
-                    'Ditugaskan Kepada',
-                    availableEmployees.map((emp) => ({ label: emp.employee_name, value: emp.id })),
-                    true,
-                )} */}
-                <View style={styles.fieldGroup}>
-                    <Text style={styles.labelText}>
-                        Ditugaskan Kepada {mode === 'create' && <Text style={styles.required}>*</Text>}
+            {/* Enhanced Assignment Section */}
+            <View style={styles.sectionContainer}>
+                <View style={styles.sectionHeader}>
+                    <Feather name="users" size={20} color="#0E509E" />
+                    <Text style={styles.sectionTitle}>
+                        Penugasan {mode === 'create' && <Text style={styles.required}>*</Text>}
                     </Text>
-                    <View style={styles.multiPickerContainer}>
-                        <SelectedEmployees
-                            selectedIds={formData.assign_to}
-                            employees={assignedEmployees}
-                            onRemove={handleAssignToChange}
-                        />
+                </View>
+                <Text style={styles.sectionDescription}>
+                    Pilih anggota tim yang akan bertanggung jawab atas tugas ini
+                </Text>
+                
+                <View style={styles.multiPickerContainer}>
+                    <SelectedEmployees
+                        selectedIds={formData.assign_to}
+                        employees={assignedEmployees}
+                        onRemove={handleAssignToChange}
+                    />
+                    <View style={styles.employeeListContainer}>
+                        <Text style={styles.listTitle}>Daftar Karyawan</Text>
                         <FlatList
                             style={styles.flatListContainer}
                             data={availableEmployees}
@@ -531,7 +576,10 @@ const TaskForm = () => {
                             renderItem={({ item }) => (
                                 <TouchableOpacity
                                     onPress={() => handleAssignToChange(item.id)}
-                                    style={styles.contactItem}
+                                    style={[
+                                        styles.contactItem,
+                                        formData.assign_to.includes(item.id) && styles.contactItemSelected
+                                    ]}
                                 >
                                     <View
                                         style={[
@@ -545,312 +593,476 @@ const TaskForm = () => {
                                     </View>
                                     <View style={styles.contactInfo}>
                                         <Text style={styles.contactName}>{item.employee_name}</Text>
-                                        <Text>{item.job_name}</Text>
+                                        <Text style={styles.contactRole}>{item.job_name}</Text>
                                     </View>
+                                    {formData.assign_to.includes(item.id) && (
+                                        <Feather name="check-circle" size={20} color="#10B981" />
+                                    )}
                                 </TouchableOpacity>
                             )}
                             scrollEnabled={true}
                             nestedScrollEnabled={true}
+                            showsVerticalScrollIndicator={false}
                         />
                     </View>
                 </View>
+            </View>
 
-                <View style={styles.fieldGroup}>
+            {/* Enhanced Description Field */}
+            <View style={styles.fieldGroup}>
+                <View style={styles.labelContainer}>
+                    <Feather name="file-text" size={18} color="#0E509E" />
                     <Text style={styles.labelText}>Keterangan</Text>
+                </View>
+                <View style={styles.inputContainer}>
                     <TextInput
-                        style={[styles.input, styles.textArea]}
-                        placeholder="Masukkan Keterangan Tugas"
+                        style={[
+                            styles.input, 
+                            styles.textArea,
+                            formData.task_description && styles.inputFilled
+                        ]}
+                        placeholder="Jelaskan detail tugas, requirements, dan ekspektasi hasil..."
+                        placeholderTextColor="#999"
                         value={formData.task_description}
                         onChangeText={(value) => updateFormField('task_description', value)}
                         multiline
                         numberOfLines={4}
+                        textAlignVertical="top"
                     />
                 </View>
+            </View>
 
-                <View style={styles.fieldGroup}>
-                <Text style={styles.labelText}>Tambah Keterangan</Text>
-                    <View style={styles.uploadContainer}>
-                        <TouchableOpacity style={styles.uploadButton} onPress={handleUploadPress}>
-                            {imageUri ? (
-                                <Image source={{ uri: imageUri }} style={styles.imagePreview} />
-                            ) : (
-                                <View style={styles.iconContainer}>
-                                    <Icon name="camera" size={24} color="#999999" />
-                                    <Text style={styles.iconSeparator}>/</Text>
-                                    <Icon name="image" size={24} color="#999999" />
-                                </View>
-                            )}
-                        </TouchableOpacity>
-                    </View>
+            {/* Enhanced Upload Section */}
+            <View style={styles.fieldGroup}>
+                <View style={styles.labelContainer}>
+                    <Feather name="paperclip" size={18} color="#0E509E" />
+                    <Text style={styles.labelText}>Lampiran</Text>
                 </View>
-
-                <View style={styles.buttonContainer}>
-                    <TouchableOpacity style={styles.button} onPress={handleSubmit}>
-                        <Text style={styles.buttonText}>{mode === 'create' ? 'Simpan' : 'Update'}</Text>
+                <Text style={styles.fieldDescription}>
+                    Tambahkan gambar atau dokumen pendukung untuk tugas ini
+                </Text>
+                <View style={styles.uploadContainer}>
+                    <TouchableOpacity style={styles.uploadButton} onPress={handleUploadPress}>
+                        {imageUri ? (
+                            <View style={styles.imageContainer}>
+                                <Image source={{ uri: imageUri }} style={styles.imagePreview} />
+                                <View style={styles.imageOverlay}>
+                                    <Feather name="edit-2" size={20} color="white" />
+                                </View>
+                            </View>
+                        ) : (
+                            <View style={styles.uploadContent}>
+                                <View style={styles.uploadIconContainer}>
+                                    <Feather name="camera" size={28} color="#0E509E" />
+                                    <Text style={styles.iconSeparator}>atau</Text>
+                                    <Feather name="image" size={28} color="#0E509E" />
+                                </View>
+                                <Text style={styles.uploadText}>Tap untuk menambahkan foto</Text>
+                                <Text style={styles.uploadSubtext}>Kamera • Galeri</Text>
+                            </View>
+                        )}
                     </TouchableOpacity>
                 </View>
             </View>
 
-            <ReusableBottomPopUp
-                show={alert.show}
-                alertType={alert.type}
-                message={alert.message}
-                onConfirm={() => setAlert((prev) => ({ ...prev, show: false }))}
-            />
-        </ScrollView>
-    );
-};
+            {/* Enhanced Submit Button */}
+            <View style={styles.buttonContainer}>
+                <TouchableOpacity 
+                    style={[
+                        styles.button,
+                        !formData.task_name || formData.assign_to.length === 0 ? styles.buttonDisabled : null
+                    ]} 
+                    onPress={handleSubmit}
+                    disabled={!formData.task_name || formData.assign_to.length === 0}
+                >
+                    <LinearGradient
+                        colors={
+                            !formData.task_name || formData.assign_to.length === 0 
+                                ? ['#CBD5E0', '#A0AEC0'] 
+                                : ['#0E509E', '#27A0CF']
+                        }
+                        style={styles.buttonGradient}
+                        start={{ x: 0, y: 0 }}
+                        end={{ x: 1, y: 0 }}
+                    >
+                        <Text style={styles.buttonText}>
+                            {mode === 'create' ? '✓ Simpan Tugas' : '✓ Update Tugas'}
+                        </Text>
+                    </LinearGradient>
+                </TouchableOpacity>
+            </View>
+        </View>
+
+        <ReusableBottomPopUp
+            show={alert.show}
+            alertType={alert.type}
+            message={alert.message}
+            onConfirm={() => setAlert((prev) => ({ ...prev, show: false }))}
+        />
+    </ScrollView>
+)};
 
 const styles = StyleSheet.create({
     container: {
         flexGrow: 1,
+        backgroundColor: '#F8FAFC',
     },
     backgroundGradient: {
         position: 'absolute',
         left: 0,
         right: 0,
         top: 0,
-        height: '35%', // Increased slightly
+        height: '40%',
     },
     headerSection: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        justifyContent: 'center',
         paddingTop: 60,
-        paddingBottom: 30,
+        paddingBottom: 40,
+        paddingHorizontal: 20,
+        position: 'relative',
     },
     backButton: {
         position: 'absolute',
         left: 20,
         top: 60,
+        zIndex: 1,
+    },
+    backButtonContainer: {
+        width: 40,
+        height: 40,
+        borderRadius: 20,
+        backgroundColor: 'rgba(255, 255, 255, 0.2)',
+        justifyContent: 'center',
+        alignItems: 'center',
+        backdropFilter: 'blur(10px)',
+    },
+    headerContent: {
+        alignItems: 'center',
+        marginTop: 20,
     },
     header: {
-        fontSize: 24,
-        fontWeight: 'bold',
+        fontSize: 28,
+        fontWeight: '700',
         color: 'white',
         textAlign: 'center',
+        letterSpacing: -0.5,
+    },
+    subHeader: {
+        fontSize: 16,
+        color: 'rgba(255, 255, 255, 0.8)',
+        textAlign: 'center',
+        marginTop: 8,
+        letterSpacing: 0.2,
     },
     formContainer: {
         backgroundColor: 'white',
-        borderTopLeftRadius: 30,
-        borderTopRightRadius: 30,
-        paddingHorizontal: 20,
-        paddingTop: 36,
-        paddingBottom: 60,
-        width: '100%',
+        borderTopLeftRadius: 32,
+        borderTopRightRadius: 32,
+        paddingHorizontal: 24,
+        paddingTop: 32,
+        paddingBottom: 80,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: -5 },
+        shadowOpacity: 0.1,
+        shadowRadius: 15,
+        elevation: 10,
     },
     fieldGroup: {
-        width: '100%',
-        marginBottom: 24,
+        marginBottom: 28,
+    },
+    sectionContainer: {
+        marginBottom: 32,
+        padding: 20,
+        backgroundColor: '#F8FAFC',
+        borderRadius: 16,
+        borderWidth: 1,
+        borderColor: '#E2E8F0',
+    },
+    sectionHeader: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        marginBottom: 8,
+    },
+    sectionTitle: {
+        fontSize: 18,
+        fontWeight: '600',
+        color: '#1A202C',
+        marginLeft: 12,
+    },
+    sectionDescription: {
+        fontSize: 14,
+        color: '#64748B',
+        marginBottom: 16,
+        lineHeight: 20,
+    },
+    labelContainer: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        marginBottom: 12,
     },
     labelText: {
         fontSize: 16,
         fontWeight: '600',
-        marginBottom: 10,
-        color: '#333',
+        color: '#1A202C',
+        marginLeft: 10,
+        flex: 1,
     },
-    labelDescText : {
-        fontSize: 12,
-        fontWeight: '600',  
-        color: '#a0a0a0',
+    fieldDescription: {
+        fontSize: 14,
+        color: '#64748B',
+        marginBottom: 12,
+        lineHeight: 18,
+    },
+    inputContainer: {
+        position: 'relative',
     },
     input: {
-        height: 54,
-        borderColor: '#ddd',
-        borderWidth: 1,
-        borderRadius: 12,
-        paddingHorizontal: 16,
+        height: 56,
+        borderColor: '#E2E8F0',
+        borderWidth: 2,
+        borderRadius: 14,
+        paddingHorizontal: 18,
+        paddingRight: 50,
         fontSize: 16,
-        backgroundColor: '#f9f9f9',
-        width: '100%',
+        backgroundColor: '#FFFFFF',
+        color: '#1A202C',
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.05,
+        shadowRadius: 8,
+        elevation: 2,
+    },
+    inputFilled: {
+        borderColor: '#10B981',
+        backgroundColor: '#F0FDF4',
+    },
+    inputIcon: {
+        position: 'absolute',
+        right: 16,
+        top: 18,
+    },
+    requiredField: {
+        borderColor: '#EF4444',
+        backgroundColor: '#FEF2F2',
+    },
+    required: {
+        color: '#EF4444',
+        fontSize: 16,
+        fontWeight: '600',
     },
     dateContainer: {
-        flexDirection: 'column', // Changed to column for better layout
+        gap: 16,
     },
     dateFieldContainer: {
-        width: '100%',
-        marginBottom: 16, // Added space between date fields
+        marginBottom: 0,
     },
     datePickerButton: {
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'space-between',
-        height: 54,
-        borderColor: '#ddd',
-        borderWidth: 1,
-        borderRadius: 12,
-        paddingHorizontal: 16,
-        backgroundColor: '#f9f9f9',
-        width: '100%',
+        height: 56,
+        borderColor: '#E2E8F0',
+        borderWidth: 2,
+        borderRadius: 14,
+        paddingHorizontal: 18,
+        backgroundColor: '#FFFFFF',
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.05,
+        shadowRadius: 8,
+        elevation: 2,
     },
     dateText: {
         fontSize: 16,
-        color: '#333',
-    },
-    buttonContainer: {
-        alignItems: 'center',
-        marginTop: 36,
-        width: '100%',
-    },
-    button: {
-        backgroundColor: '#27A0CF',
-        borderRadius: 28,
-        paddingVertical: 16,
-        paddingHorizontal: 48,
-        elevation: 3,
-        width: '100%', // Changed to full width
-    },
-    buttonText: {
-        color: 'white',
-        fontWeight: 'bold',
-        fontSize: 18,
-        textAlign: 'center',
-    },
-    dateInput: {
-        flex: 1,
-        fontSize: 16,
+        color: '#1A202C',
+        fontWeight: '500',
     },
     multiPickerContainer: {
-        borderRadius: 12,
-        fontSize: 16,
-        width: '100%',
+        borderRadius: 14,
     },
-    pickerContainer: {
-        borderRadius: 12,
-        fontSize: 16,
-        width: '100%',
-        backgroundColor: '#f9f9f9',
-        borderColor: '#ddd',
-        borderWidth: 1,
+    employeeListContainer: {
+        marginTop: 16,
     },
-    picker: {
-        height: 54,
-        width: '100%', // Ensure full width
-        fontFamily: 'Poppins-Medium',
-    },
-    multiSelectContainer: {
-        flexDirection: 'row',
-        flexWrap: 'wrap',
-        marginBottom: 16,
-        width: '100%', // Ensure full width
-    },
-    multiSelectItem: {
-        backgroundColor: '#f0f0f0',
-        borderRadius: 20,
-        paddingVertical: 10,
-        paddingHorizontal: 16,
-        margin: 6,
-        flexBasis: '45%', // Adjust for two columns with some margin
-    },
-    multiSelectItemSelected: {
-        backgroundColor: '#27A0CF',
-    },
-    multiSelectText: {
-        color: '#333',
-        fontSize: 15,
-    },
-    multiSelectTextSelected: {
-        color: 'white',
-    },
-    textArea: {
-        height: 120,
-        textAlignVertical: 'top',
-        paddingTop: 16,
-        width: '100%', // Ensure full width
+    listTitle: {
+        fontSize: 14,
+        fontWeight: '600',
+        color: '#4A5568',
+        marginBottom: 12,
     },
     flatListContainer: {
-        maxHeight: 200,
-        borderWidth: 1,
-        borderColor: '#ccc',
-        borderRadius: 5,
+        maxHeight: 240,
+        borderWidth: 2,
+        borderColor: '#E2E8F0',
+        borderRadius: 14,
+        backgroundColor: '#FFFFFF',
     },
     contactItem: {
         flexDirection: 'row',
         alignItems: 'center',
-        padding: 10,
+        padding: 16,
         borderBottomWidth: 1,
-        borderBottomColor: '#eee',
+        borderBottomColor: '#F1F5F9',
+        transition: 'all 0.2s ease',
     },
     contactItemSelected: {
-        backgroundColor: '#e6f7ff',
+        backgroundColor: '#EBF8FF',
+        borderBottomColor: '#BEE3F8',
     },
     initialsCircle: {
-        width: 25,
-        height: 25,
-        borderRadius: 20,
+        width: 44,
+        height: 44,
+        borderRadius: 22,
         justifyContent: 'center',
         alignItems: 'center',
-        marginRight: 10,
+        marginRight: 16,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.1,
+        shadowRadius: 4,
+        elevation: 2,
     },
     initialsText: {
         color: '#fff',
-        fontSize: 12,
-        fontWeight: 'bold',
+        fontSize: 16,
+        fontWeight: '700',
     },
     contactInfo: {
         flex: 1,
     },
     contactName: {
+        fontSize: 16,
+        fontWeight: '600',
+        color: '#1A202C',
+        marginBottom: 2,
+    },
+    contactRole: {
         fontSize: 14,
-        fontWeight: 'bold',
+        color: '#64748B',
     },
     selectedEmployeesContainer: {
         flexDirection: 'row',
         flexWrap: 'wrap',
-        padding: 5,
+        padding: 8,
+        backgroundColor: '#F8FAFC',
+        borderRadius: 12,
+        borderWidth: 1,
+        borderColor: '#E2E8F0',
+        marginBottom: 16,
     },
     selectedEmployee: {
         flexDirection: 'row',
         alignItems: 'center',
-        backgroundColor: '#d7d7d7',
-        borderRadius: 15,
-        paddingHorizontal: 10,
-        paddingVertical: 5,
-        marginRight: 5,
-        marginBottom: 5,
+        backgroundColor: '#0E509E',
+        borderRadius: 20,
+        paddingHorizontal: 14,
+        paddingVertical: 8,
+        marginRight: 8,
+        marginBottom: 8,
+        shadowColor: '#0E509E',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.2,
+        shadowRadius: 4,
+        elevation: 3,
     },
     selectedEmployeeName: {
         fontSize: 14,
-        marginRight: 5,
-        fontWeight: 'semibold',
+        marginRight: 8,
+        fontWeight: '600',
+        color: 'white',
     },
     removeButton: {
         padding: 2,
     },
-    required: {
-        color: 'red',
-        fontSize: 16,
+    textArea: {
+        height: 120,
+        paddingTop: 18,
+        paddingBottom: 18,
     },
-    requiredField: {
-        borderColor: 'red',
+    uploadContainer: {
+        marginTop: 8,
     },
-    iconContainer: {
-        flexDirection: 'row',
+    uploadButton: {
+        height: 180,
+        borderWidth: 2,
+        borderColor: '#E2E8F0',
+        borderStyle: 'dashed',
+        borderRadius: 16,
         justifyContent: 'center',
         alignItems: 'center',
+        backgroundColor: '#FAFAFA',
+        overflow: 'hidden',
+    },
+    uploadContent: {
+        alignItems: 'center',
+    },
+    uploadIconContainer: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        marginBottom: 16,
     },
     iconSeparator: {
-        marginHorizontal: 8,
-        fontSize: 24,
-        color: '#999999',
+        marginHorizontal: 16,
+        fontSize: 16,
+        color: '#64748B',
+        fontWeight: '500',
+    },
+    uploadText: {
+        fontSize: 16,
+        fontWeight: '600',
+        color: '#1A202C',
+        marginBottom: 4,
+    },
+    uploadSubtext: {
+        fontSize: 14,
+        color: '#64748B',
+    },
+    imageContainer: {
+        width: '100%',
+        height: '100%',
+        position: 'relative',
     },
     imagePreview: {
         width: '100%',
         height: '100%',
-        borderRadius: 8,
+        borderRadius: 14,
     },
-    uploadContainer: {
-        marginBottom: 16,
-    },
-    uploadButton: {
-        height: 200,
-        borderWidth: 1,
-        borderColor: '#CCCCCC',
-        borderStyle: 'dashed',
-        borderRadius: 8,
+    imageOverlay: {
+        position: 'absolute',
+        top: 12,
+        right: 12,
+        width: 36,
+        height: 36,
+        borderRadius: 18,
+        backgroundColor: 'rgba(0, 0, 0, 0.6)',
         justifyContent: 'center',
         alignItems: 'center',
-        flexDirection: 'row',
+    },
+    buttonContainer: {
+        marginTop: 40,
+    },
+    button: {
+        borderRadius: 16,
+        overflow: 'hidden',
+        shadowColor: '#0E509E',
+        shadowOffset: { width: 0, height: 8 },
+        shadowOpacity: 0.3,
+        shadowRadius: 12,
+        elevation: 8,
+    },
+    buttonDisabled: {
+        shadowOpacity: 0.1,
+        elevation: 2,
+    },
+    buttonGradient: {
+        paddingVertical: 18,
+        paddingHorizontal: 32,
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
+    buttonText: {
+        color: 'white',
+        fontWeight: '700',
+        fontSize: 18,
+        letterSpacing: 0.5,
     },
 });
 

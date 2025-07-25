@@ -188,9 +188,6 @@ const NotificationScreen = ({ navigation }) => {
                 case 'new_task_notif':
                     navigation.navigate('Tugas', navigationParams);
                     break;
-                case 'submit_task_notif':
-                    navigation.navigate('TaskOnReview', { ...navigationParams, mode: 'review' });
-                    break;
                 case 'approve_task_notif':
                     navigation.navigate('Tugas', { ...navigationParams, showCompletionStatus: true });
                     break;

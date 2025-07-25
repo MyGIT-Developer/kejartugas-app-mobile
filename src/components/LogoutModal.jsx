@@ -11,7 +11,7 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 
-const { width } = Dimensions.get('window');
+const { width, height } = Dimensions.get('window');
 
 const LogoutModal = ({ 
     visible, 
@@ -27,6 +27,8 @@ const LogoutModal = ({
     const iconRotateAnim = useRef(new Animated.Value(0)).current;
     const buttonScaleAnim = useRef(new Animated.Value(1)).current;
     const progressAnim = useRef(new Animated.Value(0)).current;
+    const blurFadeAnim = useRef(new Animated.Value(0)).current;
+    const loadingScaleAnim = useRef(new Animated.Value(0.8)).current;
 
     useEffect(() => {
         if (visible) {
@@ -70,6 +72,21 @@ const LogoutModal = ({
 
     useEffect(() => {
         if (isLoading) {
+            // Animate to fullscreen blur
+            Animated.parallel([
+                Animated.timing(blurFadeAnim, {
+                    toValue: 1,
+                    duration: 300,
+                    useNativeDriver: true,
+                }),
+                Animated.spring(loadingScaleAnim, {
+                    toValue: 1,
+                    tension: 100,
+                    friction: 8,
+                    useNativeDriver: true,
+                }),
+            ]).start();
+
             // Start progress animation when loading
             Animated.loop(
                 Animated.timing(progressAnim, {
@@ -79,6 +96,8 @@ const LogoutModal = ({
                 })
             ).start();
         } else {
+            blurFadeAnim.setValue(0);
+            loadingScaleAnim.setValue(0.8);
             progressAnim.setValue(0);
         }
     }, [isLoading]);
@@ -169,30 +188,71 @@ const LogoutModal = ({
             lineHeight: 22,
             paddingHorizontal: 4,
         },
+        fullscreenBlur: {
+            position: 'absolute',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            width: width,
+            height: height,
+            justifyContent: 'center',
+            alignItems: 'center',
+            backgroundColor: 'rgba(0, 0, 0, 0.8)',
+            zIndex: 1000,
+        },
         loadingContainer: {
             alignItems: 'center',
-            paddingVertical: 24,
-            minHeight: 120,
+            paddingVertical: 40,
+            paddingHorizontal: 40,
+            backgroundColor: 'rgba(255, 255, 255, 0.98)',
+            borderRadius: 24,
+            minWidth: 280,
+            shadowColor: '#000',
+            shadowOffset: { width: 0, height: 20 },
+            shadowOpacity: 0.25,
+            shadowRadius: 25,
+            elevation: 25,
+            borderWidth: 1,
+            borderColor: 'rgba(255, 255, 255, 0.2)',
+        },
+        loadingIcon: {
+            width: 80,
+            height: 80,
+            borderRadius: 40,
+            backgroundColor: 'rgba(14, 80, 158, 0.1)',
             justifyContent: 'center',
+            alignItems: 'center',
+            marginBottom: 24,
+            borderWidth: 2,
+            borderColor: 'rgba(14, 80, 158, 0.2)',
+        },
+        loadingTitle: {
+            fontSize: 20,
+            fontWeight: '700',
+            color: '#1F2937',
+            marginBottom: 8,
+            textAlign: 'center',
+            letterSpacing: -0.3,
         },
         loadingText: {
-            marginTop: 16,
             fontSize: 16,
             color: '#6B7280',
             textAlign: 'center',
+            marginBottom: 24,
+            lineHeight: 22,
         },
         loadingProgress: {
-            width: '80%',
-            height: 4,
+            width: 200,
+            height: 6,
             backgroundColor: '#E5E7EB',
-            borderRadius: 2,
-            marginTop: 12,
+            borderRadius: 3,
             overflow: 'hidden',
         },
         loadingProgressFill: {
             height: '100%',
             backgroundColor: '#0E509E',
-            borderRadius: 2,
+            borderRadius: 3,
         },
         modalButtonContainer: {
             flexDirection: 'row',
@@ -268,104 +328,125 @@ const LogoutModal = ({
                         }
                     ]}
                 >
-                    {isLoading ? (
-                        <View style={styles.loadingContainer}>
-                            <ActivityIndicator size="large" color="#0E509E" />
+                    <View style={styles.modalIcon}>
+                        <Animated.View
+                            style={{
+                                transform: [{ rotate: iconRotation }]
+                            }}
+                        >
+                            <Ionicons 
+                                name="log-out-outline" 
+                                size={52} 
+                                color="#EF4444" 
+                            />
+                        </Animated.View>
+                    </View>
+                    <Text
+                        style={[
+                            styles.modalTitle, 
+                            fontsLoaded ? { fontFamily: 'Poppins-Bold' } : null
+                        ]}
+                    >
+                        Konfirmasi Logout
+                    </Text>
+                    <Text
+                        style={[
+                            styles.modalSubtitle,
+                            fontsLoaded ? { fontFamily: 'Poppins-Regular' } : null,
+                        ]}
+                    >
+                        Apakah Anda yakin ingin keluar dari aplikasi? Anda perlu login kembali untuk mengakses akun.
+                    </Text>
+                    <Animated.View 
+                        style={[
+                            styles.modalButtonContainer,
+                            { transform: [{ scale: buttonScaleAnim }] }
+                        ]}
+                    >
+                        <TouchableOpacity
+                            style={[
+                                styles.cancelButton,
+                                isLoading && styles.disabledButton
+                            ]}
+                            onPress={() => handleButtonPress(onCancel, false)}
+                            activeOpacity={0.8}
+                            disabled={isLoading}
+                        >
                             <Text
                                 style={[
-                                    styles.loadingText,
+                                    styles.cancelButtonText,
                                     fontsLoaded ? { fontFamily: 'Poppins-Medium' } : null,
                                 ]}
                             >
-                                Sedang logout...
+                                Batal
                             </Text>
-                            <View style={styles.loadingProgress}>
-                                <Animated.View 
-                                    style={[
-                                        styles.loadingProgressFill,
-                                        { width: progressWidth }
-                                    ]} 
-                                />
-                            </View>
-                        </View>
-                    ) : (
-                        <>
-                            <View style={styles.modalIcon}>
-                                <Animated.View
-                                    style={{
-                                        transform: [{ rotate: iconRotation }]
-                                    }}
-                                >
-                                    <Ionicons 
-                                        name="log-out-outline" 
-                                        size={52} 
-                                        color="#EF4444" 
-                                    />
-                                </Animated.View>
-                            </View>
+                        </TouchableOpacity>
+                        <TouchableOpacity
+                            style={[
+                                styles.confirmButton,
+                                isLoading && styles.disabledButton
+                            ]}
+                            onPress={() => handleButtonPress(onConfirm, true)}
+                            activeOpacity={0.8}
+                            disabled={isLoading}
+                        >
                             <Text
                                 style={[
-                                    styles.modalTitle, 
-                                    fontsLoaded ? { fontFamily: 'Poppins-Bold' } : null
+                                    styles.confirmButtonText,
+                                    fontsLoaded ? { fontFamily: 'Poppins-Medium' } : null,
                                 ]}
                             >
-                                Konfirmasi Logout
+                                Logout
                             </Text>
-                            <Text
-                                style={[
-                                    styles.modalSubtitle,
-                                    fontsLoaded ? { fontFamily: 'Poppins-Regular' } : null,
-                                ]}
-                            >
-                                Apakah Anda yakin ingin keluar dari aplikasi? Anda perlu login kembali untuk mengakses akun.
-                            </Text>
-                            <Animated.View 
-                                style={[
-                                    styles.modalButtonContainer,
-                                    { transform: [{ scale: buttonScaleAnim }] }
-                                ]}
-                            >
-                                <TouchableOpacity
-                                    style={[
-                                        styles.cancelButton,
-                                        isLoading && styles.disabledButton
-                                    ]}
-                                    onPress={() => handleButtonPress(onCancel, false)}
-                                    activeOpacity={0.8}
-                                    disabled={isLoading}
-                                >
-                                    <Text
-                                        style={[
-                                            styles.cancelButtonText,
-                                            fontsLoaded ? { fontFamily: 'Poppins-Medium' } : null,
-                                        ]}
-                                    >
-                                        Batal
-                                    </Text>
-                                </TouchableOpacity>
-                                <TouchableOpacity
-                                    style={[
-                                        styles.confirmButton,
-                                        isLoading && styles.disabledButton
-                                    ]}
-                                    onPress={() => handleButtonPress(onConfirm, true)}
-                                    activeOpacity={0.8}
-                                    disabled={isLoading}
-                                >
-                                    <Text
-                                        style={[
-                                            styles.confirmButtonText,
-                                            fontsLoaded ? { fontFamily: 'Poppins-Medium' } : null,
-                                        ]}
-                                    >
-                                        {isLoading ? 'Logging out...' : 'Logout'}
-                                    </Text>
-                                </TouchableOpacity>
-                            </Animated.View>
-                        </>
-                    )}
+                        </TouchableOpacity>
+                    </Animated.View>
                 </Animated.View>
             </Animated.View>
+
+            {/* Fullscreen Loading Overlay */}
+            {isLoading && (
+                <Animated.View
+                    style={[
+                        styles.fullscreenBlur,
+                        { opacity: blurFadeAnim }
+                    ]}
+                >
+                    <Animated.View 
+                        style={[
+                            styles.loadingContainer,
+                            { transform: [{ scale: loadingScaleAnim }] }
+                        ]}
+                    >
+                        <View style={styles.loadingIcon}>
+                            <ActivityIndicator size="large" color="#0E509E" />
+                        </View>
+                        <Text
+                            style={[
+                                styles.loadingTitle,
+                                fontsLoaded ? { fontFamily: 'Poppins-Bold' } : null,
+                            ]}
+                        >
+                            Logging Out
+                        </Text>
+                        <Text
+                            style={[
+                                styles.loadingText,
+                                fontsLoaded ? { fontFamily: 'Poppins-Regular' } : null,
+                            ]}
+                        >
+                            Sedang memproses logout...
+                        </Text>
+                        <View style={styles.loadingProgress}>
+                            <Animated.View 
+                                style={[
+                                    styles.loadingProgressFill,
+                                    { width: progressWidth }
+                                ]} 
+                            />
+                        </View>
+                    </Animated.View>
+                </Animated.View>
+            )}
         </Modal>
     );
 };

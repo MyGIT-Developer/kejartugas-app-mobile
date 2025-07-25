@@ -17,7 +17,7 @@ const STATUS_MAPPING = {
     rejected: { text: 'Ditolak', bgColor: '#F69292', textColor: '#811616' },
     onReview: { text: 'Dalam Peninjauan', bgColor: '#f6e092', textColor: '#ee9000' },
     onHold: { text: 'Ditunda', bgColor: '#F69292', textColor: '#811616' },
-    onPending: { text: 'Tersedia', bgColor: '#FEEE91', textColor: 'gray' },
+    onPending: { text: 'Tersedia', bgColor: '#FEEE91', textColor: '#ee9000' },
     earlyFinish: { text: 'Early Finish', bgColor: '#C9F8C1', textColor: '#0A642E' },
     finish: { text: 'On Time', bgColor: '#95d6fc', textColor: '#0b4b76' },
     'finish in delay': { text: 'Finish Delay', bgColor: '#f6e092', textColor: '#ee9000' },
@@ -228,17 +228,18 @@ const TableRow = React.memo(({ item, index, onTaskPress, projectData, fetchProje
                                         <Feather name={'trash'} color="red" />
                                     </TouchableOpacity>
                                     {/* <TouchableOpacity style={[styles.buttonAction, { backgroundColor: 'none' }]}>
-                                            <Text style={[styles.expandedText, { color: '#0E509E' }]}>Approve</Text>
-                                            <Feather name={'check'} color={'blue'} />
-                                        </TouchableOpacity>
-                                        <TouchableOpacity style={[styles.buttonAction, { backgroundColor: 'none' }]}>
+                                        <Text style={[styles.expandedText, { color: '#0E509E' }]}>Approve</Text>
+                                        <Feather name={'check'} color={'blue'} />
+                                    </TouchableOpacity>
+                                    <TouchableOpacity style={[styles.buttonAction, { backgroundColor: 'none' }]}>
                                         <Text style={[styles.expandedText, { color: '#0E509E' }]}>Reject</Text>
-                            <Feather name={'x'} color={'red'} />
-                        </TouchableOpacity> */}
+                                        <Feather name={'x'} color={'red'} />
+                                    </TouchableOpacity> */}
                                 </View>
                             </View>
                         </View>
                     )}
+
                     <ReusableBottomPopUp
                         show={alert.show}
                         alertType={alert.type}
@@ -270,7 +271,7 @@ const DetailProjekDua = ({ data, onFetch }) => {
     });
     const [filterModalVisible, setFilterModalVisible] = useState(false);
     const [sortDirection, setSortDirection] = useState('asc');
-
+    const navigation = useNavigation();
     // Status priority for sorting
     const statusPriority = {
         'onPending': 1,    // Tersedia
@@ -579,6 +580,16 @@ const DetailProjekDua = ({ data, onFetch }) => {
                 />
                 <Text style={styles.actionButtonText}>Sort</Text>
             </TouchableOpacity>
+            <TouchableOpacity
+                style={styles.actionButton}
+                onPress={() => navigation.navigate('TaskForm', {
+                    projectData: data,
+                })} // Navigasi ke layar TaskForm dengan data proyek
+            >
+                <Feather name="plus-circle" size={20}
+                    color="#0E509E" />
+                <Text style={styles.actionButtonText}>Tugas Baru</Text>
+            </TouchableOpacity>
         </View>
     );
 
@@ -635,63 +646,69 @@ const DetailProjekDua = ({ data, onFetch }) => {
     };
 
     return (
-        <ScrollView contentContainerStyle={styles.container}>
-            <View style={styles.mainContainer}>
-                <ActionButtons />
+        <View style={styles.screenContainer}>
+            <ActionButtons />
 
-                <ScrollView
-                    style={styles.scrollView}
-                    contentContainerStyle={styles.scrollViewContent}
-                    showsVerticalScrollIndicator={false}
-                >
-                    <View style={styles.headerSection}>
-                        <View style={styles.tableHeader}>
-                            <Text style={[styles.headerCell, styles.indexHeaderCell]}>No</Text>
-                            <Text style={[styles.headerCell, styles.taskNameHeaderCell]}>Nama Tugas</Text>
-                            <Text style={[styles.headerCell, styles.statusHeaderCell]}>Status</Text>
+            <ScrollView contentContainerStyle={styles.container}>
+                <View style={styles.mainContainer}>
+
+                    <ScrollView
+                        style={styles.scrollView}
+                        contentContainerStyle={styles.scrollViewContent}
+                        showsVerticalScrollIndicator={false}
+                    >
+                        <View style={styles.headerSection}>
+                            <View style={styles.tableHeader}>
+                                <Text style={[styles.headerCell, styles.indexHeaderCell]}>No</Text>
+                                <Text style={[styles.headerCell, styles.taskNameHeaderCell]}>Nama Tugas</Text>
+                                <Text style={[styles.headerCell, styles.statusHeaderCell]}>Status</Text>
+                            </View>
                         </View>
-                    </View>
 
-                    {/* Table Section */}
-                    <View style={styles.tableSection}>
-                        {filteredAndSortedTasks && filteredAndSortedTasks.length > 0 ? (
-                            filteredAndSortedTasks.map((item, index) => (
-                                <TableRow
-                                    key={item.id || index}
-                                    item={item}
-                                    index={index}
-                                    onTaskPress={handleTaskDetailPress}
-                                    projectData={data}
-                                    fetchProjectData={onFetch}
-                                />
-                            ))
-                        ) : (
-                            <TableRow item={{ task_name: 'No data available' }} index={0} />
-                        )}
-                    </View>
-                </ScrollView>
+                        {/* Table Section */}
+                        <View style={styles.tableSection}>
+                            {filteredAndSortedTasks && filteredAndSortedTasks.length > 0 ? (
+                                filteredAndSortedTasks.map((item, index) => (
+                                    <TableRow
+                                        key={item.id || index}
+                                        item={item}
+                                        index={index}
+                                        onTaskPress={handleTaskDetailPress}
+                                        projectData={data}
+                                        fetchProjectData={onFetch}
+                                    />
+                                ))
+                            ) : (
+                                <TableRow item={{ task_name: 'No data available' }} index={0} />
+                            )}
+                        </View>
+                    </ScrollView>
+                </View>
 
-                {/* Floating Button */}
-                <FloatingButtonTask projectData={data} />
-            </View>
+                <FilterModal />
 
+                {/* Modals */}
+                <DraggableModalTask
+                    visible={draggableModalVisible}
+                    onClose={() => {
+                        setDraggableModalVisible(false);
+                        setSelectedTask(null);
+                    }}
+                    taskDetails={selectedTask || {}}
+                />
+            </ScrollView>
 
-            <FilterModal />
+            {/* Floating Button */}
 
-            {/* Modals */}
-            <DraggableModalTask
-                visible={draggableModalVisible}
-                onClose={() => {
-                    setDraggableModalVisible(false);
-                    setSelectedTask(null);
-                }}
-                taskDetails={selectedTask || {}}
-            />
-        </ScrollView>
+        </View>
     );
 };
 
 const styles = StyleSheet.create({
+    screenContainer: {
+        flex: 1,
+        position: 'relative',
+    },
     container: {
         display: 'flex',
         flexGrow: 1,
@@ -731,10 +748,10 @@ const styles = StyleSheet.create({
         borderTopRightRadius: 15,
     },
     headerCell: {
-        fontWeight: 'bold',
         color: 'white',
-        fontFamily: 'Poppins-Medium',
-        letterSpacing: -0.3,
+        fontFamily: FONTS.family.semiBold,
+        fontSize: FONTS.size.md,
+        letterSpacing: -0.5,
     },
     indexHeaderCell: {
         flex: 1,
@@ -764,26 +781,41 @@ const styles = StyleSheet.create({
         elevation: 1,
     },
     expandedContent: {
-        marginTop: 12,
-        backgroundColor: '#F9FAFB',
+        marginTop: 8,
+        backgroundColor: '#F3F4F6',
         borderRadius: 12,
         padding: 16,
-        gap: 8,
+        shadowColor: '#000',
+        shadowOpacity: 0.05,
+        shadowRadius: 4,
+        borderWidth: 1,
+        borderColor: '#E5E7EB',
     },
     expandedText: {
-        fontSize: 14,
+        fontSize: FONTS.size.sm,
+        fontFamily: FONTS.family.medium,
+        letterSpacing: -0.5,
         color: '#111827',
     },
     expandedLabel: {
-        fontWeight: '600',
-        fontSize: 13,
-        color: '#374151',
+        fontSize: FONTS.size.sm,
+        fontFamily: FONTS.family.medium,
+        color: '#6B7280',
         marginBottom: 2,
     },
     row: {
         flexDirection: 'row',
         alignItems: 'center',
-        padding: 12,
+        padding: 14,
+        borderRadius: 8,
+        backgroundColor: 'white',
+        marginVertical: 6,
+        marginHorizontal: 4,
+        elevation: 1,
+        shadowColor: '#ccc',
+        shadowOffset: { width: 0, height: 1 },
+        shadowOpacity: 0.2,
+        shadowRadius: 2,
     },
     indexCell: {
         flexDirection: 'row',
@@ -803,11 +835,10 @@ const styles = StyleSheet.create({
         marginRight: 10,
     },
     taskNameText: {
-        fontSize: 14,
-        fontWeight: '500',
+        fontSize: FONTS.size.md,
+        fontFamily: FONTS.family.semiBold,
         color: '#333',
-        fontFamily: 'Poppins-Medium',
-        letterSpacing: -0.3,
+        letterSpacing: -0.5,
     },
     statusCell: {
         paddingHorizontal: 10,
@@ -819,8 +850,10 @@ const styles = StyleSheet.create({
         justifyContent: 'center',
     },
     statusText: {
-        fontSize: 14,
-        fontWeight: '600',
+        fontSize: FONTS.size.sm,
+        fontFamily: FONTS.family.semiBold,
+        color: '#333',
+        letterSpacing: -0.5,
         textAlign: 'center',
     },
     expandedColumnText: {
@@ -837,14 +870,24 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         alignItems: 'center',
         gap: 6,
-        padding: 6,
+        paddingHorizontal: 12,
+        paddingVertical: 6,
         borderRadius: 8,
         backgroundColor: '#EFF6FF',
+        borderWidth: 1,
+        borderColor: '#DBEAFE',
+    },
+    expandedButtonContainer: {
+        flexDirection: 'row',
+        flexWrap: 'wrap',
+        gap: 10,
+        justifyContent: 'space-between',
+        marginTop: 12,
     },
     actionButtonsContainer: {
         flexDirection: 'row',
         justifyContent: 'flex-end',
-        padding: 10,
+        padding: 20,
         gap: 10,
     },
     actionButton: {
@@ -961,6 +1004,18 @@ const styles = StyleSheet.create({
     },
     filterButton: {
         padding: 8,
+    },
+    addButton: {
+        width: 56,
+        borderRadius: 28,
+        backgroundColor: '#4A90E2',
+        justifyContent: 'center',
+        alignItems: 'center',
+        shadowColor: '#4A90E2',
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.3,
+        shadowRadius: 8,
+        elevation: 8,
     },
 });
 

@@ -91,7 +91,7 @@ const DetailProjekSatu = ({ data }) => {
                     <Text style={{
                         fontFamily: FONTS.family.semiBold,
                         fontSize: FONTS.size.md,
-                        color: '#6e6e6eff',
+                        color: '#919191ff',
                         letterSpacing: -0.5,
                     }}>
                         Nama Proyek
