@@ -9,7 +9,7 @@ import {
     Platform,
     StatusBar,
     ScrollView,
-    Animated
+    Animated,
 } from 'react-native';
 import { getProject } from '../api/projectTask';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -97,16 +97,14 @@ const ProjectSection = ({
     }
 
     // Sort & optionally limit results
-    filteredProjects = filteredProjects
-        .sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+    filteredProjects = filteredProjects.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
     if (limitToFive) filteredProjects = filteredProjects.slice(0, 5);
 
     // Only show projects where task_status_counts for this status is not 0
     const visibleProjects = filteredProjects.filter(
         (item) =>
             status === 'all' ||
-            (item.task_status_counts &&
-                item.task_status_counts.find((t) => t.task_status === status && t.count > 0))
+            (item.task_status_counts && item.task_status_counts.find((t) => t.task_status === status && t.count > 0)),
     );
 
     console.log('Visible Projects:', visibleProjects);
@@ -117,9 +115,11 @@ const ProjectSection = ({
                 <Text style={styles.sectionTitle}>
                     {title} {status === 'all' ? `(${visibleProjects.length})` : ''}
                 </Text>
-                <TouchableOpacity onPress={() => handleGoTo(status)}>
-                    <Text style={styles.seeAllText}>Lihat semua</Text>
-                </TouchableOpacity>
+                {visibleProjects.length > 0 && (
+                    <TouchableOpacity onPress={() => handleGoTo(status)}>
+                        <Text style={styles.seeAllText}>Lihat semua</Text>
+                    </TouchableOpacity>
+                )}
             </View>
 
             {visibleProjects.length === 0 ? (
@@ -135,7 +135,17 @@ const ProjectSection = ({
                             {status === 'all' ? (
                                 <ProjectCard item={item} handleGoToDetail={handleGoToDetail} />
                             ) : (
-                                <View style={[styles.card, { flexDirection: 'row', gap: 12, justifyContent: 'space-between', alignItems: 'center' }]}>
+                                <View
+                                    style={[
+                                        styles.card,
+                                        {
+                                            flexDirection: 'row',
+                                            gap: 12,
+                                            justifyContent: 'space-between',
+                                            alignItems: 'center',
+                                        },
+                                    ]}
+                                >
                                     <View style={{ flex: 2, maxWidth: '60%', gap: 2 }}>
                                         <Text style={styles.projectNameLabel} numberOfLines={2}>
                                             Nama Projek
@@ -143,30 +153,39 @@ const ProjectSection = ({
                                         <Text style={styles.projectName} numberOfLines={2}>
                                             {item.project_name}
                                         </Text>
-                                        <View style={{
-                                            alignSelf: 'flex-start',
-                                            backgroundColor: item.project_type === 'maintenance' ? '#FFF7E0' : '#E6F7FF',
-                                            borderRadius: 8,
-                                            paddingHorizontal: 10,
-                                            paddingVertical: 4,
-                                            marginTop: 4,
-                                            marginBottom: 2,
-                                            flexDirection: 'row',
-                                            alignItems: 'center',
-                                        }}>
+                                        <View
+                                            style={{
+                                                alignSelf: 'flex-start',
+                                                backgroundColor:
+                                                    item.project_type === 'maintenance' ? '#FFF7E0' : '#E6F7FF',
+                                                borderRadius: 8,
+                                                paddingHorizontal: 10,
+                                                paddingVertical: 4,
+                                                marginTop: 4,
+                                                marginBottom: 2,
+                                                flexDirection: 'row',
+                                                alignItems: 'center',
+                                            }}
+                                        >
                                             <Ionicons
-                                                name={item.project_type === 'maintenance' ? 'construct-outline' : 'briefcase-outline'}
+                                                name={
+                                                    item.project_type === 'maintenance'
+                                                        ? 'construct-outline'
+                                                        : 'briefcase-outline'
+                                                }
                                                 size={16}
                                                 color={item.project_type === 'maintenance' ? '#E6A100' : '#1890FF'}
                                                 style={{ marginRight: 4 }}
                                             />
-                                            <Text style={{
-                                                fontFamily: FONTS.family.medium,
-                                                fontSize: FONTS.size.xs,
-                                                color: item.project_type === 'maintenance' ? '#E6A100' : '#1890FF',
-                                                letterSpacing: -0.3,
-                                                textTransform: 'capitalize',
-                                            }}>
+                                            <Text
+                                                style={{
+                                                    fontFamily: FONTS.family.medium,
+                                                    fontSize: FONTS.size.xs,
+                                                    color: item.project_type === 'maintenance' ? '#E6A100' : '#1890FF',
+                                                    letterSpacing: -0.3,
+                                                    textTransform: 'capitalize',
+                                                }}
+                                            >
                                                 {item.project_type === 'maintenance' ? 'Maintenance' : 'General'}
                                             </Text>
                                         </View>
@@ -187,19 +206,24 @@ const ProjectSection = ({
                                             {
                                                 // borderColor:
                                                 //     status === 'workingOnIt' ? '#ec930fff' : '#d74b24ff',
-                                                backgroundColor:
-                                                    status === 'workingOnIt' ? '#ffeed6ff' : '#fff1f0ff',
+                                                backgroundColor: status === 'workingOnIt' ? '#ffeed6ff' : '#fff1f0ff',
                                             },
                                         ]}
                                     >
-                                        <Text style={[styles.badgeTextNumber, { color: status === 'workingOnIt' ? '#ec930fff' : '#d74b24ff', }]}>
-                                            {
-                                                item.task_status_counts.find(
-                                                    (t) => t.task_status === status
-                                                )?.count
-                                            }
+                                        <Text
+                                            style={[
+                                                styles.badgeTextNumber,
+                                                { color: status === 'workingOnIt' ? '#ec930fff' : '#d74b24ff' },
+                                            ]}
+                                        >
+                                            {item.task_status_counts.find((t) => t.task_status === status)?.count}
                                         </Text>
-                                        <Text style={[styles.badgeTextDescription, { color: status === 'workingOnIt' ? '#ec930fff' : '#d74b24ff', }]}>
+                                        <Text
+                                            style={[
+                                                styles.badgeTextDescription,
+                                                { color: status === 'workingOnIt' ? '#ec930fff' : '#d74b24ff' },
+                                            ]}
+                                        >
                                             {/* {status === 'workingOnIt'
                                                     ? 'Tugas Dalam Pengerjaan'
                                                     : 'Tugas Perlu Ditinjau'} */}
@@ -290,7 +314,6 @@ const ProjectDashboard = () => {
     };
 
     const renderContent = () => {
-
         if (loading) {
             return (
                 <ScrollView
@@ -495,8 +518,7 @@ const ProjectDashboard = () => {
             {renderHeader()}
             {hasAccess && (
                 <>
-                    <View
-                        style={styles.scrollViewContent}>
+                    <View style={styles.scrollViewContent}>
                         <Animated.View
                             style={[
                                 styles.headerContainer,
@@ -572,17 +594,14 @@ const ProjectDashboard = () => {
                     </View>
                     <TouchableOpacity
                         style={styles.addButton}
-                        onPress={() => navigation.navigate('ProjectForm',
-                            { mode: 'create' }
-                        )} // Navigasi ke layar AddAdhoc
+                        onPress={() => navigation.navigate('ProjectForm', { mode: 'create' })} // Navigasi ke layar AddAdhoc
                     >
                         <Feather name="plus-circle" size={24} color="#FFFFFF" />
                     </TouchableOpacity>
                 </>
-            )
-            }
+            )}
             {hasAccess === false && <AccessDenied setHasAccess={setHasAccess} />}
-        </SafeAreaView >
+        </SafeAreaView>
     );
 };
 
@@ -790,7 +809,7 @@ const styles = StyleSheet.create({
     },
     badgeTextNumber: {
         fontFamily: FONTS.family.bold,
-        fontSize: FONTS.size["5xl"],
+        fontSize: FONTS.size['5xl'],
     },
     badgeTextDescription: {
         fontFamily: FONTS.family.medium,

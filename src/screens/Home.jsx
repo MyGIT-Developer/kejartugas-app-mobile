@@ -272,37 +272,22 @@ const Home = () => {
             Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
             let requiredPermission;
 
-            switch (stat.description) {
-                case 'Projek Dalam Pengerjaan':
-                case 'Total Projek Selesai':
-                    requiredPermission = accessPermissions.access_project;
-                    break;
-                case 'Tugas Dalam Pengerjaan':
-                case 'Tugas Selesai':
-                    requiredPermission = accessPermissions.access_tasks;
-                    break;
-                default:
-                    showAlert('Fitur Belum Tersedia.', 'error');
+            if (stat.type === 'project') {
+                requiredPermission = accessPermissions.access_project;
+                if (!requiredPermission) {
+                    showAlert('You do not have permission to access this feature.', 'error');
                     return;
-            }
-
-            if (!requiredPermission) {
-                showAlert('You do not have permission to access this feature.', 'error');
-                return;
-            }
-
-            // Navigate based on the description
-            switch (stat.description) {
-                case 'Projek Dalam Pengerjaan':
-                    navigation.navigate('ProjectOnWorking');
-                    break;
-                case 'Total Projek Selesai':
-                    navigation.navigate('ProjectList');
-                    break;
-                case 'Tugas Dalam Pengerjaan':
-                case 'Tugas Selesai':
-                    navigation.navigate('Tugas');
-                    break;
+                }
+                navigation.navigate('ProjectList');
+            } else if (stat.type === 'task') {
+                requiredPermission = accessPermissions.access_tasks;
+                if (!requiredPermission) {
+                    showAlert('You do not have permission to access this feature.', 'error');
+                    return;
+                }
+                navigation.navigate('Tugas');
+            } else {
+                showAlert('Fitur Belum Tersedia.', 'error');
             }
         },
         [accessPermissions, navigation, showAlert],
@@ -376,24 +361,28 @@ const Home = () => {
                 value: `${dashboardData.total_projects_working_on_it} Projek`,
                 color: '#FAA1A7',
                 icon: 'monitor',
+                type: 'project',
             },
             {
                 description: 'Selesai',
                 value: `${dashboardData.total_projects_complete} Projek`,
                 color: '#3E84CF',
                 icon: 'check-circle',
+                type: 'project',
             },
             {
                 description: 'Dalam Pengerjaan',
                 value: `${dashboardData.total_tasks_working_on_it} Tugas`,
                 color: '#DD9968',
                 icon: 'rotate-cw',
+                type: 'task',
             },
             {
                 description: 'Selesai',
                 value: `${dashboardData.total_tasks_completed} Tugas`,
                 color: '#3AD665',
                 icon: 'check-square',
+                type: 'task',
             },
         ]
         : [];
