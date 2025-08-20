@@ -11,6 +11,7 @@ import {
     ImageBackground,
     Keyboard,
     ActivityIndicator,
+    ToastAndroid,
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useNavigation } from '@react-navigation/native';
@@ -24,7 +25,7 @@ import NotificationService from '../utils/notificationService';
 import { setupNotifications } from '../api/notification';
 import { FONTS } from '../constants/fonts';
 import { LinearGradient } from 'expo-linear-gradient';
-//test
+
 const Login = () => {
     const [credentials, setCredentials] = useState({ username: '', password: '' });
     const [passwordVisible, setPasswordVisible] = useState(false);
@@ -171,6 +172,23 @@ const Login = () => {
         setAlert((prev) => ({ ...prev, show: false }));
     }, []);
 
+    // Handle register button press with toast message
+    const handleRegisterPress = useCallback(() => {
+        // Show toast message
+        if (Platform.OS === 'android') {
+            ToastAndroid.show('Untuk melakukan pendaftaran silahkan kunjungi KejarTugas.com', ToastAndroid.LONG);
+        } else {
+            // For iOS, use alert as fallback since ToastAndroid is Android only
+            showAlert('Untuk melakukan pendaftaran silahkan kunjungi KejarTugas.com', 'info');
+        }
+
+        // Still navigate to WebView (keeping existing functionality)
+        // navigation.navigate('WebViewScreen', {
+        //     url: 'https://app.kejartugas.com/register/free',
+        //     title: 'Daftar KejarTugas',
+        // });
+    }, [navigation, showAlert]);
+
     if (!fontsLoaded) {
         return (
             <View style={styles.centeredLoadingContainer}>
@@ -230,14 +248,7 @@ const Login = () => {
                             )}
                         </LinearGradient>
                     </TouchableOpacity>
-                    <TouchableOpacity
-                        onPress={() =>
-                            navigation.navigate('WebViewScreen', {
-                                url: 'https://app.kejartugas.com/register/free',
-                                title: 'Daftar KejarTugas',
-                            })
-                        }
-                    >
+                    <TouchableOpacity onPress={handleRegisterPress}>
                         <Text style={styles.registerText}>
                             <Text style={styles.registerTextBlack}>Belum punya akun? </Text>
                             <Text style={styles.registerTextBlue}>Daftar sekarang!</Text>
