@@ -1,37 +1,126 @@
-# dependencies
+# Dependencies
 node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
 
-# Expo
+# React Native
+.react-native/
+
+# Metro bundler
+.metro-health-check*
+.metro/
+
+# Expo (if using)
 .expo/
 dist/
 web-build/
 
-# Native
+# Android
+android/app/build/
+android/build/
+android/.gradle/
+android/app/release/
+android/gradle/
+android/gradlew
+android/gradlew.bat
+android/local.properties
+android/.project
+android/.settings/
+android/app/.cxx/
+*.keystore
+!debug.keystore
+
+# iOS
+ios/build/
+ios/Pods/
+ios/*.xcworkspace
+ios/*.xcuserdata/
+ios/DerivedData/
+ios/.xcode.env.local
+
+# fastlane
+**/fastlane/report.xml
+**/fastlane/Preview.html
+**/fastlane/screenshots
+**/fastlane/test_output
+
+# Bundle artifacts
+*.jsbundle
+
+# Native crash logs
+*.crash
+
+# Build artifacts
 *.orig.*
 *.jks
 *.p8
 *.p12
 *.key
 *.mobileprovision
+*.pem
 
-# Ignore Android and iOS folders if using Expo Prebuild
-/android
-/ios
-
-# Metro
-.metro-health-check*
-
-# debug
-npm-debug.*
-yarn-debug.*
-yarn-error.*
+# Environment variables
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
 
 # macOS
 .DS_Store
-*.pem
+.AppleDouble
+.LSOverride
 
-# local env files
-.env*.local
+# Windows
+Thumbs.db
+Thumbs.db:encryptable
+ehthumbs.db
+ehthumbs_vista.db
 
-# typescript
+# VSCode
+.vscode/
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/extensions.json
+
+# IntelliJ/Android Studio
+*.iml
+.idea/
+.gradle/
+
+# Temporary files
+*.tmp
+*.temp
+*.log
+
+# TypeScript
 *.tsbuildinfo
+
+# ESLint
+.eslintcache
+
+# Flipper
+flipper-server-state.json
+
+# Testing
+coverage/
+*.lcov
+
+# Watchman
+.watchmanconfig
+
+# Buck
+buck-out/
+\.buckd/
+*.keystore
+!debug.keystore
+
+# CocoaPods (iOS)
+ios/Pods/
+ios/Podfile.lock
+
+# Gradle (Android)
+*.gradle
+!android/gradle/wrapper/gradle-wrapper.properties
