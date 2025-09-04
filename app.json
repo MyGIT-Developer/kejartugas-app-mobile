@@ -25,7 +25,7 @@
         "assetBundlePatterns": ["assets/fonts/*", "assets/images/*", "assets/icon/*", "assets/animations/*"],
         "ios": {
             "supportsTablet": true,
-            "bundleIdentifier": "com.git.kejartugas",
+            "bundleIdentifier": "com.innovation.kejartugas",
             "jsEngine": "hermes",
             "infoPlist": {
                 "NSCameraUsageDescription": "Aplikasi ini memerlukan akses kamera untuk mengambil foto.",
@@ -40,7 +40,7 @@
                 "foregroundImage": "./assets/images/kt-512.png",
                 "backgroundColor": "#FFFFFF"
             },
-            "package": "com.git.kejartugas",
+            "package": "com.innovation.kejartugas",
             "permissions": [
                 "CAMERA",
                 "READ_EXTERNAL_STORAGE",
