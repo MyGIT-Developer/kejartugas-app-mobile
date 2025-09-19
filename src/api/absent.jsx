@@ -36,6 +36,7 @@ export const getAttendance = async (employeeId, page = 1, limit = 50) => {
             params: {
                 page,
                 limit,
+                weekly_only: true,
             },
         });
         return response.data; // Should return { data: [...], pagination: {...} }
