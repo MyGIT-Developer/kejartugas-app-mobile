@@ -267,10 +267,13 @@ const Kehadiran = () => {
             const radius = parameterResponse?.data?.radius || DEFAULT_RADIUS;
 
             // Step 3: Find today's attendance from first page
-            const today = new Date().toISOString().split('T')[0];
+            const today = new Date();
             const todayAttendance = attendanceResponse.attendance?.find((record) => {
-                const recordDate = new Date(record.checkin).toISOString().split('T')[0];
-                return recordDate === today;
+                // Use local timezone for date comparison to avoid timezone issues
+                const recordDate = new Date(record.checkin);
+                const localRecordDate = new Date(recordDate.getFullYear(), recordDate.getMonth(), recordDate.getDate());
+                const localToday = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+                return localRecordDate.getTime() === localToday.getTime();
             });
 
             const checkedOutStatus = Boolean(todayAttendance?.checkout);
@@ -773,7 +776,18 @@ const Kehadiran = () => {
             const formattedDate = currentDate.toISOString().split('T')[0];
 
             const attendanceForDate = attendanceData.find((attendance) => {
-                const checkinDate = new Date(attendance.checkin).toISOString().split('T')[0];
+                const checkinDate = new Date(attendance.checkin);
+                const localCheckinDate = new Date(
+                    checkinDate.getFullYear(),
+                    checkinDate.getMonth(),
+                    checkinDate.getDate(),
+                );
+                const localFormattedDate = new Date(
+                    currentDate.getFullYear(),
+                    currentDate.getMonth(),
+                    currentDate.getDate(),
+                );
+                return localCheckinDate.getTime() === localFormattedDate.getTime();
                 return checkinDate === formattedDate;
             });
 
