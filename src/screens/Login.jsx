@@ -76,6 +76,10 @@ const Login = () => {
 
     // Enhanced error message handler
     const getErrorMessage = useCallback((error) => {
+        // Prefer server-provided message when available
+        const serverMessage = error.response?.data?.message || error.response?.data?.error;
+        if (serverMessage) return serverMessage;
+
         if (error.response?.status === 401) {
             return 'Username atau password salah';
         }
