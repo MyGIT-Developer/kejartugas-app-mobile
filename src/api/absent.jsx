@@ -129,3 +129,55 @@ export const checkOut = async (employeeId, companyId, location, location_name) =
         throw new Error(error.response?.data?.message || 'Checking out failed');
     }
 };
+
+// Function to start lunch (break) for a specific attendance record
+export const lunchStart = async (attendanceId, location, lunchImageBase64 = null) => {
+    try {
+        const payload = {
+            action: 'lunch_start',
+            attendance_id: attendanceId,
+            location: location, // expecting "latitude,longitude" or object depending on backend
+            lunch_image: lunchImageBase64,
+        };
+
+        const response = await apiService.put(`/attendance/`, payload, {
+            params: {
+                action: 'lunch_start',
+                attendance_id: attendanceId,
+            },
+            headers: {
+                Authorization: `Bearer ${await AsyncStorage.getItem('token')}`,
+            },
+        });
+
+        return response.data;
+    } catch (error) {
+        console.error('Lunch start failed:', error.response?.data?.message || error.message);
+        throw new Error(error.response?.data?.message || 'Starting lunch failed');
+    }
+};
+
+// Function to end lunch (break) for a specific attendance record
+export const lunchEnd = async (attendanceId) => {
+    try {
+        const payload = {
+            action: 'lunch_end',
+            attendance_id: attendanceId,
+        };
+
+        const response = await apiService.put(`/attendance/`, payload, {
+            params: {
+                action: 'lunch_end',
+                attendance_id: attendanceId,
+            },
+            headers: {
+                Authorization: `Bearer ${await AsyncStorage.getItem('token')}`,
+            },
+        });
+
+        return response.data;
+    } catch (error) {
+        console.error('Lunch end failed:', error.response?.data?.message || error.message);
+        throw new Error(error.response?.data?.message || 'Ending lunch failed');
+    }
+};

@@ -25,7 +25,7 @@ import { Feather, MaterialIcons, Ionicons } from '@expo/vector-icons';
 
 import CircularButton from '../components/CircularButton';
 import ReusableBottomPopUp from '../components/ReusableBottomPopUp';
-import { markAbsent, getAttendance, getAttendanceReport, checkOut, checkIn } from '../api/absent';
+import { markAbsent, getAttendance, getAttendanceReport, checkOut, checkIn, lunchStart, lunchEnd } from '../api/absent';
 import { getParameter } from '../api/parameter';
 import Shimmer from '../components/Shimmer';
 import { FONTS } from '../constants/fonts';
@@ -144,7 +144,14 @@ ShimmerTaskCard.displayName = 'ShimmerTaskCard';
 const Kehadiran = () => {
     const { location, errorMsg, locationName } = useContext(LocationContext);
     // State management
-    const [currentTime, setCurrentTime] = useState('');
+    const [currentTime, setCurrentTime] = useState(
+        new Date().toLocaleTimeString('id-ID', {
+            hour: '2-digit',
+            minute: '2-digit',
+            second: '2-digit',
+            hour12: false,
+        }),
+    );
     const [employeeId, setEmployeeId] = useState(null);
     const [companyId, setCompanyId] = useState(null);
     const [attendanceData, setAttendanceData] = useState([]);
@@ -157,8 +164,6 @@ const Kehadiran = () => {
     const [currentPage, setCurrentPage] = useState(0);
     const [hasAccess, setHasAccess] = useState(null);
     const [isLoading, setIsLoading] = useState(true);
-    const [showStats, setShowStats] = useState(false);
-    const [showHistory, setShowHistory] = useState(false);
     const [totalPages, setTotalPages] = useState(1);
     const [isPaginating, setIsPaginating] = useState(false);
     const [totalRecords, setTotalRecords] = useState(0);
@@ -169,7 +174,6 @@ const Kehadiran = () => {
     const slideAnim = useRef(new Animated.Value(50)).current;
     const scaleAnim = useRef(new Animated.Value(0.8)).current;
     const buttonPulseAnim = useRef(new Animated.Value(1)).current;
-    const statsSlideAnim = useRef(new Animated.Value(-100)).current;
     const historySlideAnim = useRef(new Animated.Value(-100)).current;
     const headerAnim = useRef(new Animated.Value(0)).current;
     const headerScaleAnim = useRef(new Animated.Value(0.9)).current;
@@ -189,35 +193,12 @@ const Kehadiran = () => {
     const [checkInTime, setCheckInTime] = useState(null);
     const [checkOutTime, setCheckOutTime] = useState(null);
     const [totalHours, setTotalHours] = useState(null);
-
-    // Memoized attendance statistics
-    const attendanceStats = useMemo(() => {
-        const stats = {
-            total: attendanceData.length,
-            onTime: 0,
-            late: 0,
-            early: 0,
-            absent: 0,
-        };
-
-        attendanceData.forEach((record) => {
-            switch (record.status) {
-                case 'On Time':
-                    stats.onTime++;
-                    break;
-                case 'Late':
-                    stats.late++;
-                    break;
-                case 'Early':
-                    stats.early++;
-                    break;
-                default:
-                    stats.absent++;
-            }
-        });
-
-        return stats;
-    }, [attendanceData]);
+    const [todayAttendanceId, setTodayAttendanceId] = useState(null);
+    // Today's lunch timestamps (strings from server) — used to control UI and buttons
+    const [todayLunchStart, setTodayLunchStart] = useState(null);
+    const [todayLunchEnd, setTodayLunchEnd] = useState(null);
+    const [hasLunchStarted, setHasLunchStarted] = useState(false);
+    const [isLunchProcessing, setIsLunchProcessing] = useState(false);
 
     // Memoized start date for pagination
     const startDate = useMemo(() => new Date(START_DATE), []);
@@ -321,6 +302,20 @@ const Kehadiran = () => {
                 setCurrentPage(attendanceResponse.pagination.current_page - 1);
                 setTotalPages(attendanceResponse.pagination.last_page);
                 setTotalRecords(attendanceResponse.pagination.total || 0);
+                // Persist today's attendance id and lunch status for lunch actions
+                setTodayAttendanceId(todayAttendance?.id || null);
+                // Extract today's lunch start/end explicitly
+                const lunchStartRaw = todayAttendance?.lunch_start || null;
+                const lunchEndRaw = todayAttendance?.lunch_end || null;
+                setTodayLunchStart(lunchStartRaw);
+                setTodayLunchEnd(lunchEndRaw);
+
+                // Prefer server-provided flag (if backend returns isLunchStartedToday), otherwise fall back to today's attendance record
+                const serverLunchFlag =
+                    typeof attendanceResponse.isLunchStartedToday !== 'undefined'
+                        ? attendanceResponse.isLunchStartedToday
+                        : null;
+                setHasLunchStarted(serverLunchFlag !== null ? Boolean(serverLunchFlag) : Boolean(lunchStartRaw));
             }
         } catch (error) {
             if (mountedRef.current) {
@@ -460,12 +455,13 @@ const Kehadiran = () => {
             ]).start();
         });
 
-        // Initialize time with better formatting
+        // Initialize time with better formatting - include seconds for real-time update
         const updateTime = () => {
             const now = new Date();
             const time = now.toLocaleTimeString('id-ID', {
                 hour: '2-digit',
                 minute: '2-digit',
+                second: '2-digit',
                 hour12: false,
             });
             if (mountedRef.current) {
@@ -476,7 +472,7 @@ const Kehadiran = () => {
         updateTime();
         setIsLoading(false);
 
-        // Optimized interval with cleanup
+        // Optimized interval with cleanup - update every second for real-time clock
         timeInterval.current = setInterval(updateTime, 1000);
 
         return () => {
@@ -585,6 +581,76 @@ const Kehadiran = () => {
         }
     };
 
+    // Lunch start handler - allowed only if checked in and not yet lunch started
+    const handleLunchStart = useCallback(async () => {
+        if (!isCheckedIn || isCheckedOut) {
+            showAlert('Anda harus melakukan clock in sebelum memulai istirahat.', 'error');
+            return;
+        }
+
+        if (hasLunchStarted) {
+            showAlert('Istirahat sudah dimulai sebelumnya.', 'info');
+            return;
+        }
+
+        if (!todayAttendanceId) {
+            showAlert('Data absen hari ini tidak ditemukan.', 'error');
+            return;
+        }
+
+        try {
+            setIsLunchProcessing(true);
+            const locationString = location ? `${location.coords.latitude}, ${location.coords.longitude}` : '';
+            // Send null for lunch_image (image not required)
+            const res = await lunchStart(todayAttendanceId, locationString, null);
+
+            if (res && (res.success === true || res.status === 'success')) {
+                // Use a fixed, clear success message to avoid displaying unrelated backend messages
+                showAlert('Istirahat dimulai — selamat istirahat! ⏱️', 'success');
+                setHasLunchStarted(true);
+                await fetchData();
+            } else {
+                throw new Error(res.message || 'Gagal memulai istirahat');
+            }
+        } catch (err) {
+            console.error('handleLunchStart error', err);
+            showAlert(err.message || 'Gagal memulai istirahat. Silakan coba lagi.', 'error');
+        } finally {
+            setIsLunchProcessing(false);
+        }
+    }, [isCheckedIn, isCheckedOut, hasLunchStarted, todayAttendanceId, location, fetchData]);
+
+    // Lunch end handler - allowed only if lunch started
+    const handleLunchEnd = useCallback(async () => {
+        if (!hasLunchStarted) {
+            showAlert('Kamu belum memulai waktu istirahat.', 'error');
+            return;
+        }
+
+        if (!todayAttendanceId) {
+            showAlert('Data absen hari ini tidak ditemukan. Silakan muat ulang.', 'error');
+            return;
+        }
+
+        try {
+            setIsLunchProcessing(true);
+            const res = await lunchEnd(todayAttendanceId);
+            if (res && (res.success === true || res.status === 'success')) {
+                // Use a fixed success message to prevent backend messages (e.g., 'checkout') from showing here
+                showAlert('Istirahat selesai — semoga kembali segar!', 'success');
+                setHasLunchStarted(false);
+                await fetchData();
+            } else {
+                throw new Error(res.message || 'Gagal mengakhiri istirahat');
+            }
+        } catch (err) {
+            console.error('handleLunchEnd error', err);
+            showAlert(err.message || 'Gagal mengakhiri istirahat. Silakan coba lagi.', 'error');
+        } finally {
+            setIsLunchProcessing(false);
+        }
+    }, [hasLunchStarted, todayAttendanceId, fetchData]);
+
     const handleNextPage = () => {
         if (currentPage < totalPages - 1) {
             if (Platform.OS === 'ios') {
@@ -666,162 +732,46 @@ const Kehadiran = () => {
         return getStatusConfig(status).color;
     }, []);
 
-    // Memoized AttendanceStats component for better performance
-    const AttendanceStats = memo(() => {
-        const stats = attendanceStats;
-
-        if (stats.total === 0) return null;
-
-        const contentHeight = useRef(new Animated.Value(0)).current;
-
-        const handleStatsToggle = useCallback(() => {
-            if (Platform.OS === 'ios') {
-                Haptics.selectionAsync();
-            }
-
-            const newShowStats = !showStats;
-            setShowStats(newShowStats);
-
-            // Enhanced animation with better timing
-            Animated.timing(statsSlideAnim, {
-                toValue: newShowStats ? 0 : -100,
-                duration: ANIMATION_DURATION.MEDIUM,
-                useNativeDriver: true,
-            }).start();
-        }, [showStats]);
-
-        return (
-            <View style={styles.statsContainer}>
-                <TouchableOpacity style={styles.statsHeader} onPress={handleStatsToggle} activeOpacity={0.7}>
-                    <Text style={styles.statsTitle}>Ringkasan Kehadiran</Text>
-                    <Animated.View
-                        style={{
-                            transform: [
-                                {
-                                    rotate: showStats ? '180deg' : '0deg',
-                                },
-                            ],
-                        }}
-                    >
-                        <Ionicons name="chevron-down" size={20} color="#6B7280" />
-                    </Animated.View>
-                </TouchableOpacity>
-
-                {showStats && (
-                    <Animated.View
-                        style={[
-                            styles.statsGrid,
-                            {
-                                opacity: fadeAnim,
-                                transform: [{ translateY: statsSlideAnim }],
-                                // height: heightInterpolation, overflow: 'hidden'
-                            },
-                        ]}
-                    >
-                        <View style={styles.statCard}>
-                            <Text style={styles.statNumber}>{stats.total}</Text>
-                            <Text style={styles.statLabel}>Total</Text>
-                        </View>
-                        <View style={styles.statCard}>
-                            <Text style={[styles.statNumber, { color: '#10B981' }]}>{stats.onTime}</Text>
-                            <Text style={styles.statLabel}>Tepat Waktu</Text>
-                        </View>
-                        <View style={styles.statCard}>
-                            <Text style={[styles.statNumber, { color: '#EF4444' }]}>{stats.late}</Text>
-                            <Text style={styles.statLabel}>Terlambat</Text>
-                        </View>
-                        <View style={styles.statCard}>
-                            <Text style={[styles.statNumber, { color: '#3B82F6' }]}>{stats.early}</Text>
-                            <Text style={styles.statLabel}>Lebih Awal</Text>
-                        </View>
-                    </Animated.View>
-                )}
-            </View>
-        );
-    });
-
-    AttendanceStats.displayName = 'AttendanceStats';
-
-    // Memoized image renderer for better performance
-    const renderImage = useCallback((imageUri) => {
-        return imageUri ? (
-            <Image
-                source={{ uri: imageUri }}
-                style={styles.attendanceImage}
-                onError={(e) => console.warn('Image load error:', e.nativeEvent.error)}
-                resizeMode="cover"
-                loadingIndicatorSource={require('../../assets/images/profile-default.png')}
-            />
-        ) : (
-            <View style={styles.noAttendanceImage}>
-                <Ionicons name="image-outline" size={24} color="#9CA3AF" />
-                <Text style={styles.noImageText}>Tidak ada foto</Text>
-            </View>
-        );
-    }, []);
-
-    // Optimized renderDateView with better performance and memoization
-    const renderDateView = useCallback(
-        (date, index) => {
-            const currentDate = new Date(startDate);
-            currentDate.setDate(startDate.getDate() + index);
-
-            const formattedDateForUpper = currentDate.toLocaleDateString('id-ID', {
+    // Memoized date views for pagination - render only actual attendance records from monthly data
+    const dateViews = useMemo(() => {
+        // Map through attendanceData to create cards for actual records only
+        return attendanceData.map((attendance, index) => {
+            const checkinDate = new Date(attendance.checkin);
+            const formattedDateForUpper = checkinDate.toLocaleDateString('id-ID', {
                 weekday: 'short',
                 month: 'short',
                 day: 'numeric',
                 year: 'numeric',
             });
+            const formattedDate = checkinDate.toISOString().split('T')[0];
 
-            const formattedDate = currentDate.toISOString().split('T')[0];
-
-            const attendanceForDate = attendanceData.find((attendance) => {
-                const checkinDate = new Date(attendance.checkin);
-                const localCheckinDate = new Date(
-                    checkinDate.getFullYear(),
-                    checkinDate.getMonth(),
-                    checkinDate.getDate(),
-                );
-                const localFormattedDate = new Date(
-                    currentDate.getFullYear(),
-                    currentDate.getMonth(),
-                    currentDate.getDate(),
-                );
-                return localCheckinDate.getTime() === localFormattedDate.getTime();
-                return checkinDate === formattedDate;
-            });
-
-            const status = attendanceForDate?.status || 'Not Absent';
-            const checkIn = attendanceForDate?.checkin
-                ? new Date(attendanceForDate.checkin).toLocaleTimeString('id-ID', {
+            const status = attendance.status || 'Not Absent';
+            const checkIn = attendance.checkin
+                ? new Date(attendance.checkin).toLocaleTimeString('id-ID', {
                       hour: '2-digit',
                       minute: '2-digit',
                       hour12: false,
                   })
                 : '-';
 
-            const checkOut = attendanceForDate?.checkout
-                ? new Date(attendanceForDate.checkout).toLocaleTimeString('id-ID', {
+            const checkOut = attendance.checkout
+                ? new Date(attendance.checkout).toLocaleTimeString('id-ID', {
                       hour: '2-digit',
                       minute: '2-digit',
                       hour12: false,
                   })
                 : '-';
 
-            const duration = attendanceForDate
-                ? formatDuration(new Date(attendanceForDate.checkin), new Date(attendanceForDate.checkout))
-                : '-';
+            const duration =
+                attendance.checkin && attendance.checkout
+                    ? formatDuration(new Date(attendance.checkin), new Date(attendance.checkout))
+                    : '-';
 
-            const notes = attendanceForDate?.note || 'Tidak ada catatan';
-            const attendanceImage = attendanceForDate?.attendance_image
-                ? `https://app.kejartugas.com/${attendanceForDate.attendance_image}`
-                : null;
-
-            const wfh = attendanceForDate ? (attendanceForDate.isWFH ? 'At Home' : 'In Office') : 'Tidak ada data';
+            const wfh = attendance.isWFH ? 'At Home' : 'In Office';
 
             return (
                 <Animated.View
-                    key={`date-${index}-${formattedDate}`}
+                    key={`attendance-${attendance.id || index}-${formattedDate}`}
                     style={[
                         styles.containerPerDate,
                         {
@@ -861,36 +811,32 @@ const Kehadiran = () => {
                                             {status}
                                         </Text>
                                     </View>
-                                    {wfh !== 'Tidak ada data' && (
-                                        <View
+                                    <View
+                                        style={[
+                                            styles.wfhBadge,
+                                            {
+                                                backgroundColor: attendance.isWFH ? '#FEF3C7' : '#DBEAFE',
+                                            },
+                                        ]}
+                                    >
+                                        <Ionicons
+                                            name={attendance.isWFH ? 'home' : 'business'}
+                                            size={12}
+                                            color={attendance.isWFH ? '#D97706' : '#2563EB'}
+                                        />
+                                        <Text
                                             style={[
-                                                styles.wfhBadge,
+                                                styles.wfhText,
                                                 {
-                                                    backgroundColor: attendanceForDate?.isWFH ? '#FEF3C7' : '#DBEAFE',
+                                                    color: attendance.isWFH ? '#D97706' : '#2563EB',
                                                 },
                                             ]}
                                         >
-                                            <Ionicons
-                                                name={attendanceForDate?.isWFH ? 'home' : 'business'}
-                                                size={12}
-                                                color={attendanceForDate?.isWFH ? '#D97706' : '#2563EB'}
-                                            />
-                                            <Text
-                                                style={[
-                                                    styles.wfhText,
-                                                    {
-                                                        color: attendanceForDate?.isWFH ? '#D97706' : '#2563EB',
-                                                    },
-                                                ]}
-                                            >
-                                                {wfh}
-                                            </Text>
-                                        </View>
-                                    )}
+                                            {wfh}
+                                        </Text>
+                                    </View>
                                 </View>
                             </View>
-
-                            {/* <View style={styles.imageContainer}>{renderImage(attendanceImage)}</View> */}
                         </View>
                     </View>
 
@@ -924,43 +870,65 @@ const Kehadiran = () => {
                                 </View>
                             </View>
 
-                            {/* Notes Section */}
-                            {/* <View style={styles.notesSection}>
-                                <View style={styles.notesHeader}>
-                                    <Ionicons name="document-text" size={16} color="#6B7280" />
-                                    <Text style={styles.notesLabel}>Catatan:</Text>
-                                </View>
-                                <Text style={styles.notesText} numberOfLines={3} ellipsizeMode="tail">
-                                    {notes}
-                                </Text>
-                            </View> */}
-                        </View>
+                            {/* Lunch Info Section */}
+                            <View style={{ marginTop: 10, flexDirection: 'row', justifyContent: 'space-between' }}>
+                                {(() => {
+                                    const lunchStartRaw = attendance.lunch_start;
+                                    const lunchEndRaw = attendance.lunch_end;
 
-                        {/* Attendance Image */}
+                                    const lunchStartFormatted = lunchStartRaw
+                                        ? new Date(lunchStartRaw).toLocaleTimeString('id-ID', {
+                                              hour: '2-digit',
+                                              minute: '2-digit',
+                                              hour12: false,
+                                          })
+                                        : '-';
+                                    const lunchEndFormatted = lunchEndRaw
+                                        ? new Date(lunchEndRaw).toLocaleTimeString('id-ID', {
+                                              hour: '2-digit',
+                                              minute: '2-digit',
+                                              hour12: false,
+                                          })
+                                        : '-';
+
+                                    let lunchDurationDisplay = '-';
+                                    if (lunchStartRaw && lunchEndRaw) {
+                                        const diff = new Date(lunchEndRaw) - new Date(lunchStartRaw);
+                                        if (!isNaN(diff) && diff >= 0) {
+                                            const hours = Math.floor(diff / (1000 * 60 * 60));
+                                            const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+                                            lunchDurationDisplay = `${hours}h ${minutes}m`;
+                                        }
+                                    }
+
+                                    return (
+                                        <>
+                                            <View style={{ flex: 1, alignItems: 'center' }}>
+                                                <Text style={styles.timeLabel}>Istirahat Mulai</Text>
+                                                <Text style={styles.timeValue}>{lunchStartFormatted}</Text>
+                                            </View>
+                                            <View style={{ flex: 1, alignItems: 'center' }}>
+                                                <Text style={styles.timeLabel}>Istirahat Selesai</Text>
+                                                <Text style={styles.timeValue}>{lunchEndFormatted}</Text>
+                                            </View>
+                                            <View style={{ flex: 1, alignItems: 'center' }}>
+                                                <Text style={styles.timeLabel}>Durasi Istirahat</Text>
+                                                <Text style={styles.timeValue}>{lunchDurationDisplay}</Text>
+                                            </View>
+                                        </>
+                                    );
+                                })()}
+                            </View>
+                        </View>
                     </View>
                 </Animated.View>
             );
-        },
-        [
-            attendanceData,
-            startDate,
-            fadeAnim,
-            slideAnim,
-            getBackgroundColor,
-            getStatusIcon,
-            getStatusIconColor,
-            renderImage,
-        ],
-    );
-
-    // Memoized date views for pagination with better performance
-    const dateViews = useMemo(() => {
-        return Array.from({ length: daysDiff + 1 }, (_, index) => renderDateView(null, index)).reverse();
-    }, [daysDiff, renderDateView]);
+        });
+    }, [attendanceData, fadeAnim, slideAnim, getBackgroundColor, getStatusIcon, getStatusIconColor, formatDuration]);
 
     const paginatedDateViews = useMemo(() => {
-        return dateViews.slice(currentPage * ITEMS_PER_PAGE, (currentPage + 1) * ITEMS_PER_PAGE);
-    }, [dateViews, currentPage]);
+        return dateViews.slice(currentPage * PAGE_SIZE, (currentPage + 1) * PAGE_SIZE);
+    }, [dateViews, currentPage, PAGE_SIZE]);
 
     return (
         <View style={styles.container}>
@@ -1258,7 +1226,13 @@ const Kehadiran = () => {
                             )}
                             <View style={styles.buttonContainer}>
                                 {isLoading ? (
-                                    <Animated.View style={{ transform: [{ scale: scaleAnim }] }}>
+                                    <Animated.View
+                                        style={{
+                                            transform: [{ scale: scaleAnim }],
+                                            alignItems: 'center',
+                                            width: '100%',
+                                        }}
+                                    >
                                         <CircularButton
                                             title="Memuat..."
                                             colors={['#E5E7EB', '#D1D5DB', '#9CA3AF']}
@@ -1269,6 +1243,8 @@ const Kehadiran = () => {
                                     <Animated.View
                                         style={{
                                             transform: [{ scale: scaleAnim }, { scale: buttonPulseAnim }],
+                                            alignItems: 'center',
+                                            width: '100%',
                                         }}
                                     >
                                         <CircularButton
@@ -1278,15 +1254,100 @@ const Kehadiran = () => {
                                         />
                                     </Animated.View>
                                 ) : isCheckedIn == 1 && isCheckedOut == false ? (
-                                    <Animated.View style={{ transform: [{ scale: scaleAnim }] }}>
+                                    <Animated.View
+                                        style={{
+                                            transform: [{ scale: scaleAnim }],
+                                            alignItems: 'center',
+                                            width: '100%',
+                                        }}
+                                    >
                                         <CircularButton
                                             title="Clock Out"
                                             onPress={handleClockOut}
                                             colors={['#EF4444', '#DC2626', '#B91C1C']}
                                         />
+                                        {/* Lunch action buttons underneath */}
+                                        <View
+                                            style={{
+                                                flexDirection: 'row',
+                                                marginTop: 12,
+                                                justifyContent: 'center',
+                                                gap: 12,
+                                                alignItems: 'center',
+                                                width: '100%',
+                                            }}
+                                        >
+                                            <TouchableOpacity
+                                                style={[
+                                                    styles.smallActionButton,
+                                                    {
+                                                        backgroundColor:
+                                                            isLunchProcessing || hasLunchStarted || todayLunchStart
+                                                                ? '#F3F4F6'
+                                                                : '#4A90E2',
+                                                    },
+                                                ]}
+                                                onPress={handleLunchStart}
+                                                disabled={isLunchProcessing || hasLunchStarted || !!todayLunchStart}
+                                            >
+                                                <Text
+                                                    style={[
+                                                        styles.smallActionText,
+                                                        {
+                                                            color:
+                                                                isLunchProcessing ||
+                                                                hasLunchStarted ||
+                                                                !!todayLunchStart
+                                                                    ? '#9CA3AF'
+                                                                    : '#fff',
+                                                        },
+                                                    ]}
+                                                >
+                                                    {isLunchProcessing && !hasLunchStarted
+                                                        ? 'Memproses...'
+                                                        : 'Mulai Istirahat'}
+                                                </Text>
+                                            </TouchableOpacity>
+
+                                            <TouchableOpacity
+                                                style={[
+                                                    styles.smallActionButton,
+                                                    {
+                                                        backgroundColor:
+                                                            isLunchProcessing || !hasLunchStarted || todayLunchEnd
+                                                                ? '#F3F4F6'
+                                                                : '#EF4444',
+                                                    },
+                                                ]}
+                                                onPress={handleLunchEnd}
+                                                disabled={isLunchProcessing || !hasLunchStarted || !!todayLunchEnd}
+                                            >
+                                                <Text
+                                                    style={[
+                                                        styles.smallActionText,
+                                                        {
+                                                            color:
+                                                                isLunchProcessing || !hasLunchStarted || !!todayLunchEnd
+                                                                    ? '#9CA3AF'
+                                                                    : '#fff',
+                                                        },
+                                                    ]}
+                                                >
+                                                    {isLunchProcessing && hasLunchStarted
+                                                        ? 'Memproses...'
+                                                        : 'Akhiri Istirahat'}
+                                                </Text>
+                                            </TouchableOpacity>
+                                        </View>
                                     </Animated.View>
                                 ) : isCheckedIn == 1 && isCheckedOut == true ? (
-                                    <Animated.View style={{ transform: [{ scale: scaleAnim }] }}>
+                                    <Animated.View
+                                        style={{
+                                            transform: [{ scale: scaleAnim }],
+                                            alignItems: 'center',
+                                            width: '100%',
+                                        }}
+                                    >
                                         <CircularButton
                                             title="Selesai"
                                             colors={['#10B981', '#059669', '#047857']}
@@ -1294,7 +1355,13 @@ const Kehadiran = () => {
                                         />
                                     </Animated.View>
                                 ) : (
-                                    <Animated.View style={{ transform: [{ scale: scaleAnim }] }}>
+                                    <Animated.View
+                                        style={{
+                                            transform: [{ scale: scaleAnim }],
+                                            alignItems: 'center',
+                                            width: '100%',
+                                        }}
+                                    >
                                         <CircularButton
                                             title="Clock In"
                                             colors={['#4A90E2', '#357ABD', '#2E5984']}
@@ -1304,311 +1371,154 @@ const Kehadiran = () => {
                                 )}
                             </View>
                         </View>
-
-                        <View style={styles.attendanceDataContainer}>
-                            {/* Today attendance data */}
-                            <View style={styles.attendanceHeader}>
-                                <Text style={styles.attendanceTitle}>Data Kehadiran Hari Ini</Text>
-                            </View>
-
-                            {isLoading ? (
-                                <View style={styles.attendanceDataRow}>
-                                    <Shimmer width={80} height={60} style={styles.shimmerCard} />
-                                    <Shimmer width={80} height={60} style={styles.shimmerCard} />
-                                    <Shimmer width={80} height={60} style={styles.shimmerCard} />
-                                </View>
-                            ) : (
-                                <View style={styles.attendanceDataRow}>
-                                    {/* Check In Time */}
-                                    <View style={styles.attendanceCard}>
-                                        <View style={styles.attendanceIconContainer}>
-                                            <Ionicons name="time" size={16} color="#10B981" />
-                                        </View>
-                                        <Text style={styles.attendanceCardValue}>
-                                            {checkInTime ? checkInTime : '--:--'}
-                                        </Text>
-                                        <Text style={styles.attendanceCardLabel}>Masuk</Text>
-                                    </View>
-
-                                    {/* Check Out Time */}
-                                    <View style={styles.attendanceCard}>
-                                        <View style={styles.attendanceIconContainer}>
-                                            <Ionicons name="time-outline" size={16} color="#EF4444" />
-                                        </View>
-                                        <Text style={styles.attendanceCardValue}>
-                                            {checkOutTime ? checkOutTime : '--:--'}
-                                        </Text>
-                                        <Text style={styles.attendanceCardLabel}>Pulang</Text>
-                                    </View>
-
-                                    {/* Total Hours */}
-                                    <View style={styles.attendanceCard}>
-                                        <View style={styles.attendanceIconContainer}>
-                                            <Ionicons name="hourglass" size={16} color="#6366F1" />
-                                        </View>
-                                        <Text style={styles.attendanceCardValue}>
-                                            {totalHours ? totalHours : '0:00'}
-                                        </Text>
-                                        <Text style={styles.attendanceCardLabel}>Total Jam</Text>
-                                    </View>
-                                </View>
-                            )}
-
-                            {/* Attendance Status Message */}
-                            {/* {!isLoading && (
-                                <View style={styles.attendanceStatusContainer}>
-                                    <Text style={styles.attendanceStatusText}>
-                                        {isCheckedIn === 0
-                                            ? "Anda belum melakukan check-in hari ini"
-                                            : isCheckedOut
-                                                ? "Anda telah menyelesaikan kerja hari ini"
-                                                : "Anda sedang dalam jam kerja"}
-                                    </Text>
-                                </View>
-                            )} */}
-                        </View>
                     </Animated.View>
 
-                    {/* Attendance History */}
+                    {/* Attendance History Cards - Directly displayed without toggle */}
                     <View style={styles.historySection}>
-                        {/* Attendance Stats */}
-                        {!isLoading && <AttendanceStats />}
-
-                        <TouchableOpacity
-                            style={styles.historySectionHeader}
-                            onPress={() => {
-                                if (Platform.OS === 'ios') {
-                                    Haptics.selectionAsync();
-                                }
-
-                                const newShowHistory = !showHistory;
-                                setShowHistory(newShowHistory);
-
-                                // Enhanced animation with spring effect
-                                Animated.parallel([
-                                    Animated.spring(historySlideAnim, {
-                                        toValue: newShowHistory ? 0 : -50,
-                                        tension: 80,
-                                        friction: 8,
-                                        useNativeDriver: true,
-                                    }),
-                                    Animated.timing(fadeAnim, {
-                                        toValue: newShowHistory ? 1 : 0.7,
-                                        duration: 300,
-                                        useNativeDriver: true,
-                                    }),
-                                ]).start();
-                            }}
-                            activeOpacity={0.7}
-                        >
-                            <View style={styles.historyTitleContainer}>
-                                <View style={styles.historyTitleWrapper}>
-                                    <View style={styles.historyTitleLeft}>
-                                        <Ionicons name="time-outline" size={22} color="#4A90E2" />
-                                        <Text style={styles.historySectionTitle}>Riwayat Kehadiran</Text>
-                                    </View>
-                                    {/* Tombol export dihapus */}
-                                </View>
-                                <Animated.View
-                                    style={{
-                                        transform: [
-                                            {
-                                                rotate: showHistory ? '180deg' : '0deg',
-                                            },
-                                        ],
-                                    }}
-                                >
-                                    <Ionicons name="chevron-down" size={20} color="#6B7280" />
-                                </Animated.View>
-                            </View>
-                            <View style={styles.totalRecordsContainer}>
-                                <View style={styles.totalRecords}>
-                                    <Ionicons name="document-text" size={14} color="white" />
-                                    <Text style={styles.totalRecordsText}>
-                                        Menampilkan {attendanceData.length} dari total {totalRecords} catatan
-                                    </Text>
-                                </View>
-                                {attendanceData.length > 0 && (
-                                    <Text style={styles.lastUpdateText}>
-                                        Update terakhir: {new Date().toLocaleDateString('id-ID')}
-                                    </Text>
-                                )}
-                            </View>
-                        </TouchableOpacity>
-
-                        {/* {!showHistory && attendanceData.length > 0 && (
-                            <Animated.View
-                                style={[
-                                    styles.collapsedIndicator,
+                        <Animated.View
+                            style={{
+                                opacity: fadeAnim,
+                                transform: [
                                     {
-                                        opacity: fadeAnim.interpolate({
-                                            inputRange: [0.7, 1],
-                                            outputRange: [0.6, 1],
+                                        translateY: historySlideAnim.interpolate({
+                                            inputRange: [-50, 0],
+                                            outputRange: [-20, 0],
+                                            extrapolate: 'clamp',
                                         }),
-                                        transform: [
-                                            {
-                                                scale: buttonPulseAnim.interpolate({
-                                                    inputRange: [1, 1.05],
-                                                    outputRange: [1, 1.02],
-                                                }),
-                                            },
-                                        ],
                                     },
-                                ]}
-                            >
-                                <Text style={styles.collapsedText}>
-                                    👆 Tap untuk melihat {attendanceData.length} riwayat kehadiran
-                                </Text>
-                            </Animated.View>
-                        )} */}
-
-                        {showHistory && (
-                            <Animated.View
-                                style={{
-                                    opacity: fadeAnim,
-                                    transform: [
-                                        {
-                                            translateY: historySlideAnim.interpolate({
-                                                inputRange: [-50, 0],
-                                                outputRange: [-20, 0],
-                                                extrapolate: 'clamp',
-                                            }),
-                                        },
-                                        {
-                                            scale: fadeAnim.interpolate({
-                                                inputRange: [0.7, 1],
-                                                outputRange: [0.97, 1], // Smoother scale
-                                                extrapolate: 'clamp',
-                                            }),
-                                        },
-                                    ],
-                                }}
-                                accessible={true}
-                                accessibilityLabel="Riwayat Kehadiran"
-                            >
-                                {/* Loading shimmer hanya saat benar-benar loading */}
-                                {isLoading && (
-                                    <View style={styles.historyContainer}>
-                                        {[...Array(3)].map((_, index) => (
-                                            <ShimmerTaskCard key={index} />
-                                        ))}
-                                    </View>
-                                )}
-                                {/* Jika sudah tidak loading dan ada data */}
-                                {!isLoading && paginatedDateViews.length > 0 && (
-                                    <>
+                                    {
+                                        scale: fadeAnim.interpolate({
+                                            inputRange: [0.7, 1],
+                                            outputRange: [0.97, 1], // Smoother scale
+                                            extrapolate: 'clamp',
+                                        }),
+                                    },
+                                ],
+                            }}
+                            accessible={true}
+                            accessibilityLabel="Riwayat Kehadiran"
+                        >
+                            {/* Loading shimmer hanya saat benar-benar loading */}
+                            {isLoading && (
+                                <View style={styles.historyContainer}>
+                                    {[...Array(3)].map((_, index) => (
+                                        <ShimmerTaskCard key={index} />
+                                    ))}
+                                </View>
+                            )}
+                            {/* Jika sudah tidak loading dan ada data */}
+                            {!isLoading && paginatedDateViews.length > 0 && (
+                                <>
+                                    <Animated.View
+                                        style={[
+                                            styles.historyContainer,
+                                            {
+                                                opacity: fadeAnim,
+                                                transform: [{ translateY: historySlideAnim }],
+                                            },
+                                        ]}
+                                    >
+                                        {paginatedDateViews}
+                                    </Animated.View>
+                                    {/* Pagination - Always show if there are multiple pages */}
+                                    {totalPages > 1 && (
                                         <Animated.View
                                             style={[
-                                                styles.historyContainer,
+                                                styles.paginationControls,
                                                 {
                                                     opacity: fadeAnim,
                                                     transform: [{ translateY: historySlideAnim }],
                                                 },
                                             ]}
                                         >
-                                            {paginatedDateViews}
-                                        </Animated.View>
-                                        {/* Pagination - Always show if there are multiple pages */}
-                                        {totalPages > 1 && (
-                                            <Animated.View
+                                            <TouchableOpacity
+                                                onPress={() => {
+                                                    handlePreviousPage();
+                                                    if (Platform.OS === 'ios') Haptics.selectionAsync();
+                                                }}
+                                                disabled={currentPage === 0}
                                                 style={[
-                                                    styles.paginationControls,
-                                                    {
-                                                        opacity: fadeAnim,
-                                                        transform: [{ translateY: historySlideAnim }],
-                                                    },
+                                                    styles.paginationButton,
+                                                    currentPage === 0 && styles.disabledPaginationButton,
                                                 ]}
+                                                accessibilityLabel="Halaman sebelumnya"
                                             >
-                                                <TouchableOpacity
-                                                    onPress={() => {
-                                                        handlePreviousPage();
-                                                        if (Platform.OS === 'ios') Haptics.selectionAsync();
-                                                    }}
-                                                    disabled={currentPage === 0}
-                                                    style={[
-                                                        styles.paginationButton,
-                                                        currentPage === 0 && styles.disabledPaginationButton,
-                                                    ]}
-                                                    accessibilityLabel="Halaman sebelumnya"
-                                                >
-                                                    <Ionicons
-                                                        name="chevron-back"
-                                                        size={20}
-                                                        color={currentPage === 0 ? '#D1D5DB' : '#4A90E2'}
-                                                    />
-                                                </TouchableOpacity>
+                                                <Ionicons
+                                                    name="chevron-back"
+                                                    size={20}
+                                                    color={currentPage === 0 ? '#D1D5DB' : '#4A90E2'}
+                                                />
+                                            </TouchableOpacity>
 
-                                                <View
-                                                    style={styles.pageIndicator}
-                                                    accessible={true}
-                                                    accessibilityLabel={`Halaman ${currentPage + 1} dari ${totalPages}`}
-                                                >
-                                                    <Text style={styles.pageText}>
-                                                        {currentPage + 1} / {totalPages}
-                                                    </Text>
-                                                </View>
+                                            <View
+                                                style={styles.pageIndicator}
+                                                accessible={true}
+                                                accessibilityLabel={`Halaman ${currentPage + 1} dari ${totalPages}`}
+                                            >
+                                                <Text style={styles.pageText}>
+                                                    {currentPage + 1} / {totalPages}
+                                                </Text>
+                                            </View>
 
-                                                <TouchableOpacity
-                                                    onPress={() => {
-                                                        handleNextPage();
-                                                        if (Platform.OS === 'ios') Haptics.selectionAsync();
-                                                    }}
-                                                    disabled={currentPage === totalPages - 1 || isPaginating}
-                                                    style={[
-                                                        styles.paginationButton,
-                                                        currentPage === totalPages - 1 &&
-                                                            styles.disabledPaginationButton,
-                                                    ]}
-                                                    accessibilityLabel="Halaman berikutnya"
-                                                >
-                                                    <Ionicons
-                                                        name="chevron-forward"
-                                                        size={20}
-                                                        color={currentPage === totalPages - 1 ? '#D1D5DB' : '#4A90E2'}
-                                                    />
-                                                </TouchableOpacity>
-                                            </Animated.View>
-                                        )}
-                                    </>
-                                )}
-                                {/* Jika sudah tidak loading dan data kosong, tampilkan pesan tanpa delay dan tanpa animasi berat */}
-                                {!isLoading && paginatedDateViews.length === 0 && (
-                                    <View
+                                            <TouchableOpacity
+                                                onPress={() => {
+                                                    handleNextPage();
+                                                    if (Platform.OS === 'ios') Haptics.selectionAsync();
+                                                }}
+                                                disabled={currentPage === totalPages - 1 || isPaginating}
+                                                style={[
+                                                    styles.paginationButton,
+                                                    currentPage === totalPages - 1 && styles.disabledPaginationButton,
+                                                ]}
+                                                accessibilityLabel="Halaman berikutnya"
+                                            >
+                                                <Ionicons
+                                                    name="chevron-forward"
+                                                    size={20}
+                                                    color={currentPage === totalPages - 1 ? '#D1D5DB' : '#4A90E2'}
+                                                />
+                                            </TouchableOpacity>
+                                        </Animated.View>
+                                    )}
+                                </>
+                            )}
+                            {/* Jika sudah tidak loading dan data kosong, tampilkan pesan tanpa delay dan tanpa animasi berat */}
+                            {!isLoading && paginatedDateViews.length === 0 && (
+                                <View
+                                    style={{
+                                        alignItems: 'center',
+                                        paddingVertical: 32,
+                                    }}
+                                >
+                                    <Ionicons
+                                        name="cloud-offline"
+                                        size={48}
+                                        color="#D1D5DB"
+                                        style={{ marginBottom: 8 }}
+                                    />
+                                    <Text
                                         style={{
-                                            alignItems: 'center',
-                                            paddingVertical: 32,
+                                            color: '#9CA3AF',
+                                            fontSize: 16,
+                                            fontWeight: '600',
+                                            marginBottom: 4,
                                         }}
                                     >
-                                        <Ionicons
-                                            name="cloud-offline"
-                                            size={48}
-                                            color="#D1D5DB"
-                                            style={{ marginBottom: 8 }}
-                                        />
-                                        <Text
-                                            style={{
-                                                color: '#9CA3AF',
-                                                fontSize: 16,
-                                                fontWeight: '600',
-                                                marginBottom: 4,
-                                            }}
-                                        >
-                                            Belum ada riwayat kehadiran
-                                        </Text>
-                                        <Text
-                                            style={{
-                                                color: '#B0B0B0',
-                                                fontSize: 13,
-                                                textAlign: 'center',
-                                                maxWidth: 220,
-                                            }}
-                                        >
-                                            Catatan kehadiran Anda akan muncul di sini setelah Anda melakukan clock in.
-                                        </Text>
-                                    </View>
-                                )}
-                            </Animated.View>
-                        )}
+                                        Belum ada riwayat kehadiran
+                                    </Text>
+                                    <Text
+                                        style={{
+                                            color: '#B0B0B0',
+                                            fontSize: 13,
+                                            textAlign: 'center',
+                                            maxWidth: 220,
+                                        }}
+                                    >
+                                        Catatan kehadiran Anda akan muncul di sini setelah Anda melakukan clock in.
+                                    </Text>
+                                </View>
+                            )}
+                        </Animated.View>
                     </View>
                 </View>
             </ScrollView>
@@ -1811,9 +1721,11 @@ const styles = StyleSheet.create({
         shadowRadius: 8,
         elevation: 8,
         marginTop: -3,
+        alignItems: 'center',
     },
     timeSection: {
         alignItems: 'center',
+        width: '100%',
     },
     todayText: {
         fontSize: 14,
@@ -1857,69 +1769,76 @@ const styles = StyleSheet.create({
     },
     buttonContainer: {
         alignItems: 'center',
+        justifyContent: 'center',
         marginVertical: 16,
+        width: '100%',
     },
 
     attendanceDataContainer: {
-        marginTop: 4,
+        marginTop: 20,
         paddingHorizontal: 0,
     },
     attendanceHeader: {
-        marginBottom: 8,
+        marginBottom: 12,
     },
     attendanceTitle: {
-        fontSize: 14,
-        fontWeight: '600',
-        color: '#808080',
+        fontSize: 15,
+        fontWeight: '700',
+        color: '#1F2937',
         textAlign: 'center',
+        letterSpacing: -0.3,
     },
     attendanceDataRow: {
         flexDirection: 'row',
-        justifyContent: 'space-between',
-        backgroundColor: '#F8FAFC',
-        borderRadius: 12,
-        padding: 8,
-        marginHorizontal: 4,
-        alignItems: 'center',
-        borderColor: '#357ABD',
-        borderWidth: 1,
-        borderOpacity: 0.2,
-        // shadowColor: '#444',
-        // shadowOffset: {
-        //     width: 0,
-        //     height: 2,
-        // },
-        // shadowOpacity: 0.1,
-        // shadowRadius: 3.84,
-        // elevation: 5,
+        justifyContent: 'space-around',
+        flexWrap: 'wrap',
+        backgroundColor: '#FFFFFF',
+        borderRadius: 16,
+        padding: 16,
+        marginHorizontal: 0,
+        gap: 12,
+        alignItems: 'stretch',
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.08,
+        shadowRadius: 8,
+        elevation: 4,
+        borderWidth: 0,
     },
     attendanceCard: {
         flex: 1,
         alignItems: 'center',
+        justifyContent: 'center',
+        minWidth: 75,
+        backgroundColor: '#F8FAFC',
+        borderRadius: 12,
+        padding: 12,
+        paddingVertical: 16,
     },
     attendanceIconContainer: {
-        width: 32,
-        height: 32,
-        borderRadius: 16,
-        padding: 4,
-        backgroundColor: '#fff',
+        width: 40,
+        height: 40,
+        borderRadius: 20,
+        backgroundColor: '#FFFFFF',
         justifyContent: 'center',
         alignItems: 'center',
         marginBottom: 8,
-        shadowColor: '#444',
-        shadowOffset: { width: 0, height: 1 },
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
         shadowOpacity: 0.1,
-        shadowRadius: 2,
+        shadowRadius: 4,
         elevation: 3,
     },
     attendanceCardValue: {
-        fontSize: 16,
+        fontSize: 18,
         fontWeight: '700',
         color: '#1F2937',
         marginBottom: 4,
+        letterSpacing: -0.5,
     },
     attendanceCardLabel: {
         fontSize: 12,
+        fontWeight: '600',
         color: '#6B7280',
         textAlign: 'center',
     },
@@ -1944,6 +1863,7 @@ const styles = StyleSheet.create({
     historySection: {
         flex: 1,
         paddingBottom: 20,
+        marginTop: 110,
     },
 
     // Stats Section
@@ -2066,29 +1986,31 @@ const styles = StyleSheet.create({
         fontStyle: 'italic',
     },
     historyContainer: {
-        gap: 16,
+        gap: 20,
     },
 
     // Card Styles
     containerPerDate: {
         backgroundColor: 'white',
-        borderRadius: 16,
-        shadowColor: '#444',
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.08,
-        shadowRadius: 8,
-        elevation: 4,
+        borderRadius: 20,
+        marginBottom: 20,
+        marginHorizontal: 4,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.1,
+        shadowRadius: 12,
+        elevation: 6,
         overflow: 'hidden',
     },
     cardHeader: {
-        padding: 16,
+        padding: 18,
         borderBottomWidth: 1,
-        borderBottomColor: '#F3F4F6',
+        borderBottomColor: '#E5E7EB',
         display: 'flex',
         flexDirection: 'row',
         justifyContent: 'space-between',
         alignItems: 'center',
-        backgroundColor: '#ddeeffff',
+        backgroundColor: '#F0F9FF',
     },
     dateSection: {
         gap: 6,
@@ -2132,7 +2054,7 @@ const styles = StyleSheet.create({
     },
     cardContent: {
         flexDirection: 'row',
-        padding: 16,
+        padding: 20,
         gap: 16,
     },
     leftContent: {
@@ -2144,41 +2066,48 @@ const styles = StyleSheet.create({
     timeDetailsGrid: {
         flexDirection: 'row',
         justifyContent: 'space-between',
-        gap: 12,
+        gap: 10,
     },
     timeCard: {
         flex: 1,
         backgroundColor: '#F8FAFC',
-        borderRadius: 12,
-        padding: 12,
+        borderRadius: 14,
+        padding: 14,
         alignItems: 'center',
-        gap: 6,
-        shadowColor: '#444',
-        shadowOffset: { width: 0, height: 1 },
-        shadowOpacity: 0.1,
-        shadowRadius: 2,
+        gap: 8,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.08,
+        shadowRadius: 4,
         elevation: 3,
     },
     timeIconContainer: {
-        width: 32,
-        height: 32,
-        borderRadius: 16,
+        width: 36,
+        height: 36,
+        borderRadius: 18,
         backgroundColor: 'white',
         alignItems: 'center',
         justifyContent: 'center',
-        boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1)',
+        marginBottom: 4,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 1 },
+        shadowOpacity: 0.1,
+        shadowRadius: 2,
+        elevation: 2,
     },
     timeLabel: {
-        fontSize: FONTS.size.xs,
-        fontFamily: FONTS.family.medium,
+        fontSize: 11,
+        fontFamily: FONTS.family.semiBold,
         color: '#6B7280',
         textAlign: 'center',
+        marginBottom: 2,
     },
     timeValue: {
-        fontSize: FONTS.size.sm,
+        fontSize: 16,
         fontFamily: FONTS.family.bold,
         color: '#1F2937',
         textAlign: 'center',
+        letterSpacing: -0.5,
     },
 
     // Notes Section
@@ -2359,6 +2288,23 @@ const styles = StyleSheet.create({
         color: '#6B7280',
         textAlign: 'center',
         lineHeight: 20,
+    },
+    smallActionButton: {
+        paddingHorizontal: 12,
+        paddingVertical: 8,
+        borderRadius: 10,
+        minWidth: 130,
+        alignItems: 'center',
+        justifyContent: 'center',
+        shadowColor: '#444',
+        shadowOffset: { width: 0, height: 1 },
+        shadowOpacity: 0.08,
+        shadowRadius: 4,
+        elevation: 2,
+    },
+    smallActionText: {
+        fontSize: 12,
+        fontWeight: '600',
     },
 });
 
