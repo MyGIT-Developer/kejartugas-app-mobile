@@ -5,7 +5,8 @@ export const login = async (username, password) => {
         const response = await apiService.post('/login', { username, password });
         return response.data;
     } catch (error) {
-        throw new Error(error.response?.data?.message || 'Login failed');
+        // Rethrow the original error so callers can inspect error.response
+        throw error;
     }
 };
 
@@ -14,7 +15,8 @@ export const loginMobile = async (username, password) => {
         const response = await apiService.post('/loginMobile', { username, password });
         return response.data;
     } catch (error) {
-        throw new Error(error.response?.data?.message || 'Login failed');
+        // Rethrow the original error so callers can inspect error.response
+        throw error;
     }
 };
 
@@ -24,7 +26,7 @@ export const generateResetCode = async (email) => {
         const response = await apiService.post('/forgot-password/code', { email });
         return response.data;
     } catch (error) {
-        throw new Error(error.response?.data?.message || 'Failed to generate reset code');
+        throw error;
     }
 };
 
@@ -38,7 +40,7 @@ export const forgotPassword = async (email, otp_code, password) => {
         });
         return response.data;
     } catch (error) {
-        throw new Error(error.response?.data?.message || 'Failed to reset password');
+        throw error;
     }
 };
 
@@ -61,7 +63,7 @@ export const registerCompanies = async (
         });
         return response.data;
     } catch (error) {
-        const errorMessage = error.response?.data?.message || 'Failed to create Perusahaan/organisasi';
-        throw new Error(errorMessage);
+        // Rethrow original error so caller can decide how to format message
+        throw error;
     }
 };
