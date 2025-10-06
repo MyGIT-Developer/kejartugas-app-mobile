@@ -33,7 +33,7 @@ import { FONTS } from '../constants/fonts';
 const { height, width } = Dimensions.get('window');
 
 // Constants for better maintainability
-const ITEMS_PER_PAGE = 10;
+const ITEMS_PER_PAGE = 7;
 const SHIMMER_CARDS_COUNT = 3;
 const START_DATE = new Date('2024-09-01');
 const DEFAULT_LATE_TIME = '09:00';
@@ -167,7 +167,7 @@ const Kehadiran = () => {
     const [totalPages, setTotalPages] = useState(1);
     const [isPaginating, setIsPaginating] = useState(false);
     const [totalRecords, setTotalRecords] = useState(0);
-    const PAGE_SIZE = 10;
+    const PAGE_SIZE = 7;
 
     // Animation refs for better performance
     const fadeAnim = useRef(new Animated.Value(0)).current;
