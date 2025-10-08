@@ -302,6 +302,14 @@ const Kehadiran = () => {
                 setCurrentPage(attendanceResponse.pagination.current_page - 1);
                 setTotalPages(attendanceResponse.pagination.last_page);
                 setTotalRecords(attendanceResponse.pagination.total || 0);
+
+                // Debug: Log today's attendance info
+                console.log('=== TODAY ATTENDANCE DEBUG ===');
+                console.log('todayAttendance:', todayAttendance);
+                console.log('todayAttendance.id:', todayAttendance?.id);
+                console.log('isCheckedInToday:', attendanceResponse.isCheckedInToday);
+                console.log('============================');
+
                 // Persist today's attendance id and lunch status for lunch actions
                 setTodayAttendanceId(todayAttendance?.id || null);
                 // Extract today's lunch start/end explicitly
@@ -581,6 +589,51 @@ const Kehadiran = () => {
         }
     };
 
+    // Listen for a serializable refresh flag coming back from LunchCamera (handle inside component)
+    useFocusEffect(
+        useCallback(() => {
+            try {
+                const params = navigation?.dangerouslyGetState?.() || {};
+                // Prefer route params if available via navigation
+                const routeParams =
+                    (navigation &&
+                        navigation.getState &&
+                        (() => {
+                            try {
+                                const routes = navigation.getState().routes || [];
+                                const current = routes[routes.length - 1];
+                                return current?.params;
+                            } catch (e) {
+                                return null;
+                            }
+                        })()) ||
+                    {};
+
+                const refresh = routeParams?.refreshLunch || null;
+                if (refresh) {
+                    fetchData();
+
+                    if (refresh === 'start') {
+                        showAlert('Istirahat dimulai — selamat istirahat! ⏱️', 'success');
+                        setHasLunchStarted(true);
+                    } else if (refresh === 'end') {
+                        showAlert('Istirahat selesai — semoga kembali segar!', 'success');
+                        setHasLunchStarted(false);
+                    }
+
+                    // clear the param so it doesn't re-fire
+                    try {
+                        navigation.setParams({ refreshLunch: null });
+                    } catch (e) {
+                        // ignore
+                    }
+                }
+            } catch (e) {
+                // ignore
+            }
+        }, [navigation]),
+    );
+
     // Lunch start handler - allowed only if checked in and not yet lunch started
     const handleLunchStart = useCallback(async () => {
         if (!isCheckedIn || isCheckedOut) {
@@ -595,30 +648,34 @@ const Kehadiran = () => {
 
         if (!todayAttendanceId) {
             showAlert('Data absen hari ini tidak ditemukan.', 'error');
+            console.error('todayAttendanceId is null or undefined');
+            return;
+        }
+
+        if (!location) {
+            showAlert('Data lokasi tidak tersedia. Silakan coba lagi.', 'error');
             return;
         }
 
         try {
             setIsLunchProcessing(true);
-            const locationString = location ? `${location.coords.latitude}, ${location.coords.longitude}` : '';
-            // Send null for lunch_image (image not required)
-            const res = await lunchStart(todayAttendanceId, locationString, null);
 
-            if (res && (res.success === true || res.status === 'success')) {
-                // Use a fixed, clear success message to avoid displaying unrelated backend messages
-                showAlert('Istirahat dimulai — selamat istirahat! ⏱️', 'success');
-                setHasLunchStarted(true);
-                await fetchData();
-            } else {
-                throw new Error(res.message || 'Gagal memulai istirahat');
-            }
+            // Navigate to camera screen for lunch photo
+            // Do not pass functions in navigation params (non-serializable). LunchCamera will navigate back
+            // and pass a refresh flag which Kehadiran listens for.
+            navigation.navigate('LunchCamera', {
+                attendanceId: todayAttendanceId,
+                location: location,
+                locationName: locationName,
+                action: 'start',
+            });
         } catch (err) {
             console.error('handleLunchStart error', err);
             showAlert(err.message || 'Gagal memulai istirahat. Silakan coba lagi.', 'error');
         } finally {
             setIsLunchProcessing(false);
         }
-    }, [isCheckedIn, isCheckedOut, hasLunchStarted, todayAttendanceId, location, fetchData]);
+    }, [isCheckedIn, isCheckedOut, hasLunchStarted, todayAttendanceId, location, locationName, navigation, fetchData]);
 
     // Lunch end handler - allowed only if lunch started
     const handleLunchEnd = useCallback(async () => {
@@ -634,22 +691,21 @@ const Kehadiran = () => {
 
         try {
             setIsLunchProcessing(true);
-            const res = await lunchEnd(todayAttendanceId);
-            if (res && (res.success === true || res.status === 'success')) {
-                // Use a fixed success message to prevent backend messages (e.g., 'checkout') from showing here
-                showAlert('Istirahat selesai — semoga kembali segar!', 'success');
-                setHasLunchStarted(false);
-                await fetchData();
-            } else {
-                throw new Error(res.message || 'Gagal mengakhiri istirahat');
-            }
+
+            // Navigate to camera screen for lunch end photo
+            navigation.navigate('LunchCamera', {
+                attendanceId: todayAttendanceId,
+                location: location,
+                locationName: locationName,
+                action: 'end',
+            });
         } catch (err) {
             console.error('handleLunchEnd error', err);
             showAlert(err.message || 'Gagal mengakhiri istirahat. Silakan coba lagi.', 'error');
         } finally {
             setIsLunchProcessing(false);
         }
-    }, [hasLunchStarted, todayAttendanceId, fetchData]);
+    }, [hasLunchStarted, todayAttendanceId, location, locationName, navigation, fetchData]);
 
     const handleNextPage = () => {
         if (currentPage < totalPages - 1) {

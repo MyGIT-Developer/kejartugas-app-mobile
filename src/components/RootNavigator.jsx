@@ -5,6 +5,7 @@ import AppNavigator from '../components/AppNavigator';
 import SplashScreen from '../screens/SplashScreen';
 import Login from '../screens/Login';
 import DetailKehadiran from '../screens/DetailKehadiran';
+import LunchCamera from '../screens/LunchCamera';
 import ForgotPassword from '../screens/ForgotPassword';
 import BoardingScreen from '../screens/BoardingScreen';
 import Step1 from '../screens/Step1';
@@ -41,6 +42,7 @@ const screens = [
     { name: 'Login', component: Login },
     { name: 'App', component: AppNavigator },
     { name: 'DetailKehadiran', component: DetailKehadiran },
+    { name: 'LunchCamera', component: LunchCamera },
     { name: 'ForgotPassword', component: ForgotPassword },
     { name: 'BoardingScreen', component: BoardingScreen },
     { name: 'Step1', component: Step1 },

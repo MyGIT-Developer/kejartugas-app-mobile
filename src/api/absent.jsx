@@ -131,53 +131,91 @@ export const checkOut = async (employeeId, companyId, location, location_name) =
 };
 
 // Function to start lunch (break) for a specific attendance record
-export const lunchStart = async (attendanceId, location, lunchImageBase64 = null) => {
+export const lunchStart = async (attendanceId, location, lunchImageBase64 = null, locationName = null) => {
     try {
+        // Ensure attendanceId is a valid number/string
+        if (!attendanceId) {
+            throw new Error('Attendance ID is required for lunch start');
+        }
+
+        if (!location) {
+            throw new Error('Location is required for lunch start');
+        }
+
         const payload = {
-            action: 'lunch_start',
             attendance_id: attendanceId,
-            location: location, // expecting "latitude,longitude" or object depending on backend
+            location: location, // expecting "latitude,longitude" string
             lunch_image: lunchImageBase64,
         };
 
-        const response = await apiService.put(`/attendance/`, payload, {
-            params: {
-                action: 'lunch_start',
-                attendance_id: attendanceId,
-            },
+        // Add location_name_lunch if provided
+        if (locationName) {
+            payload.location_name_lunch = locationName;
+        }
+
+        console.log('=== LUNCH START API CALL ===');
+        console.log('Endpoint: POST /lunch-in');
+        console.log('Payload:', JSON.stringify(payload, null, 2));
+        console.log('===========================');
+
+        // Use POST request to /lunch-in endpoint
+        const response = await apiService.post('/lunch-in', payload, {
             headers: {
                 Authorization: `Bearer ${await AsyncStorage.getItem('token')}`,
+                'Content-Type': 'application/json',
             },
         });
 
+        console.log('Lunch start response:', response.data);
         return response.data;
     } catch (error) {
         console.error('Lunch start failed:', error.response?.data?.message || error.message);
+        console.error('Full error response:', error.response?.data);
+        console.error('Error status:', error.response?.status);
         throw new Error(error.response?.data?.message || 'Starting lunch failed');
     }
 };
 
 // Function to end lunch (break) for a specific attendance record
-export const lunchEnd = async (attendanceId) => {
+export const lunchEnd = async (attendanceId, lunchImageBase64 = null, locationName = null) => {
     try {
+        if (!attendanceId) {
+            throw new Error('Attendance ID is required for lunch end');
+        }
+
         const payload = {
-            action: 'lunch_end',
             attendance_id: attendanceId,
         };
 
-        const response = await apiService.put(`/attendance/`, payload, {
-            params: {
-                action: 'lunch_end',
-                attendance_id: attendanceId,
-            },
+        // Add optional lunch_image if provided
+        if (lunchImageBase64) {
+            payload.lunch_image = lunchImageBase64;
+        }
+
+        // Add location_name_lunch if provided
+        if (locationName) {
+            payload.location_name_lunch = locationName;
+        }
+
+        console.log('=== LUNCH END API CALL ===');
+        console.log('Endpoint: POST /lunch-out');
+        console.log('Payload:', JSON.stringify(payload, null, 2));
+        console.log('=========================');
+
+        // Use POST request to /lunch-out endpoint
+        const response = await apiService.post('/lunch-out', payload, {
             headers: {
                 Authorization: `Bearer ${await AsyncStorage.getItem('token')}`,
+                'Content-Type': 'application/json',
             },
         });
 
+        console.log('Lunch end response:', response.data);
         return response.data;
     } catch (error) {
         console.error('Lunch end failed:', error.response?.data?.message || error.message);
+        console.error('Full error response:', error.response?.data);
+        console.error('Error status:', error.response?.status);
         throw new Error(error.response?.data?.message || 'Ending lunch failed');
     }
 };
