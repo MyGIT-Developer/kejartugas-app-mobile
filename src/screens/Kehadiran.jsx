@@ -16,6 +16,7 @@ import {
     Share,
     InteractionManager,
     StatusBar,
+    Modal,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import * as Location from 'expo-location';
@@ -169,6 +170,10 @@ const Kehadiran = () => {
     const [totalRecords, setTotalRecords] = useState(0);
     const PAGE_SIZE = 7;
 
+    // Checkout confirmation state
+    const [showCheckoutConfirm, setShowCheckoutConfirm] = useState(false);
+    const [checkoutDuration, setCheckoutDuration] = useState({ hours: 0, minutes: 0 });
+
     // Animation refs for better performance
     const fadeAnim = useRef(new Animated.Value(0)).current;
     const slideAnim = useRef(new Animated.Value(50)).current;
@@ -259,12 +264,14 @@ const Kehadiran = () => {
 
             const checkedOutStatus = Boolean(todayAttendance?.checkout);
             let todayCheckInTime = null;
+            let todayCheckInDate = null; // Store full Date object for duration calculation
             let todayCheckOutTime = null;
             let todayTotalHours = null;
 
             if (todayAttendance) {
                 if (todayAttendance.checkin) {
                     const checkInDate = new Date(todayAttendance.checkin);
+                    todayCheckInDate = checkInDate; // Store full Date object
                     todayCheckInTime = checkInDate.toLocaleTimeString('id-ID', {
                         hour: '2-digit',
                         minute: '2-digit',
@@ -296,7 +303,7 @@ const Kehadiran = () => {
                 setIsCheckedOut(checkedOutStatus);
                 setJamTelat(jamTelat);
                 setRadius(radius);
-                setCheckInTime(todayCheckInTime);
+                setCheckInTime(todayCheckInDate); // Store full Date object for duration calculation
                 setCheckOutTime(todayCheckOutTime);
                 setTotalHours(todayTotalHours);
                 setCurrentPage(attendanceResponse.pagination.current_page - 1);
@@ -548,26 +555,53 @@ const Kehadiran = () => {
         }
     }, [location, locationName, jamTelat, radius, navigation, scaleAnim]);
 
-    const handleClockOut = async () => {
+    // Calculate work duration from check-in time
+    const calculateWorkDuration = useCallback(() => {
+        if (!checkInTime) return { hours: 0, minutes: 0, totalMinutes: 0 };
+
+        const now = new Date();
+        const checkInDate = new Date(checkInTime);
+
+        const diffInMilliseconds = now - checkInDate;
+        const diffInMinutes = Math.floor(diffInMilliseconds / (1000 * 60));
+        const hours = Math.floor(diffInMinutes / 60);
+        const minutes = diffInMinutes % 60;
+
+        return {
+            hours,
+            minutes,
+            totalMinutes: diffInMinutes,
+        };
+    }, [checkInTime]);
+
+    // Perform actual checkout
+    const performCheckout = async () => {
         try {
+            // Validate location
+            if (!location || !locationName) {
+                showAlert('Data lokasi tidak tersedia. Silakan coba lagi.', 'error');
+                return;
+            }
+
             // Add haptic feedback for better UX
             if (Platform.OS === 'ios') {
                 Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
             }
 
-            const checkOutPayload = {
-                employeeId,
-                companyId,
-                location,
-                location_name: locationName,
-            };
+            // Convert location object to string if needed
+            const locationString =
+                typeof location === 'string' ? location : `${location.coords.latitude}, ${location.coords.longitude}`;
 
-            const updateResponse = await checkOut(
-                checkOutPayload.employeeId,
-                checkOutPayload.companyId,
-                checkOutPayload.location,
-                checkOutPayload.location_name,
-            );
+            console.log('=== CHECKOUT DEBUG ===');
+            console.log('employeeId:', employeeId);
+            console.log('companyId:', companyId);
+            console.log('location:', locationString);
+            console.log('locationName:', locationName);
+            console.log('=====================');
+
+            const updateResponse = await checkOut(employeeId, companyId, locationString, locationName);
+
+            console.log('Checkout response:', updateResponse);
 
             if (!updateResponse) {
                 throw new Error('No response received from server');
@@ -577,15 +611,38 @@ const Kehadiran = () => {
                 throw new Error(updateResponse.message || 'Check-out Failed');
             }
 
-            showAlert(updateResponse.message, 'success'); // Show success message properly
+            showAlert(updateResponse.message || 'Check-out berhasil!', 'success');
             await fetchData();
             setTimeout(() => {
                 setAlert((prev) => ({ ...prev, show: false }));
                 navigation.navigate('App', { screen: 'Kehadiran' });
             }, 1500);
         } catch (error) {
+            console.error('Checkout error:', error);
             const errorMessage = error.message || 'Unknown error';
-            showAlert(errorMessage, 'error'); // Show correct error message
+            showAlert(errorMessage, 'error');
+        }
+    };
+
+    const handleClockOut = async () => {
+        try {
+            // Calculate work duration
+            const duration = calculateWorkDuration();
+
+            console.log('Work duration:', duration);
+
+            // Check if worked less than 1 hour (60 minutes)
+            if (duration.totalMinutes < 60) {
+                // Show confirmation modal
+                setCheckoutDuration(duration);
+                setShowCheckoutConfirm(true);
+            } else {
+                // Directly checkout if worked more than 1 hour
+                await performCheckout();
+            }
+        } catch (error) {
+            console.error('Checkout handler error:', error);
+            showAlert('Terjadi kesalahan. Silakan coba lagi.', 'error');
         }
     };
 
@@ -677,7 +734,7 @@ const Kehadiran = () => {
         }
     }, [isCheckedIn, isCheckedOut, hasLunchStarted, todayAttendanceId, location, locationName, navigation, fetchData]);
 
-    // Lunch end handler - allowed only if lunch started
+    // Lunch end handler - confirm and call API directly (no camera)
     const handleLunchEnd = useCallback(async () => {
         if (!hasLunchStarted) {
             showAlert('Kamu belum memulai waktu istirahat.', 'error');
@@ -690,22 +747,40 @@ const Kehadiran = () => {
         }
 
         try {
+            // Ask for confirmation before ending lunch
+            const confirm = await new Promise((resolve) => {
+                Alert.alert(
+                    'Konfirmasi Istirahat',
+                    'Apakah Anda yakin sudah selesai istirahat?',
+                    [
+                        { text: 'Batal', style: 'cancel', onPress: () => resolve(false) },
+                        { text: 'Ya', onPress: () => resolve(true) },
+                    ],
+                    { cancelable: true },
+                );
+            });
+
+            if (!confirm) return;
+
             setIsLunchProcessing(true);
 
-            // Navigate to camera screen for lunch end photo
-            navigation.navigate('LunchCamera', {
-                attendanceId: todayAttendanceId,
-                location: location,
-                locationName: locationName,
-                action: 'end',
-            });
+            // Call lunchEnd API without camera image
+            const response = await lunchEnd(todayAttendanceId, null, locationName);
+
+            if (response && (response.success === true || response.status === 'success')) {
+                showAlert('Istirahat selesai — semoga kembali segar!', 'success');
+                setHasLunchStarted(false);
+                await fetchData();
+            } else {
+                throw new Error(response?.message || 'Gagal mengakhiri istirahat');
+            }
         } catch (err) {
             console.error('handleLunchEnd error', err);
             showAlert(err.message || 'Gagal mengakhiri istirahat. Silakan coba lagi.', 'error');
         } finally {
             setIsLunchProcessing(false);
         }
-    }, [hasLunchStarted, todayAttendanceId, location, locationName, navigation, fetchData]);
+    }, [hasLunchStarted, todayAttendanceId, locationName, fetchData]);
 
     const handleNextPage = () => {
         if (currentPage < totalPages - 1) {
@@ -1579,6 +1654,68 @@ const Kehadiran = () => {
                 </View>
             </ScrollView>
 
+            {/* Checkout Confirmation Modal */}
+            <Modal
+                visible={showCheckoutConfirm}
+                transparent={true}
+                animationType="fade"
+                onRequestClose={() => setShowCheckoutConfirm(false)}
+            >
+                <View style={styles.modalOverlay}>
+                    <View style={styles.modalContainer}>
+                        <View style={styles.modalHeader}>
+                            <View style={styles.warningIconContainer}>
+                                <Ionicons name="time-outline" size={32} color="#F59E0B" />
+                            </View>
+                            <Text style={styles.modalTitle}>Konfirmasi Clock Out</Text>
+                        </View>
+
+                        <View style={styles.modalContent}>
+                            <Text style={styles.modalMessage}>
+                                Anda baru bekerja selama{' '}
+                                <Text style={styles.durationHighlight}>
+                                    {checkoutDuration.hours > 0
+                                        ? `${checkoutDuration.hours} jam ${checkoutDuration.minutes} menit`
+                                        : `${checkoutDuration.minutes} menit`}
+                                </Text>
+                                {'\n\n'}
+                                Apakah Anda yakin ingin melakukan clock out sekarang?
+                            </Text>
+                        </View>
+
+                        <View style={styles.modalActions}>
+                            <TouchableOpacity
+                                style={[styles.modalButton, styles.cancelButton]}
+                                onPress={() => {
+                                    setShowCheckoutConfirm(false);
+                                    if (Platform.OS === 'ios') {
+                                        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                                    }
+                                }}
+                                activeOpacity={0.8}
+                            >
+                                <Text style={styles.cancelButtonText}>Batal</Text>
+                            </TouchableOpacity>
+
+                            <TouchableOpacity
+                                style={[styles.modalButton, styles.confirmButton]}
+                                onPress={async () => {
+                                    setShowCheckoutConfirm(false);
+                                    if (Platform.OS === 'ios') {
+                                        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+                                    }
+                                    await performCheckout();
+                                }}
+                                activeOpacity={0.8}
+                            >
+                                <Ionicons name="checkmark-circle" size={20} color="white" />
+                                <Text style={styles.confirmButtonText}>Ya, Clock Out</Text>
+                            </TouchableOpacity>
+                        </View>
+                    </View>
+                </View>
+            </Modal>
+
             <ReusableBottomPopUp
                 show={alert.show}
                 alertType={alert.type}
@@ -2361,6 +2498,110 @@ const styles = StyleSheet.create({
     smallActionText: {
         fontSize: 12,
         fontWeight: '600',
+    },
+
+    // Checkout Confirmation Modal Styles
+    modalOverlay: {
+        flex: 1,
+        backgroundColor: 'rgba(0, 0, 0, 0.5)',
+        justifyContent: 'center',
+        alignItems: 'center',
+        padding: 20,
+    },
+    modalContainer: {
+        backgroundColor: 'white',
+        borderRadius: 20,
+        width: '100%',
+        maxWidth: 400,
+        overflow: 'hidden',
+        shadowColor: '#444',
+        shadowOffset: { width: 0, height: 10 },
+        shadowOpacity: 0.3,
+        shadowRadius: 20,
+        elevation: 10,
+    },
+    modalHeader: {
+        alignItems: 'center',
+        paddingTop: 32,
+        paddingHorizontal: 24,
+        paddingBottom: 20,
+        backgroundColor: '#FEF3C7',
+    },
+    warningIconContainer: {
+        width: 64,
+        height: 64,
+        borderRadius: 32,
+        backgroundColor: 'white',
+        justifyContent: 'center',
+        alignItems: 'center',
+        marginBottom: 16,
+        shadowColor: '#F59E0B',
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.2,
+        shadowRadius: 8,
+        elevation: 4,
+    },
+    modalTitle: {
+        fontSize: 20,
+        fontFamily: FONTS.family.bold,
+        color: '#92400E',
+        textAlign: 'center',
+    },
+    modalContent: {
+        paddingHorizontal: 24,
+        paddingVertical: 24,
+    },
+    modalMessage: {
+        fontSize: 16,
+        fontFamily: FONTS.family.regular,
+        color: '#374151',
+        textAlign: 'center',
+        lineHeight: 24,
+    },
+    durationHighlight: {
+        fontSize: 18,
+        fontFamily: FONTS.family.bold,
+        color: '#F59E0B',
+    },
+    modalActions: {
+        flexDirection: 'row',
+        gap: 12,
+        paddingHorizontal: 24,
+        paddingVertical: 20,
+        borderTopWidth: 1,
+        borderTopColor: '#F3F4F6',
+    },
+    modalButton: {
+        flex: 1,
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+        paddingVertical: 14,
+        borderRadius: 12,
+        gap: 8,
+    },
+    cancelButton: {
+        backgroundColor: '#F3F4F6',
+        borderWidth: 1,
+        borderColor: '#E5E7EB',
+    },
+    cancelButtonText: {
+        fontSize: 16,
+        fontFamily: FONTS.family.semiBold,
+        color: '#6B7280',
+    },
+    confirmButton: {
+        backgroundColor: '#EF4444',
+        shadowColor: '#EF4444',
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.3,
+        shadowRadius: 8,
+        elevation: 4,
+    },
+    confirmButtonText: {
+        fontSize: 16,
+        fontFamily: FONTS.family.bold,
+        color: 'white',
     },
 });
 
